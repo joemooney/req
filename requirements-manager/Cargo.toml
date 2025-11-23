@@ -1,0 +1,17 @@
+[package]
+name = "requirements-manager"
+version = "0.1.0"
+edition = "2021"
+description = "A simple CLI-based requirements management system"
+authors = ["Joe Mooney"]
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.9"
+clap = { version = "4.4", features = ["derive"] }
+uuid = { version = "1.4", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+inquire = { version = "0.9.1", features = ["editor"] }
+colored = "2.0"
+anyhow = "1.0"
+dirs = "5.0"

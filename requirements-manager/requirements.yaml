@@ -1,0 +1,139 @@
+requirements:
+- id: f7d250bf-5b3e-4ec3-8bd5-2bee2c4b7bb9
+  title: Implement user authentication
+  description: The system should support user authentication via username/password and OAuth
+  status: Draft
+  priority: High
+  owner: Joe Mooney
+  feature: 1-Authentication
+  created_at: 2025-11-19T19:41:14.018536570Z
+  modified_at: 2025-11-19T19:41:14.018536570Z
+  req_type: Functional
+  dependencies: []
+  tags:
+  - security
+  - user
+  - auth
+- id: 013cc55c-3123-42b2-81df-d930cf9eb288
+  title: Implement requirements export
+  description: The system should allow exporting requirements to various formats (PDF, CSV, JSON)
+  status: Draft
+  priority: Medium
+  owner: Joe Mooney
+  feature: 2-Reporting
+  created_at: 2025-11-19T19:41:32.523506980Z
+  modified_at: 2025-11-19T19:41:32.523506980Z
+  req_type: Functional
+  dependencies: []
+  tags:
+  - reporting
+  - export
+- id: 819258b2-9624-4046-9f52-0b00af26c046
+  title: Test Non-Interactive
+  description: This is a test requirement for non-interactive mode
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 3-Testing
+  created_at: 2025-11-19T20:14:34.464156508Z
+  modified_at: 2025-11-19T20:14:34.464156508Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+- id: b8ebfc9e-b93e-4644-b1d5-79139465107d
+  title: Password Strength Rules
+  description: System should enforce password strength rules
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 4-Security
+  created_at: 2025-11-19T20:28:24.824469396Z
+  modified_at: 2025-11-19T20:28:24.824469396Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+- id: 59d7c79a-2796-4e9a-866b-d39d02370e3c
+  title: Default Feature Test
+  description: Testing default feature when REQ_FEATURE is not set
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 5-Uncategorized
+  created_at: 2025-11-19T20:28:37.514068238Z
+  modified_at: 2025-11-19T20:28:37.514068238Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+- id: 2c5b7c16-0b9b-4090-9bf0-5c3ee81855fb
+  title: Explicit Feature
+  description: Testing setting feature on command line
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 6-UI
+  created_at: 2025-11-19T20:28:51.559887018Z
+  modified_at: 2025-11-19T20:28:51.559887018Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+- id: ce794d40-9918-48a9-83c2-f8e1d0bb2f40
+  title: Feature Precedence
+  description: Testing which feature takes precedence
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 7-API
+  created_at: 2025-11-19T20:29:04.405708451Z
+  modified_at: 2025-11-19T20:29:04.405708451Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+- id: e1c4ca48-7985-4fdd-bcd1-a17e8a3dcf77
+  title: Example Requirement
+  description: This is a test requirement
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 5-Uncategorized
+  created_at: 2025-11-19T22:33:36.028263237Z
+  modified_at: 2025-11-19T22:33:36.028263237Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+- id: 28fe33c5-87f6-4883-ae5f-a4b2a5c94104
+  title: Auth Requirement
+  description: This is a test requirement for the auth project
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 5-Uncategorized
+  created_at: 2025-11-19T22:33:49.932270075Z
+  modified_at: 2025-11-19T22:33:49.932270075Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+- id: 5ccc0fbb-83bd-46cc-9af7-9dc32fb0fca7
+  title: Test Requirement
+  description: This is a test requirement
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 8-TestFeature
+  created_at: 2025-11-21T00:09:09.858957127Z
+  modified_at: 2025-11-21T00:09:09.858957127Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+- id: 7eb75492-0d69-4920-8b47-23e8d427ef15
+  title: Another Test
+  description: Another test requirement
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: AnotherFeature
+  created_at: 2025-11-21T00:12:41.406518998Z
+  modified_at: 2025-11-21T00:12:41.406518998Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+next_feature_number: 9

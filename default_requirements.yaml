@@ -1,0 +1,14 @@
+requirements:
+- id: ee8d8e56-3a81-4f05-a06d-60ef5236a7aa
+  title: prompt for db if not provided
+  description: ''
+  status: Draft
+  priority: High
+  owner: joe
+  feature: Uncategorized
+  created_at: 2025-11-19T22:58:27.635415053Z
+  modified_at: 2025-11-19T22:58:27.635415053Z
+  req_type: Functional
+  dependencies: []
+  tags:
+  - req
