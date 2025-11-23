@@ -169,4 +169,15 @@ pub enum Command {
     /// Database management commands
     #[clap(subcommand)]
     Db(DbCommand),
+
+    /// Export requirements to different formats
+    Export {
+        /// Output format (mapping, json)
+        #[clap(long, short = 'f', default_value = "mapping")]
+        format: String,
+
+        /// Output file path
+        #[clap(long, short = 'o')]
+        output: Option<PathBuf>,
+    },
 }

@@ -1,4 +1,5 @@
 mod cli;
+mod export;
 mod models;
 mod prompts;
 mod project;
@@ -52,6 +53,9 @@ fn main() -> Result<()> {
         }
         Command::Db(db_cmd) => {
             handle_db_command(db_cmd, &requirements_path)?;
+        }
+        Command::Export { format, output } => {
+            handle_export_command(&storage, format, output.as_deref())?;
         }
     }
 
@@ -620,6 +624,29 @@ fn handle_db_command(cmd: &DbCommand, requirements_path: &std::path::PathBuf) ->
                 // Use the already determined path
                 println!("{}", requirements_path.display());
             }
+        }
+    }
+
+    Ok(())
+}
+
+fn handle_export_command(storage: &Storage, format: &str, output: Option<&std::path::Path>) -> Result<()> {
+    // Load requirements
+    let store = storage.load()?;
+
+    match format {
+        "mapping" => {
+            let output_path = output.map(|p| p.to_path_buf())
+                .unwrap_or_else(|| std::path::PathBuf::from(".requirements-mapping.yaml"));
+            export::generate_mapping_file(&store, &output_path)?;
+        }
+        "json" => {
+            let output_path = output.map(|p| p.to_path_buf())
+                .unwrap_or_else(|| std::path::PathBuf::from("requirements.json"));
+            export::export_json(&store, &output_path)?;
+        }
+        _ => {
+            anyhow::bail!("Unknown export format: {}. Supported formats: mapping, json", format);
         }
     }
 
