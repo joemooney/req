@@ -1,0 +1,23 @@
+# Rust build artifacts
+/target/
+
+# Cargo.lock should be committed for binaries, ignored for libraries
+# Keeping it since this is a binary project
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test files (if temporary)
+test_registry.yaml
+
+# Requirements files (project-specific, not part of the tool itself)
+requirements.yaml
+.requirements-mapping.yaml
