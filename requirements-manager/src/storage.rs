@@ -44,6 +44,18 @@ impl Storage {
         // Migrate existing features to numbered format if needed
         store.migrate_features();
 
+        // Assign SPEC-IDs to requirements that don't have them
+        let had_missing_spec_ids = store.requirements.iter().any(|r| r.spec_id.is_none());
+        store.assign_spec_ids();
+
+        // Save back if we assigned any SPEC-IDs (migration)
+        if had_missing_spec_ids {
+            self.save(&store)?;
+        }
+
+        // Validate SPEC-ID uniqueness
+        store.validate_unique_spec_ids()?;
+
         Ok(store)
     }
 

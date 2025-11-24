@@ -13,7 +13,7 @@ use std::collections::HashSet;
 use uuid::Uuid;
 
 use crate::cli::{Cli, Command, DbCommand, FeatureCommand};
-use crate::models::{Requirement, RequirementPriority, RequirementStatus, RequirementType};
+use crate::models::{Requirement, RequirementPriority, RequirementStatus, RequirementType, RequirementsStore};
 use crate::project::determine_requirements_path;
 use crate::registry::{get_registry_path, Registry};
 use crate::storage::Storage;
@@ -70,12 +70,18 @@ fn add_requirement_interactive(storage: &Storage) -> Result<()> {
     let requirement = crate::prompts::prompt_new_requirement(&mut store)?;
     let id = requirement.id;
 
-    // Add the requirement
-    store.add_requirement(requirement);
+    // Add the requirement with auto-assigned SPEC-ID
+    store.add_requirement_with_spec_id(requirement);
     storage.save(&store)?;
+
+    // Get the added requirement to show SPEC-ID
+    let added_req = store.get_requirement_by_id(&id).expect("Just added requirement");
 
     println!("{}", "Requirement added successfully!".green());
     println!("ID: {}", id);
+    if let Some(spec_id) = &added_req.spec_id {
+        println!("SPEC-ID: {}", spec_id.green());
+    }
 
     Ok(())
 }
@@ -140,12 +146,18 @@ fn add_requirement_cli(
 
     let id = requirement.id;
 
-    // Add the requirement
-    store.add_requirement(requirement);
+    // Add the requirement with auto-assigned SPEC-ID
+    store.add_requirement_with_spec_id(requirement);
     storage.save(&store)?;
+
+    // Get the added requirement to show SPEC-ID
+    let added_req = store.get_requirement_by_id(&id).expect("Just added requirement");
 
     println!("{}", "Requirement added successfully!".green());
     println!("ID: {}", id);
+    if let Some(spec_id) = &added_req.spec_id {
+        println!("SPEC-ID: {}", spec_id.green());
+    }
 
     Ok(())
 }
@@ -193,8 +205,8 @@ fn list_requirements(
         return Ok(());
     }
 
-    println!("{:<36} | {:<30} | {:<10} | {:<10} | {:<15}", "ID", "Title", "Status", "Priority", "Feature");
-    println!("{}", "-".repeat(105));
+    println!("{:<10} | {:<36} | {:<30} | {:<10} | {:<10} | {:<15}", "SPEC-ID", "UUID", "Title", "Status", "Priority", "Feature");
+    println!("{}", "-".repeat(120));
 
     for req in requirements {
         let status_str = match req.status {
@@ -210,7 +222,12 @@ fn list_requirements(
             RequirementPriority::Low => "Low".green(),
         };
 
-        println!("{:<36} | {:<30} | {:<10} | {:<10} | {:<15}",
+        let spec_id_display = req.spec_id.as_ref()
+            .map(|s| s.as_str())
+            .unwrap_or("-");
+
+        println!("{:<10} | {:<36} | {:<30} | {:<10} | {:<10} | {:<15}",
+            spec_id_display,
             req.id.to_string(),
             req.title,
             status_str,
@@ -222,11 +239,11 @@ fn list_requirements(
 }
 
 fn show_requirement(storage: &Storage, id_str: &str) -> Result<()> {
-    // Parse UUID
-    let id = parse_uuid(id_str)?;
-
-    // Load requirements
+    // Load requirements first (needed for SPEC-ID lookup)
     let store = storage.load()?;
+
+    // Parse UUID or SPEC-ID
+    let id = parse_requirement_id(id_str, &store)?;
 
     // Find the specified requirement
     let req = store.get_requirement_by_id(&id)
@@ -234,6 +251,9 @@ fn show_requirement(storage: &Storage, id_str: &str) -> Result<()> {
 
     // Display the requirement details
     println!("{}: {}", "ID".blue(), req.id);
+    if let Some(spec_id) = &req.spec_id {
+        println!("{}: {}", "SPEC-ID".blue(), spec_id);
+    }
     println!("{}: {}", "Title".blue(), req.title);
     println!("{}: {}", "Description".blue(), req.description);
 
@@ -282,10 +302,13 @@ fn show_requirement(storage: &Storage, id_str: &str) -> Result<()> {
 }
 
 fn edit_requirement(storage: &Storage, id_str: &str) -> Result<()> {
-    // Parse UUID
-    let id = parse_uuid(id_str)?;
+    // Load requirements first (needed for SPEC-ID lookup)
+    let store_for_lookup = storage.load()?;
 
-    // Load requirements
+    // Parse UUID or SPEC-ID
+    let id = parse_requirement_id(id_str, &store_for_lookup)?;
+
+    // Load again as mutable
     let mut store = storage.load()?;
 
     // Find the specified requirement
@@ -365,6 +388,21 @@ fn edit_requirement(storage: &Storage, id_str: &str) -> Result<()> {
 
 fn parse_uuid(id_str: &str) -> Result<Uuid> {
     Uuid::parse_str(id_str).with_context(|| format!("Invalid UUID: {}", id_str))
+}
+
+/// Parse requirement ID - accepts either UUID or SPEC-ID
+fn parse_requirement_id(id_str: &str, store: &RequirementsStore) -> Result<Uuid> {
+    // Try parsing as UUID first
+    if let Ok(uuid) = Uuid::parse_str(id_str) {
+        return Ok(uuid);
+    }
+
+    // Try as SPEC-ID
+    if let Some(req) = store.get_requirement_by_spec_id(id_str) {
+        return Ok(req.id);
+    }
+
+    anyhow::bail!("Invalid requirement ID: '{}'. Must be either a UUID or SPEC-ID (e.g., SPEC-001)", id_str)
 }
 
 fn parse_status(status_str: &str) -> Result<RequirementStatus> {
