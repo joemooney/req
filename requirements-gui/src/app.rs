@@ -168,19 +168,66 @@ impl RequirementsApp {
 
     fn update_requirement(&mut self, idx: usize) {
         if let Some(req) = self.store.requirements.get_mut(idx) {
-            req.title = self.form_title.clone();
-            req.description = self.form_description.clone();
-            req.status = self.form_status.clone();
-            req.priority = self.form_priority.clone();
-            req.req_type = self.form_type.clone();
-            req.owner = self.form_owner.clone();
-            req.feature = self.form_feature.clone();
-            req.tags = self.form_tags
+            let mut changes: Vec<FieldChange> = Vec::new();
+
+            // Track title change
+            if self.form_title != req.title {
+                changes.push(Requirement::field_change("title", req.title.clone(), self.form_title.clone()));
+                req.title = self.form_title.clone();
+            }
+
+            // Track description change
+            if self.form_description != req.description {
+                changes.push(Requirement::field_change("description", req.description.clone(), self.form_description.clone()));
+                req.description = self.form_description.clone();
+            }
+
+            // Track status change
+            if self.form_status != req.status {
+                changes.push(Requirement::field_change("status", format!("{:?}", req.status), format!("{:?}", self.form_status)));
+                req.status = self.form_status.clone();
+            }
+
+            // Track priority change
+            if self.form_priority != req.priority {
+                changes.push(Requirement::field_change("priority", format!("{:?}", req.priority), format!("{:?}", self.form_priority)));
+                req.priority = self.form_priority.clone();
+            }
+
+            // Track type change
+            if self.form_type != req.req_type {
+                changes.push(Requirement::field_change("type", format!("{:?}", req.req_type), format!("{:?}", self.form_type)));
+                req.req_type = self.form_type.clone();
+            }
+
+            // Track owner change
+            if self.form_owner != req.owner {
+                changes.push(Requirement::field_change("owner", req.owner.clone(), self.form_owner.clone()));
+                req.owner = self.form_owner.clone();
+            }
+
+            // Track feature change
+            if self.form_feature != req.feature {
+                changes.push(Requirement::field_change("feature", req.feature.clone(), self.form_feature.clone()));
+                req.feature = self.form_feature.clone();
+            }
+
+            // Track tags change
+            let new_tags: HashSet<String> = self.form_tags
                 .split(',')
                 .map(|s| s.trim().to_string())
                 .filter(|s| !s.is_empty())
                 .collect();
-            req.modified_at = Utc::now();
+
+            if new_tags != req.tags {
+                let old_tags_vec: Vec<String> = req.tags.iter().cloned().collect();
+                let new_tags_vec: Vec<String> = new_tags.iter().cloned().collect();
+                changes.push(Requirement::field_change("tags", old_tags_vec.join(", "), new_tags_vec.join(", ")));
+                req.tags = new_tags;
+            }
+
+            // Record changes with author "GUI User" (could be made configurable)
+            req.record_change("GUI User".to_string(), changes);
 
             self.save();
             self.clear_form();
@@ -288,6 +335,7 @@ impl RequirementsApp {
 
                 ui.separator();
 
+                // Metadata grid (always shown)
                 egui::Grid::new("detail_grid")
                     .num_columns(2)
                     .spacing([40.0, 8.0])
@@ -326,43 +374,32 @@ impl RequirementsApp {
                     });
 
                 ui.separator();
-                ui.heading("Description");
-                ui.label(&req.description);
 
-                if !req.relationships.is_empty() {
-                    ui.separator();
-                    ui.heading(format!("Relationships ({})", req.relationships.len()));
-                    for rel in &req.relationships {
-                        // Try to find the target requirement to show its spec_id
-                        let target_label = self.store.requirements.iter()
-                            .find(|r| r.id == rel.target_id)
-                            .and_then(|r| r.spec_id.as_ref())
-                            .map(|s| s.as_str())
-                            .unwrap_or("Unknown");
-                        ui.label(format!("• {:?} {}", rel.rel_type, target_label));
-                    }
-                }
-
-                // Comments section
-                ui.separator();
+                // Tabbed content
                 ui.horizontal(|ui| {
-                    ui.heading(format!("Comments ({})", req.comments.len()));
-                    if ui.button("➕ Add Comment").clicked() {
-                        self.show_add_comment = true;
-                        self.reply_to_comment = None;
-                        self.comment_author.clear();
-                        self.comment_content.clear();
-                    }
+                    ui.selectable_value(&mut self.active_tab, DetailTab::Description, "📄 Description");
+                    ui.selectable_value(&mut self.active_tab, DetailTab::Comments, format!("💬 Comments ({})", req.comments.len()));
+                    ui.selectable_value(&mut self.active_tab, DetailTab::Links, format!("🔗 Links ({})", req.relationships.len()));
+                    ui.selectable_value(&mut self.active_tab, DetailTab::History, format!("📜 History ({})", req.history.len()));
                 });
 
-                if self.show_add_comment {
-                    self.show_comment_form(ui, idx);
-                }
+                ui.separator();
 
-                // Display comments in a scrollable area
-                egui::ScrollArea::vertical().max_height(400.0).show(ui, |ui| {
-                    for comment in &req.comments {
-                        self.show_comment_tree(ui, comment, idx, 0);
+                // Tab content
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    match &self.active_tab {
+                        DetailTab::Description => {
+                            self.show_description_tab(ui, &req);
+                        }
+                        DetailTab::Comments => {
+                            self.show_comments_tab(ui, &req, idx);
+                        }
+                        DetailTab::Links => {
+                            self.show_links_tab(ui, &req);
+                        }
+                        DetailTab::History => {
+                            self.show_history_tab(ui, &req);
+                        }
                     }
                 });
             }
@@ -371,6 +408,97 @@ impl RequirementsApp {
                 ui.add_space(100.0);
                 ui.heading("Select a requirement from the list");
             });
+        }
+    }
+
+    fn show_description_tab(&self, ui: &mut egui::Ui, req: &Requirement) {
+        ui.heading("Description");
+        ui.add_space(10.0);
+        ui.label(&req.description);
+    }
+
+    fn show_comments_tab(&mut self, ui: &mut egui::Ui, req: &Requirement, idx: usize) {
+        ui.horizontal(|ui| {
+            ui.heading("Comments");
+            if ui.button("➕ Add Comment").clicked() {
+                self.show_add_comment = true;
+                self.reply_to_comment = None;
+                self.comment_author.clear();
+                self.comment_content.clear();
+            }
+        });
+
+        ui.add_space(10.0);
+
+        if self.show_add_comment {
+            self.show_comment_form(ui, idx);
+        }
+
+        if req.comments.is_empty() {
+            ui.label("No comments yet");
+        } else {
+            for comment in &req.comments {
+                self.show_comment_tree(ui, comment, idx, 0);
+            }
+        }
+    }
+
+    fn show_links_tab(&self, ui: &mut egui::Ui, req: &Requirement) {
+        ui.heading("Relationships");
+        ui.add_space(10.0);
+
+        if req.relationships.is_empty() {
+            ui.label("No relationships defined");
+        } else {
+            for rel in &req.relationships {
+                let target_label = self.store.requirements.iter()
+                    .find(|r| r.id == rel.target_id)
+                    .and_then(|r| r.spec_id.as_ref())
+                    .map(|s| s.as_str())
+                    .unwrap_or("Unknown");
+
+                let target_title = self.store.requirements.iter()
+                    .find(|r| r.id == rel.target_id)
+                    .map(|r| r.title.as_str())
+                    .unwrap_or("(not found)");
+
+                ui.label(format!("• {:?} {} - {}", rel.rel_type, target_label, target_title));
+            }
+        }
+    }
+
+    fn show_history_tab(&self, ui: &mut egui::Ui, req: &Requirement) {
+        ui.heading("Change History");
+        ui.add_space(10.0);
+
+        if req.history.is_empty() {
+            ui.label("No changes recorded yet");
+        } else {
+            for entry in req.history.iter().rev() {  // Show newest first
+                ui.group(|ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(format!("🕒 {}", entry.timestamp.format("%Y-%m-%d %H:%M:%S")));
+                        ui.label(format!("👤 {}", entry.author));
+                    });
+
+                    ui.add_space(5.0);
+
+                    for change in &entry.changes {
+                        ui.horizontal(|ui| {
+                            ui.label(format!("  📝 {}", change.field_name));
+                        });
+                        ui.horizontal(|ui| {
+                            ui.label("    ❌");
+                            ui.colored_label(egui::Color32::from_rgb(200, 100, 100), &change.old_value);
+                        });
+                        ui.horizontal(|ui| {
+                            ui.label("    ✅");
+                            ui.colored_label(egui::Color32::from_rgb(100, 200, 100), &change.new_value);
+                        });
+                    }
+                });
+                ui.add_space(10.0);
+            }
         }
     }
 
