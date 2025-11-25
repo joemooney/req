@@ -1,12 +1,33 @@
+# Build artifacts
 /target/
+**/target/
+Cargo.lock
+debug/
+release/
+
+# Backup files
 **/*.rs.bk
 *.swp
 *.swo
 *~
-.DS_Store
-Cargo.lock
-.vscode/
-.idea/
-*.patch
 *.orig
 *.rej
+*.patch
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Requirements data (user-specific)
+requirements.yaml
+*.requirements.yaml
+!default_requirements.yaml
+
+# Test files
+test_*.yaml
+.requirements-mapping.yaml
