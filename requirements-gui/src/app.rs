@@ -1,10 +1,11 @@
 use eframe::egui;
 use requirements_core::{
     Requirement, RequirementPriority, RequirementStatus, RequirementType,
-    RequirementsStore, Storage, determine_requirements_path,
+    RequirementsStore, Storage, determine_requirements_path, Comment,
 };
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 use chrono::Utc;
+use uuid::Uuid;
 
 #[derive(Default, PartialEq, Clone)]
 enum View {
@@ -35,9 +36,19 @@ pub struct RequirementsApp {
     // Messages
     message: Option<(String, bool)>, // (message, is_error)
 
+    // Comment state
+    comment_author: String,
+    comment_content: String,
+    show_add_comment: bool,
+    reply_to_comment: Option<Uuid>, // Parent comment ID for replies
+    collapsed_comments: HashMap<Uuid, bool>, // Track which comments are collapsed
+    edit_comment_id: Option<Uuid>,
+
     // Pending operations (to avoid borrow checker issues)
     pending_delete: Option<usize>,
     pending_view_change: Option<View>,
+    pending_comment_add: Option<(String, String, Option<Uuid>)>, // (author, content, parent_id)
+    pending_comment_delete: Option<Uuid>,
 }
 
 impl RequirementsApp {
@@ -63,8 +74,16 @@ impl RequirementsApp {
             form_feature: String::from("Uncategorized"),
             form_tags: String::new(),
             message: None,
+            comment_author: String::new(),
+            comment_content: String::new(),
+            show_add_comment: false,
+            reply_to_comment: None,
+            collapsed_comments: HashMap::new(),
+            edit_comment_id: None,
             pending_delete: None,
             pending_view_change: None,
+            pending_comment_add: None,
+            pending_comment_delete: None,
         }
     }
 
@@ -311,6 +330,29 @@ impl RequirementsApp {
                         ui.label(format!("• {:?} {}", rel.rel_type, target_label));
                     }
                 }
+
+                // Comments section
+                ui.separator();
+                ui.horizontal(|ui| {
+                    ui.heading(format!("Comments ({})", req.comments.len()));
+                    if ui.button("➕ Add Comment").clicked() {
+                        self.show_add_comment = true;
+                        self.reply_to_comment = None;
+                        self.comment_author.clear();
+                        self.comment_content.clear();
+                    }
+                });
+
+                if self.show_add_comment {
+                    self.show_comment_form(ui, idx);
+                }
+
+                // Display comments in a scrollable area
+                egui::ScrollArea::vertical().max_height(400.0).show(ui, |ui| {
+                    for comment in &req.comments {
+                        self.show_comment_tree(ui, comment, idx, 0);
+                    }
+                });
             }
         } else {
             ui.vertical_centered(|ui| {
@@ -401,6 +443,118 @@ impl RequirementsApp {
             });
         });
     }
+
+    fn show_comment_form(&mut self, ui: &mut egui::Ui, req_idx: usize) {
+        ui.group(|ui| {
+            ui.label(if self.reply_to_comment.is_some() { "Add Reply" } else { "Add Comment" });
+
+            ui.horizontal(|ui| {
+                ui.label("Author:");
+                ui.text_edit_singleline(&mut self.comment_author);
+            });
+
+            ui.label("Content:");
+            ui.text_edit_multiline(&mut self.comment_content);
+
+            ui.horizontal(|ui| {
+                if ui.button("💾 Save").clicked() {
+                    if !self.comment_author.is_empty() && !self.comment_content.is_empty() {
+                        self.pending_comment_add = Some((
+                            self.comment_author.clone(),
+                            self.comment_content.clone(),
+                            self.reply_to_comment,
+                        ));
+                        self.show_add_comment = false;
+                    }
+                }
+                if ui.button("❌ Cancel").clicked() {
+                    self.show_add_comment = false;
+                    self.reply_to_comment = None;
+                    self.comment_author.clear();
+                    self.comment_content.clear();
+                }
+            });
+        });
+    }
+
+    fn show_comment_tree(&mut self, ui: &mut egui::Ui, comment: &Comment, req_idx: usize, depth: usize) {
+        let indent = depth as f32 * 20.0;
+        ui.add_space(indent);
+
+        let is_collapsed = self.collapsed_comments.get(&comment.id).copied().unwrap_or(false);
+
+        ui.group(|ui| {
+            ui.horizontal(|ui| {
+                // Collapse/expand button if there are replies
+                if !comment.replies.is_empty() {
+                    let button_text = if is_collapsed { "▶" } else { "▼" };
+                    if ui.small_button(button_text).clicked() {
+                        self.collapsed_comments.insert(comment.id, !is_collapsed);
+                    }
+                } else {
+                    ui.label("  "); // Spacing when no collapse button
+                }
+
+                ui.label(format!("👤 {}", comment.author));
+                ui.label(format!("🕒 {}", comment.created_at.format("%Y-%m-%d %H:%M")));
+            });
+
+            ui.label(&comment.content);
+
+            ui.horizontal(|ui| {
+                if ui.small_button("💬 Reply").clicked() {
+                    self.show_add_comment = true;
+                    self.reply_to_comment = Some(comment.id);
+                    self.comment_author.clear();
+                    self.comment_content.clear();
+                }
+                if ui.small_button("🗑 Delete").clicked() {
+                    self.pending_comment_delete = Some(comment.id);
+                }
+            });
+        });
+
+        // Show replies if not collapsed
+        if !is_collapsed {
+            for reply in &comment.replies {
+                self.show_comment_tree(ui, reply, req_idx, depth + 1);
+            }
+        }
+    }
+
+    fn add_comment_to_requirement(&mut self, idx: usize, author: String, content: String, parent_id: Option<Uuid>) {
+        if let Some(req) = self.store.requirements.get_mut(idx) {
+            if let Some(parent) = parent_id {
+                // This is a reply
+                let reply = Comment::new_reply(author, content, parent);
+                if let Err(e) = req.add_reply(parent, reply) {
+                    self.message = Some((format!("Error adding reply: {}", e), true));
+                    return;
+                }
+            } else {
+                // This is a top-level comment
+                let comment = Comment::new(author, content);
+                req.add_comment(comment);
+            }
+
+            self.save();
+            self.comment_author.clear();
+            self.comment_content.clear();
+            self.reply_to_comment = None;
+            self.message = Some(("Comment added successfully".to_string(), false));
+        }
+    }
+
+    fn delete_comment_from_requirement(&mut self, idx: usize, comment_id: Uuid) {
+        if let Some(req) = self.store.requirements.get_mut(idx) {
+            if let Err(e) = req.delete_comment(&comment_id) {
+                self.message = Some((format!("Error deleting comment: {}", e), true));
+                return;
+            }
+            self.save();
+            self.message = Some(("Comment deleted successfully".to_string(), false));
+        }
+    }
 }
 
 impl eframe::App for RequirementsApp {
@@ -411,6 +565,16 @@ impl eframe::App for RequirementsApp {
         }
         if let Some(view) = self.pending_view_change.take() {
             self.current_view = view;
+        }
+        if let Some((author, content, parent_id)) = self.pending_comment_add.take() {
+            if let Some(idx) = self.selected_idx {
+                self.add_comment_to_requirement(idx, author, content, parent_id);
+            }
+        }
+        if let Some(comment_id) = self.pending_comment_delete.take() {
+            if let Some(idx) = self.selected_idx {
+                self.delete_comment_from_requirement(idx, comment_id);
+            }
         }
 
         self.show_top_panel(ctx);
