@@ -310,9 +310,21 @@ fn show_requirement(storage: &Storage, id_str: &str) -> Result<()> {
             let target = store.get_requirement_by_id(&relationship.target_id);
             if let Some(target_req) = target {
                 let target_spec = target_req.spec_id.as_deref().unwrap_or("N/A");
+
+                // Format the relationship description based on type
+                let description = match &relationship.rel_type {
+                    RelationshipType::Parent => format!("is parent of"),
+                    RelationshipType::Child => format!("is child of"),
+                    RelationshipType::Duplicate => format!("is duplicate of"),
+                    RelationshipType::Verifies => format!("verifies"),
+                    RelationshipType::VerifiedBy => format!("is verified by"),
+                    RelationshipType::References => format!("references"),
+                    RelationshipType::Custom(name) => format!("{}", name),
+                };
+
                 println!(
                     "  {} {} - {}",
-                    relationship.rel_type.to_string().cyan(),
+                    description.cyan(),
                     target_spec.yellow(),
                     target_req.title
                 );
@@ -893,9 +905,21 @@ fn list_relationships(storage: &Storage, id_str: &str) -> Result<()> {
         let target = store.get_requirement_by_id(&relationship.target_id);
         if let Some(target_req) = target {
             let target_spec = target_req.spec_id.as_deref().unwrap_or("N/A");
+
+            // Format the relationship description based on type
+            let description = match &relationship.rel_type {
+                RelationshipType::Parent => format!("is parent of"),
+                RelationshipType::Child => format!("is child of"),
+                RelationshipType::Duplicate => format!("is duplicate of"),
+                RelationshipType::Verifies => format!("verifies"),
+                RelationshipType::VerifiedBy => format!("is verified by"),
+                RelationshipType::References => format!("references"),
+                RelationshipType::Custom(name) => format!("{}", name),
+            };
+
             println!(
                 "  {} {} ({}) - {}",
-                relationship.rel_type.to_string().cyan(),
+                description.cyan(),
                 target_spec.yellow(),
                 target_req.id.to_string().dimmed(),
                 target_req.title
