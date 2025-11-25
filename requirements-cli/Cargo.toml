@@ -1,0 +1,21 @@
+[package]
+name = "requirements-cli"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "CLI for requirements management"
+
+[[bin]]
+name = "req"
+path = "src/main.rs"
+
+[dependencies]
+requirements-core = { path = "../requirements-core" }
+
+# CLI-specific dependencies
+clap = { workspace = true }
+inquire = { workspace = true }
+colored = { workspace = true }
+anyhow = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }

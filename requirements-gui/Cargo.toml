@@ -1,0 +1,22 @@
+[package]
+name = "requirements-gui"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "GUI for requirements management (egui-based)"
+
+[[bin]]
+name = "req-gui"
+path = "src/main.rs"
+
+[dependencies]
+requirements-core = { path = "../requirements-core" }
+
+# GUI dependencies
+eframe = { workspace = true }
+egui = { workspace = true }
+egui_extras = { workspace = true }
+anyhow = { workspace = true }
+uuid = { workspace = true }
+env_logger = "0.11"
+chrono = { workspace = true }

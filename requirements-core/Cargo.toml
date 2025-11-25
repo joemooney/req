@@ -1,0 +1,18 @@
+[package]
+name = "requirements-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "Core library for requirements management - shared between CLI and GUI"
+
+[dependencies]
+serde = { workspace = true }
+serde_yaml = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+anyhow = { workspace = true }
+dirs = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3.8"

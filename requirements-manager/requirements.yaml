@@ -12,12 +12,14 @@ requirements:
   req_type: Functional
   dependencies: []
   tags:
-  - user
   - security
   - auth
+  - user
   relationships:
   - rel_type: Verifies
     target_id: 819258b2-9624-4046-9f52-0b00af26c046
+  - rel_type: Parent
+    target_id: 013cc55c-3123-42b2-81df-d930cf9eb288
 - id: 013cc55c-3123-42b2-81df-d930cf9eb288
   spec_id: SPEC-002
   title: Implement requirements export
@@ -27,12 +29,15 @@ requirements:
   owner: Joe Mooney
   feature: 2-Reporting
   created_at: 2025-11-19T19:41:32.523506980Z
-  modified_at: 2025-11-19T19:41:32.523506980Z
+  modified_at: 2025-11-25T05:33:40.270050473Z
   req_type: Functional
   dependencies: []
   tags:
   - reporting
   - export
+  relationships:
+  - rel_type: Child
+    target_id: f7d250bf-5b3e-4ec3-8bd5-2bee2c4b7bb9
 - id: 819258b2-9624-4046-9f52-0b00af26c046
   spec_id: SPEC-003
   title: Test Non-Interactive
