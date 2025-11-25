@@ -134,6 +134,68 @@ pub enum RelationshipCommand {
 }
 
 #[derive(Subcommand, Debug)]
+pub enum CommentCommand {
+    /// Add a comment to a requirement
+    Add {
+        /// Requirement ID (UUID or SPEC-ID)
+        #[clap(long)]
+        id: String,
+
+        /// Comment content
+        #[clap(long)]
+        content: Option<String>,
+
+        /// Author of the comment (defaults to system user)
+        #[clap(long)]
+        author: Option<String>,
+
+        /// Parent comment ID (for replies)
+        #[clap(long)]
+        parent: Option<String>,
+
+        /// Use interactive mode (prompts)
+        #[clap(long)]
+        interactive: bool,
+    },
+
+    /// List all comments for a requirement
+    List {
+        /// Requirement ID (UUID or SPEC-ID)
+        id: String,
+    },
+
+    /// Edit a comment
+    Edit {
+        /// Requirement ID (UUID or SPEC-ID)
+        #[clap(long)]
+        req_id: String,
+
+        /// Comment ID to edit
+        #[clap(long)]
+        comment_id: String,
+
+        /// New content
+        #[clap(long)]
+        content: Option<String>,
+
+        /// Use interactive mode (prompts)
+        #[clap(long)]
+        interactive: bool,
+    },
+
+    /// Delete a comment
+    Delete {
+        /// Requirement ID (UUID or SPEC-ID)
+        #[clap(long)]
+        req_id: String,
+
+        /// Comment ID to delete
+        #[clap(long)]
+        comment_id: String,
+    },
+}
+
+#[derive(Subcommand, Debug)]
 pub enum Command {
     /// Add a new requirement
     Add {
@@ -230,6 +292,10 @@ pub enum Command {
     /// Relationship management commands
     #[clap(subcommand)]
     Rel(RelationshipCommand),
+
+    /// Manage comments on requirements
+    #[clap(subcommand)]
+    Comment(CommentCommand),
 
     /// Export requirements to different formats
     Export {

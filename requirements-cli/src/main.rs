@@ -10,12 +10,12 @@ use uuid::Uuid;
 use requirements_core::{
     export, RelationshipType, Requirement, RequirementPriority,
     RequirementStatus, RequirementType, RequirementsStore, Storage,
-    Registry, get_registry_path, determine_requirements_path,
+    Registry, get_registry_path, determine_requirements_path, Comment,
 };
 
 use chrono;
 
-use crate::cli::{Cli, Command, DbCommand, FeatureCommand, RelationshipCommand};
+use crate::cli::{Cli, Command, DbCommand, FeatureCommand, RelationshipCommand, CommentCommand};
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
@@ -58,6 +58,9 @@ fn main() -> Result<()> {
         }
         Command::Rel(rel_cmd) => {
             handle_relationship_command(rel_cmd, &storage)?;
+        }
+        Command::Comment(comment_cmd) => {
+            handle_comment_command(comment_cmd, &storage)?;
         }
         Command::Export { format, output } => {
             handle_export_command(&storage, format, output.as_deref())?;
@@ -335,6 +338,13 @@ fn show_requirement(storage: &Storage, id_str: &str) -> Result<()> {
                     "(not found)".red()
                 );
             }
+        }
+    }
+
+    if !req.comments.is_empty() {
+        println!("\n{}:", "Comments".green());
+        for comment in &req.comments {
+            print_comment(comment, 0);
         }
     }
 
@@ -933,5 +943,203 @@ fn list_relationships(storage: &Storage, id_str: &str) -> Result<()> {
         }
     }
 
+    Ok(())
+}
+
+fn handle_comment_command(cmd: &CommentCommand, storage: &Storage) -> Result<()> {
+    match cmd {
+        CommentCommand::Add { id, content, author, parent, interactive } => {
+            if *interactive || content.is_none() {
+                add_comment_interactive(storage, id, author.as_deref(), parent.as_deref())?;
+            } else {
+                add_comment_cli(storage, id, content.as_ref().unwrap(), author.as_deref(), parent.as_deref())?;
+            }
+        }
+        CommentCommand::List { id } => {
+            list_comments(storage, id)?;
+        }
+        CommentCommand::Edit { req_id, comment_id, content, interactive } => {
+            if *interactive || content.is_none() {
+                edit_comment_interactive(storage, req_id, comment_id)?;
+            } else {
+                edit_comment_cli(storage, req_id, comment_id, content.as_ref().unwrap())?;
+            }
+        }
+        CommentCommand::Delete { req_id, comment_id } => {
+            delete_comment(storage, req_id, comment_id)?;
+        }
+    }
+    Ok(())
+}
+
+fn add_comment_interactive(storage: &Storage, req_id: &str, author: Option<&str>, parent_id: Option<&str>) -> Result<()> {
+    let mut store = storage.load()?;
+    let id = parse_requirement_id(req_id, &store)?;
+
+    let req = store.requirements.iter_mut()
+        .find(|r| r.id == id)
+        .context("Requirement not found")?;
+
+    let author = if let Some(a) = author {
+        a.to_string()
+    } else {
+        inquire::Text::new("Author:").prompt()?
+    };
+
+    let content = inquire::Editor::new("Comment content:").prompt()?;
+
+    let comment = if let Some(parent_str) = parent_id {
+        let parent_uuid = Uuid::parse_str(parent_str)
+            .context("Invalid parent comment ID")?;
+        Comment::new_reply(author, content, parent_uuid)
+    } else {
+        Comment::new(author, content)
+    };
+
+    if let Some(parent_str) = parent_id {
+        let parent_uuid = Uuid::parse_str(parent_str)?;
+        req.add_reply(parent_uuid, comment)?;
+    } else {
+        req.add_comment(comment);
+    }
+
+    storage.save(&store)?;
+    println!("{}", "Comment added successfully".green());
+    Ok(())
+}
+
+fn add_comment_cli(storage: &Storage, req_id: &str, content: &str, author: Option<&str>, parent_id: Option<&str>) -> Result<()> {
+    let mut store = storage.load()?;
+    let id = parse_requirement_id(req_id, &store)?;
+
+    let req = store.requirements.iter_mut()
+        .find(|r| r.id == id)
+        .context("Requirement not found")?;
+
+    let author = author.unwrap_or("Unknown").to_string();
+
+    let comment = if let Some(parent_str) = parent_id {
+        let parent_uuid = Uuid::parse_str(parent_str)
+            .context("Invalid parent comment ID")?;
+        Comment::new_reply(author, content.to_string(), parent_uuid)
+    } else {
+        Comment::new(author, content.to_string())
+    };
+
+    if let Some(parent_str) = parent_id {
+        let parent_uuid = Uuid::parse_str(parent_str)?;
+        req.add_reply(parent_uuid, comment)?;
+    } else {
+        req.add_comment(comment);
+    }
+
+    storage.save(&store)?;
+    println!("{}", "Comment added successfully".green());
+    Ok(())
+}
+
+fn list_comments(storage: &Storage, req_id: &str) -> Result<()> {
+    let store = storage.load()?;
+    let id = parse_requirement_id(req_id, &store)?;
+
+    let req = store.requirements.iter()
+        .find(|r| r.id == id)
+        .context("Requirement not found")?;
+
+    println!("{}: {}", "Requirement".cyan(), req.title);
+    println!();
+
+    if req.comments.is_empty() {
+        println!("{}", "No comments yet".dimmed());
+        return Ok(());
+    }
+
+    println!("{}:", "Comments".green().bold());
+    for comment in &req.comments {
+        print_comment(comment, 0);
+    }
+
+    Ok(())
+}
+
+fn print_comment(comment: &Comment, indent: usize) {
+    let indent_str = "  ".repeat(indent);
+    println!();
+    println!("{}{}:", indent_str, comment.id.to_string().yellow());
+    println!("{}  {} {} at {}",
+        indent_str,
+        "By:".dimmed(),
+        comment.author.cyan(),
+        comment.created_at.format("%Y-%m-%d %H:%M").to_string().dimmed()
+    );
+    println!("{}  {}", indent_str, comment.content);
+
+    if !comment.replies.is_empty() {
+        for reply in &comment.replies {
+            print_comment(reply, indent + 1);
+        }
+    }
+}
+
+fn edit_comment_interactive(storage: &Storage, req_id: &str, comment_id: &str) -> Result<()> {
+    let mut store = storage.load()?;
+    let req_uuid = parse_requirement_id(req_id, &store)?;
+    let comment_uuid = Uuid::parse_str(comment_id)
+        .context("Invalid comment ID")?;
+
+    let req = store.requirements.iter_mut()
+        .find(|r| r.id == req_uuid)
+        .context("Requirement not found")?;
+
+    let comment = req.find_comment_mut(&comment_uuid)
+        .context("Comment not found")?;
+
+    let new_content = inquire::Editor::new("Comment content:")
+        .with_predefined_text(&comment.content)
+        .prompt()?;
+
+    comment.content = new_content;
+    comment.touch();
+
+    storage.save(&store)?;
+    println!("{}", "Comment updated successfully".green());
+    Ok(())
+}
+
+fn edit_comment_cli(storage: &Storage, req_id: &str, comment_id: &str, content: &str) -> Result<()> {
+    let mut store = storage.load()?;
+    let req_uuid = parse_requirement_id(req_id, &store)?;
+    let comment_uuid = Uuid::parse_str(comment_id)
+        .context("Invalid comment ID")?;
+
+    let req = store.requirements.iter_mut()
+        .find(|r| r.id == req_uuid)
+        .context("Requirement not found")?;
+
+    let comment = req.find_comment_mut(&comment_uuid)
+        .context("Comment not found")?;
+
+    comment.content = content.to_string();
+    comment.touch();
+
+    storage.save(&store)?;
+    println!("{}", "Comment updated successfully".green());
+    Ok(())
+}
+
+fn delete_comment(storage: &Storage, req_id: &str, comment_id: &str) -> Result<()> {
+    let mut store = storage.load()?;
+    let req_uuid = parse_requirement_id(req_id, &store)?;
+    let comment_uuid = Uuid::parse_str(comment_id)
+        .context("Invalid comment ID")?;
+
+    let req = store.requirements.iter_mut()
+        .find(|r| r.id == req_uuid)
+        .context("Requirement not found")?;
+
+    req.delete_comment(&comment_uuid)?;
+
+    storage.save(&store)?;
+    println!("{}", "Comment deleted successfully".green());
     Ok(())
 }

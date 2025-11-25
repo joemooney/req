@@ -133,6 +133,100 @@ pub struct Relationship {
     pub target_id: Uuid,
 }
 
+/// Represents a comment on a requirement with threading support
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct Comment {
+    /// Unique identifier for the comment
+    pub id: Uuid,
+
+    /// Author of the comment
+    pub author: String,
+
+    /// Content of the comment
+    pub content: String,
+
+    /// When the comment was created
+    pub created_at: DateTime<Utc>,
+
+    /// When the comment was last modified
+    pub modified_at: DateTime<Utc>,
+
+    /// Parent comment ID (None for top-level comments)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parent_id: Option<Uuid>,
+
+    /// Nested replies to this comment
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub replies: Vec<Comment>,
+}
+
+impl Comment {
+    /// Creates a new top-level comment
+    pub fn new(author: String, content: String) -> Self {
+        let now = Utc::now();
+        Self {
+            id: Uuid::new_v4(),
+            author,
+            content,
+            created_at: now,
+            modified_at: now,
+            parent_id: None,
+            replies: Vec::new(),
+        }
+    }
+
+    /// Creates a new reply to an existing comment
+    pub fn new_reply(author: String, content: String, parent_id: Uuid) -> Self {
+        let now = Utc::now();
+        Self {
+            id: Uuid::new_v4(),
+            author,
+            content,
+            created_at: now,
+            modified_at: now,
+            parent_id: Some(parent_id),
+            replies: Vec::new(),
+        }
+    }
+
+    /// Adds a reply to this comment
+    pub fn add_reply(&mut self, reply: Comment) {
+        self.replies.push(reply);
+    }
+
+    /// Finds a comment by ID in this comment tree
+    pub fn find_comment_mut(&mut self, id: &Uuid) -> Option<&mut Comment> {
+        if &self.id == id {
+            return Some(self);
+        }
+        for reply in &mut self.replies {
+            if let Some(found) = reply.find_comment_mut(id) {
+                return Some(found);
+            }
+        }
+        None
+    }
+
+    /// Updates the modified timestamp
+    pub fn touch(&mut self) {
+        self.modified_at = Utc::now();
+    }
+
+    /// Recursively removes a reply from comment tree
+    fn remove_reply_recursive(comment: &mut Comment, target_id: &Uuid) -> bool {
+        if let Some(pos) = comment.replies.iter().position(|c| &c.id == target_id) {
+            comment.replies.remove(pos);
+            return true;
+        }
+        for reply in &mut comment.replies {
+            if Comment::remove_reply_recursive(reply, target_id) {
+                return true;
+            }
+        }
+        false
+    }
+}
+
 /// Represents a single requirement in the system
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Requirement {
@@ -179,6 +273,10 @@ pub struct Requirement {
     /// Relationships to other requirements
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub relationships: Vec<Relationship>,
+
+    /// Comments on this requirement (threaded)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub comments: Vec<Comment>,
 }
 
 impl Requirement {
@@ -204,7 +302,64 @@ impl Requirement {
             dependencies: Vec::new(),
             tags: HashSet::new(),
             relationships: Vec::new(),
+            comments: Vec::new(),
         }
+    }
+
+    /// Adds a top-level comment to this requirement
+    pub fn add_comment(&mut self, comment: Comment) {
+        self.comments.push(comment);
+        self.modified_at = Utc::now();
+    }
+
+    /// Adds a reply to an existing comment
+    pub fn add_reply(&mut self, parent_id: Uuid, reply: Comment) -> anyhow::Result<()> {
+        for comment in &mut self.comments {
+            if comment.id == parent_id {
+                comment.add_reply(reply);
+                self.modified_at = Utc::now();
+                return Ok(());
+            }
+            if let Some(found) = comment.find_comment_mut(&parent_id) {
+                found.add_reply(reply);
+                self.modified_at = Utc::now();
+                return Ok(());
+            }
+        }
+        anyhow::bail!("Parent comment not found")
+    }
+
+    /// Finds a comment by ID (returns mutable reference)
+    pub fn find_comment_mut(&mut self, comment_id: &Uuid) -> Option<&mut Comment> {
+        for comment in &mut self.comments {
+            if &comment.id == comment_id {
+                return Some(comment);
+            }
+            if let Some(found) = comment.find_comment_mut(comment_id) {
+                return Some(found);
+            }
+        }
+        None
+    }
+
+    /// Deletes a comment by ID
+    pub fn delete_comment(&mut self, comment_id: &Uuid) -> anyhow::Result<()> {
+        // Try to find and remove from top-level
+        if let Some(pos) = self.comments.iter().position(|c| &c.id == comment_id) {
+            self.comments.remove(pos);
+            self.modified_at = Utc::now();
+            return Ok(());
+        }
+
+        // Search in nested replies
+        for comment in &mut self.comments {
+            if Comment::remove_reply_recursive(comment, comment_id) {
+                self.modified_at = Utc::now();
+                return Ok(());
+            }
+        }
+
+        anyhow::bail!("Comment not found")
     }
 }
 

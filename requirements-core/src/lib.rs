@@ -7,7 +7,7 @@ pub mod project;
 // Re-export commonly used types
 pub use models::{
     Requirement, RequirementPriority, RequirementStatus, RequirementType,
-    RequirementsStore, Relationship, RelationshipType,
+    RequirementsStore, Relationship, RelationshipType, Comment,
 };
 pub use storage::Storage;
 pub use registry::{Registry, get_registry_path};
