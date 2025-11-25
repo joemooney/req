@@ -12,8 +12,8 @@ use colored::Colorize;
 use std::collections::HashSet;
 use uuid::Uuid;
 
-use crate::cli::{Cli, Command, DbCommand, FeatureCommand};
-use crate::models::{Requirement, RequirementPriority, RequirementStatus, RequirementType, RequirementsStore};
+use crate::cli::{Cli, Command, DbCommand, FeatureCommand, RelationshipCommand};
+use crate::models::{RelationshipType, Requirement, RequirementPriority, RequirementStatus, RequirementType, RequirementsStore};
 use crate::project::determine_requirements_path;
 use crate::registry::{get_registry_path, Registry};
 use crate::storage::Storage;
@@ -56,6 +56,9 @@ fn main() -> Result<()> {
         }
         Command::Db(db_cmd) => {
             handle_db_command(db_cmd, &requirements_path)?;
+        }
+        Command::Rel(rel_cmd) => {
+            handle_relationship_command(rel_cmd, &storage)?;
         }
         Command::Export { format, output } => {
             handle_export_command(&storage, format, output.as_deref())?;
@@ -299,6 +302,29 @@ fn show_requirement(storage: &Storage, id_str: &str) -> Result<()> {
             .collect::<Vec<_>>()
             .join(", ");
         println!("{}: {}", "Dependencies".blue(), deps_str);
+    }
+
+    if !req.relationships.is_empty() {
+        println!("\n{}:", "Relationships".green());
+        for relationship in &req.relationships {
+            let target = store.get_requirement_by_id(&relationship.target_id);
+            if let Some(target_req) = target {
+                let target_spec = target_req.spec_id.as_deref().unwrap_or("N/A");
+                println!(
+                    "  {} {} - {}",
+                    relationship.rel_type.to_string().cyan(),
+                    target_spec.yellow(),
+                    target_req.title
+                );
+            } else {
+                println!(
+                    "  {} {} {}",
+                    relationship.rel_type.to_string().cyan(),
+                    relationship.target_id.to_string().yellow(),
+                    "(not found)".red()
+                );
+            }
+        }
     }
 
     Ok(())
@@ -733,6 +759,154 @@ fn handle_export_command(storage: &Storage, format: &str, output: Option<&std::p
         }
         _ => {
             anyhow::bail!("Unknown export format: {}. Supported formats: mapping, json", format);
+        }
+    }
+
+    Ok(())
+}
+
+fn handle_relationship_command(cmd: &RelationshipCommand, storage: &Storage) -> Result<()> {
+    match cmd {
+        RelationshipCommand::Add { from, to, r#type, bidirectional } => {
+            add_relationship(storage, from, to, r#type, *bidirectional)?;
+        }
+        RelationshipCommand::Remove { from, to, r#type, bidirectional } => {
+            remove_relationship(storage, from, to, r#type, *bidirectional)?;
+        }
+        RelationshipCommand::List { id } => {
+            list_relationships(storage, id)?;
+        }
+    }
+    Ok(())
+}
+
+fn add_relationship(
+    storage: &Storage,
+    from_str: &str,
+    to_str: &str,
+    rel_type_str: &str,
+    bidirectional: bool,
+) -> Result<()> {
+    // Load requirements
+    let mut store = storage.load()?;
+
+    // Parse source and target IDs
+    let from_id = parse_requirement_id(from_str, &store)?;
+    let to_id = parse_requirement_id(to_str, &store)?;
+
+    // Parse relationship type
+    let rel_type = RelationshipType::from_str(rel_type_str);
+
+    // Get requirement info for display (clone the data we need)
+    let from_req = store.get_requirement_by_id(&from_id)
+        .ok_or_else(|| anyhow::anyhow!("Source requirement not found"))?;
+    let to_req = store.get_requirement_by_id(&to_id)
+        .ok_or_else(|| anyhow::anyhow!("Target requirement not found"))?;
+
+    let from_spec = from_req.spec_id.clone().unwrap_or_else(|| "N/A".to_string());
+    let from_title = from_req.title.clone();
+    let to_spec = to_req.spec_id.clone().unwrap_or_else(|| "N/A".to_string());
+    let to_title = to_req.title.clone();
+
+    // Add the relationship
+    store.add_relationship(&from_id, rel_type.clone(), &to_id, bidirectional)?;
+
+    // Save
+    storage.save(&store)?;
+
+    println!("{}", "Relationship added successfully!".green());
+    println!("  {} ({}) {} {} ({})",
+        from_spec, from_title,
+        "->".blue(),
+        to_spec, to_title);
+    println!("  Relationship: {}", rel_type.to_string().cyan());
+
+    if bidirectional {
+        if let Some(inverse) = rel_type.inverse() {
+            println!("  {} (bidirectional)", inverse.to_string().cyan());
+        }
+    }
+
+    Ok(())
+}
+
+fn remove_relationship(
+    storage: &Storage,
+    from_str: &str,
+    to_str: &str,
+    rel_type_str: &str,
+    bidirectional: bool,
+) -> Result<()> {
+    // Load requirements
+    let mut store = storage.load()?;
+
+    // Parse source and target IDs
+    let from_id = parse_requirement_id(from_str, &store)?;
+    let to_id = parse_requirement_id(to_str, &store)?;
+
+    // Parse relationship type
+    let rel_type = RelationshipType::from_str(rel_type_str);
+
+    // Remove the relationship
+    store.remove_relationship(&from_id, &rel_type, &to_id, bidirectional)?;
+
+    // Save
+    storage.save(&store)?;
+
+    println!("{}", "Relationship removed successfully!".green());
+    println!("  Relationship: {}", rel_type.to_string().cyan());
+
+    if bidirectional {
+        if let Some(inverse) = rel_type.inverse() {
+            println!("  {} (bidirectional)", inverse.to_string().cyan());
+        }
+    }
+
+    Ok(())
+}
+
+fn list_relationships(storage: &Storage, id_str: &str) -> Result<()> {
+    // Load requirements
+    let store = storage.load()?;
+
+    // Parse ID
+    let id = parse_requirement_id(id_str, &store)?;
+
+    // Get requirement
+    let req = store.get_requirement_by_id(&id)
+        .ok_or_else(|| anyhow::anyhow!("Requirement not found"))?;
+
+    println!("{}: {}", "Requirement".blue(), req.title);
+    if let Some(spec_id) = &req.spec_id {
+        println!("{}: {}", "SPEC-ID".blue(), spec_id);
+    }
+    println!("{}: {}", "UUID".blue(), req.id);
+    println!();
+
+    if req.relationships.is_empty() {
+        println!("{}", "No relationships found.".yellow());
+        return Ok(());
+    }
+
+    println!("{}:", "Relationships".green());
+    for relationship in &req.relationships {
+        let target = store.get_requirement_by_id(&relationship.target_id);
+        if let Some(target_req) = target {
+            let target_spec = target_req.spec_id.as_deref().unwrap_or("N/A");
+            println!(
+                "  {} {} ({}) - {}",
+                relationship.rel_type.to_string().cyan(),
+                target_spec.yellow(),
+                target_req.id.to_string().dimmed(),
+                target_req.title
+            );
+        } else {
+            println!(
+                "  {} {} {}",
+                relationship.rel_type.to_string().cyan(),
+                relationship.target_id.to_string().yellow(),
+                "(requirement not found)".red()
+            );
         }
     }
 

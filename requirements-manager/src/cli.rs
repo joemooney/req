@@ -87,6 +87,53 @@ pub enum FeatureCommand {
 }
 
 #[derive(Subcommand, Debug)]
+pub enum RelationshipCommand {
+    /// Add a relationship between requirements
+    Add {
+        /// Source requirement ID (UUID or SPEC-ID)
+        #[clap(long)]
+        from: String,
+
+        /// Target requirement ID (UUID or SPEC-ID)
+        #[clap(long)]
+        to: String,
+
+        /// Relationship type (parent, child, duplicate, verifies, verified-by, references, or custom)
+        #[clap(long)]
+        r#type: String,
+
+        /// Create bidirectional relationship (adds inverse relationship automatically)
+        #[clap(long, short = 'b')]
+        bidirectional: bool,
+    },
+
+    /// Remove a relationship between requirements
+    Remove {
+        /// Source requirement ID (UUID or SPEC-ID)
+        #[clap(long)]
+        from: String,
+
+        /// Target requirement ID (UUID or SPEC-ID)
+        #[clap(long)]
+        to: String,
+
+        /// Relationship type
+        #[clap(long)]
+        r#type: String,
+
+        /// Remove bidirectional relationship (removes inverse relationship too)
+        #[clap(long, short = 'b')]
+        bidirectional: bool,
+    },
+
+    /// List all relationships for a requirement
+    List {
+        /// Requirement ID (UUID or SPEC-ID)
+        id: String,
+    },
+}
+
+#[derive(Subcommand, Debug)]
 pub enum Command {
     /// Add a new requirement
     Add {
@@ -179,6 +226,10 @@ pub enum Command {
     /// Database management commands
     #[clap(subcommand)]
     Db(DbCommand),
+
+    /// Relationship management commands
+    #[clap(subcommand)]
+    Rel(RelationshipCommand),
 
     /// Export requirements to different formats
     Export {
