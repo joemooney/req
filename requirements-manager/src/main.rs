@@ -48,6 +48,9 @@ fn main() -> Result<()> {
         Command::Edit { id } => {
             edit_requirement(&storage, id)?;
         }
+        Command::Del { id, yes } => {
+            delete_requirement(&storage, id, *yes)?;
+        }
         Command::Feature(feature_cmd) => {
             handle_feature_command(feature_cmd, &storage)?;
         }
@@ -382,6 +385,51 @@ fn edit_requirement(storage: &Storage, id_str: &str) -> Result<()> {
     // Save changes
     storage.save(&store)?;
     println!("{}", "Requirement updated successfully!".green());
+
+    Ok(())
+}
+
+fn delete_requirement(storage: &Storage, id_str: &str, skip_confirm: bool) -> Result<()> {
+    // Load requirements first (needed for SPEC-ID lookup)
+    let store_for_lookup = storage.load()?;
+
+    // Parse UUID or SPEC-ID
+    let id = parse_requirement_id(id_str, &store_for_lookup)?;
+
+    // Load again as mutable
+    let mut store = storage.load()?;
+
+    // Find the requirement to delete
+    let req = store.get_requirement_by_id(&id)
+        .context("Requirement not found")?;
+
+    // Display requirement info
+    println!("{}", "Requirement to delete:".yellow());
+    println!("  ID: {}", req.id);
+    if let Some(spec_id) = &req.spec_id {
+        println!("  SPEC-ID: {}", spec_id);
+    }
+    println!("  Title: {}", req.title);
+    println!("  Description: {}", req.description);
+
+    // Confirm deletion unless --yes flag is used
+    if !skip_confirm {
+        let confirm = inquire::Confirm::new("Are you sure you want to delete this requirement?")
+            .with_default(false)
+            .prompt()?;
+
+        if !confirm {
+            println!("{}", "Deletion cancelled.".yellow());
+            return Ok(());
+        }
+    }
+
+    // Remove the requirement
+    store.requirements.retain(|r| r.id != id);
+
+    // Save changes
+    storage.save(&store)?;
+    println!("{}", "Requirement deleted successfully!".green());
 
     Ok(())
 }

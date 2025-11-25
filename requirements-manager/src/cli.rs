@@ -162,6 +162,16 @@ pub enum Command {
         id: String,
     },
 
+    /// Delete a requirement
+    Del {
+        /// The ID (UUID or SPEC-ID) of the requirement to delete
+        id: String,
+
+        /// Skip confirmation prompt
+        #[clap(long, short = 'y')]
+        yes: bool,
+    },
+
     /// Feature management commands
     #[clap(subcommand)]
     Feature(FeatureCommand),
