@@ -2,10 +2,20 @@ use eframe::egui;
 use requirements_core::{
     Requirement, RequirementPriority, RequirementStatus, RequirementType,
     RequirementsStore, Storage, determine_requirements_path, Comment,
+    HistoryEntry, FieldChange,
 };
 use std::collections::{HashSet, HashMap};
 use chrono::Utc;
 use uuid::Uuid;
+
+#[derive(Default, PartialEq, Clone)]
+enum DetailTab {
+    #[default]
+    Description,
+    Comments,
+    Links,
+    History,
+}
 
 #[derive(Default, PartialEq, Clone)]
 enum View {
@@ -22,6 +32,7 @@ pub struct RequirementsApp {
     current_view: View,
     selected_idx: Option<usize>,
     filter_text: String,
+    active_tab: DetailTab,
 
     // Form state
     form_title: String,
@@ -65,6 +76,7 @@ impl RequirementsApp {
             current_view: View::List,
             selected_idx: None,
             filter_text: String::new(),
+            active_tab: DetailTab::Description,
             form_title: String::new(),
             form_description: String::new(),
             form_status: RequirementStatus::Draft,

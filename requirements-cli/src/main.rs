@@ -11,6 +11,7 @@ use requirements_core::{
     export, RelationshipType, Requirement, RequirementPriority,
     RequirementStatus, RequirementType, RequirementsStore, Storage,
     Registry, get_registry_path, determine_requirements_path, Comment,
+    HistoryEntry, FieldChange,
 };
 
 use chrono;
@@ -348,6 +349,21 @@ fn show_requirement(storage: &Storage, id_str: &str) -> Result<()> {
         }
     }
 
+    if !req.history.is_empty() {
+        println!("\n{}:", "History".green());
+        for entry in &req.history {
+            println!("\n{}:", entry.timestamp.format("%Y-%m-%d %H:%M:%S").to_string().yellow());
+            println!("  {} {}", "By:".dimmed(), entry.author.cyan());
+            for change in &entry.changes {
+                println!("  {} {} → {}",
+                    change.field_name.magenta(),
+                    change.old_value.red(),
+                    change.new_value.green()
+                );
+            }
+        }
+    }
+
     Ok(())
 }
 
@@ -365,14 +381,18 @@ fn edit_requirement(storage: &Storage, id_str: &str) -> Result<()> {
     let req = store.get_requirement_by_id_mut(&id)
         .context("Requirement not found")?;
 
-    // For simplicity, let's just update a few fields
+    // Track changes
+    let mut changes: Vec<FieldChange> = Vec::new();
+    let old_req = req.clone();
+
     println!("Editing requirement: {}", req.title);
     println!("Leave field empty to keep current value");
 
     // Update title
     let title_prompt = format!("Title [{}]:", req.title);
     if let Ok(new_title) = inquire::Text::new(&title_prompt).prompt() {
-        if !new_title.is_empty() {
+        if !new_title.is_empty() && new_title != req.title {
+            changes.push(Requirement::field_change("title", req.title.clone(), new_title.clone()));
             req.title = new_title;
         }
     }
@@ -386,7 +406,10 @@ fn edit_requirement(storage: &Storage, id_str: &str) -> Result<()> {
         .with_predefined_text(&req.description)
         .prompt()
     {
-        req.description = new_description;
+        if new_description != req.description {
+            changes.push(Requirement::field_change("description", req.description.clone(), new_description.clone()));
+            req.description = new_description;
+        }
     }
 
     // Update status
@@ -397,7 +420,10 @@ fn edit_requirement(storage: &Storage, id_str: &str) -> Result<()> {
         RequirementStatus::Rejected,
     ];
     if let Ok(new_status) = inquire::Select::new("Status:", status_options).prompt() {
-        req.status = new_status;
+        if new_status != req.status {
+            changes.push(Requirement::field_change("status", format!("{:?}", req.status), format!("{:?}", new_status)));
+            req.status = new_status;
+        }
     }
 
     // Update priority
@@ -407,13 +433,17 @@ fn edit_requirement(storage: &Storage, id_str: &str) -> Result<()> {
         RequirementPriority::Low,
     ];
     if let Ok(new_priority) = inquire::Select::new("Priority:", priority_options).prompt() {
-        req.priority = new_priority;
+        if new_priority != req.priority {
+            changes.push(Requirement::field_change("priority", format!("{:?}", req.priority), format!("{:?}", new_priority)));
+            req.priority = new_priority;
+        }
     }
 
     // Update owner
     let owner_prompt = format!("Owner [{}]:", req.owner);
     if let Ok(new_owner) = inquire::Text::new(&owner_prompt).prompt() {
-        if !new_owner.is_empty() {
+        if !new_owner.is_empty() && new_owner != req.owner {
+            changes.push(Requirement::field_change("owner", req.owner.clone(), new_owner.clone()));
             req.owner = new_owner;
         }
     }
@@ -421,13 +451,17 @@ fn edit_requirement(storage: &Storage, id_str: &str) -> Result<()> {
     // Update feature
     let feature_prompt = format!("Feature [{}]:", req.feature);
     if let Ok(new_feature) = inquire::Text::new(&feature_prompt).prompt() {
-        if !new_feature.is_empty() {
+        if !new_feature.is_empty() && new_feature != req.feature {
+            changes.push(Requirement::field_change("feature", req.feature.clone(), new_feature.clone()));
             req.feature = new_feature;
         }
     }
 
-    // Update modified time
-    req.modified_at = chrono::Utc::now();
+    // Get author for history
+    let author = inquire::Text::new("Your name (for history):").prompt().unwrap_or_else(|_| String::from("Unknown"));
+
+    // Record changes
+    req.record_change(author, changes);
 
     // Save changes
     storage.save(&store)?;

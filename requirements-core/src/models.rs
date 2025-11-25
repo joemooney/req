@@ -133,6 +133,47 @@ pub struct Relationship {
     pub target_id: Uuid,
 }
 
+/// Represents a field change in a requirement's history
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct FieldChange {
+    /// Name of the field that changed
+    pub field_name: String,
+
+    /// Value before the change
+    pub old_value: String,
+
+    /// Value after the change
+    pub new_value: String,
+}
+
+/// Represents a history entry for a requirement update
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct HistoryEntry {
+    /// Unique identifier for this history entry
+    pub id: Uuid,
+
+    /// Who made the change
+    pub author: String,
+
+    /// When the change was made
+    pub timestamp: DateTime<Utc>,
+
+    /// List of field changes in this update
+    pub changes: Vec<FieldChange>,
+}
+
+impl HistoryEntry {
+    /// Creates a new history entry
+    pub fn new(author: String, changes: Vec<FieldChange>) -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            author,
+            timestamp: Utc::now(),
+            changes,
+        }
+    }
+}
+
 /// Represents a comment on a requirement with threading support
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Comment {
@@ -277,6 +318,10 @@ pub struct Requirement {
     /// Comments on this requirement (threaded)
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub comments: Vec<Comment>,
+
+    /// History of changes to this requirement
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub history: Vec<HistoryEntry>,
 }
 
 impl Requirement {
@@ -303,6 +348,25 @@ impl Requirement {
             tags: HashSet::new(),
             relationships: Vec::new(),
             comments: Vec::new(),
+            history: Vec::new(),
+        }
+    }
+
+    /// Records a change to the requirement history
+    pub fn record_change(&mut self, author: String, changes: Vec<FieldChange>) {
+        if !changes.is_empty() {
+            let entry = HistoryEntry::new(author, changes);
+            self.history.push(entry);
+            self.modified_at = Utc::now();
+        }
+    }
+
+    /// Helper to create a field change
+    pub fn field_change(field_name: &str, old_value: String, new_value: String) -> FieldChange {
+        FieldChange {
+            field_name: field_name.to_string(),
+            old_value,
+            new_value,
         }
     }
 
