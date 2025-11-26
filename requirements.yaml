@@ -192,12 +192,20 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: 3-Uncategorized
+  feature: NAV
   created_at: 2025-11-25T22:36:17.393702816Z
-  modified_at: 2025-11-25T22:36:17.393702816Z
+  modified_at: 2025-11-26T04:26:38.748992425Z
   req_type: Functional
   dependencies: []
   tags: []
+  history:
+  - id: 92a50b21-6053-4e7c-9919-0724aadbea36
+    author: Unknown User
+    timestamp: 2025-11-26T04:26:38.748991390Z
+    changes:
+    - field_name: feature
+      old_value: 3-Uncategorized
+      new_value: NAV
 - id: f1a64c4d-3086-4010-be4e-3eaf6bc3df5d
   spec_id: CR-012
   title: broken expand/collapse
@@ -422,7 +430,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: STYLE
+  feature: 13-STYLE
   created_at: 2025-11-26T01:18:30.246370231Z
   modified_at: 2025-11-26T01:18:30.246370231Z
   req_type: Functional
@@ -449,6 +457,6 @@ id_config:
     prefix: CR
     description: Change requests for modifications to existing functionality
 features: []
-next_feature_number: 13
+next_feature_number: 14
 next_spec_number: 23
 prefix_counters: {}

@@ -1022,6 +1022,16 @@ impl RequirementsApp {
         }
     }
 
+    /// Get indices of requirements that pass the current filters (in display order)
+    fn get_filtered_indices(&self) -> Vec<usize> {
+        self.store.requirements
+            .iter()
+            .enumerate()
+            .filter(|(_, req)| self.passes_filters(req))
+            .map(|(idx, _)| idx)
+            .collect()
+    }
+
     /// Check if a requirement passes the current filters
     fn passes_filters(&self, req: &Requirement) -> bool {
         // Text search filter
@@ -2183,6 +2193,56 @@ impl eframe::App for RequirementsApp {
             self.zoom_in();
         } else if zoom_delta < 0.0 {
             self.zoom_out();
+        }
+
+        // Handle arrow key navigation in the requirements list
+        // Only when in List or Detail view and no text field has focus
+        if (self.current_view == View::List || self.current_view == View::Detail)
+            && !ctx.wants_keyboard_input()
+        {
+            let mut nav_delta: i32 = 0;
+            ctx.input(|i| {
+                if i.key_pressed(egui::Key::ArrowDown) {
+                    nav_delta = 1;
+                } else if i.key_pressed(egui::Key::ArrowUp) {
+                    nav_delta = -1;
+                }
+            });
+
+            if nav_delta != 0 {
+                let filtered_indices = self.get_filtered_indices();
+                if !filtered_indices.is_empty() {
+                    let new_selection = if let Some(current_idx) = self.selected_idx {
+                        // Find current position in filtered list
+                        if let Some(pos) = filtered_indices.iter().position(|&idx| idx == current_idx) {
+                            // Move up or down within bounds
+                            let new_pos = (pos as i32 + nav_delta)
+                                .max(0)
+                                .min(filtered_indices.len() as i32 - 1) as usize;
+                            Some(filtered_indices[new_pos])
+                        } else {
+                            // Current selection not in filtered list, select first/last
+                            if nav_delta > 0 {
+                                Some(filtered_indices[0])
+                            } else {
+                                Some(filtered_indices[filtered_indices.len() - 1])
+                            }
+                        }
+                    } else {
+                        // Nothing selected, select first or last based on direction
+                        if nav_delta > 0 {
+                            Some(filtered_indices[0])
+                        } else {
+                            Some(filtered_indices[filtered_indices.len() - 1])
+                        }
+                    };
+
+                    if new_selection != self.selected_idx {
+                        self.selected_idx = new_selection;
+                        self.pending_view_change = Some(View::Detail);
+                    }
+                }
+            }
         }
 
         // Handle pending operations (to avoid borrow checker issues)

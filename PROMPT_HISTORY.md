@@ -134,13 +134,23 @@ A chronological record of development sessions and changes made to the Requireme
   - Added `user-guide` CLI command to open documentation
   - Created helper scripts for documentation generation
 
-### Current Session - Documentation Cleanup
+### Documentation Cleanup
 - **Prompt**: Review updates and create documentation
 - **Actions**:
   - Created OVERVIEW.md with project vision and structure
   - Created REQUIREMENTS.md with system requirements
   - Created PROMPT_HISTORY.md (this file)
-  - Registered port numbers in global registry
+
+### Arrow Key Navigation
+- **Prompt**: Add arrow key navigation for requirements list panel
+- **Actions**:
+  - Added `get_filtered_indices()` helper function to app.rs
+  - Implemented Up/Down arrow key handling in update() function
+  - Navigation respects current filters (search, type, feature filters)
+  - Auto-selects first/last item when nothing selected
+  - Updated user-guide.md with new keyboard shortcut
+  - Regenerated HTML documentation
+  - Updated CLAUDE.md to reflect current workspace structure
 
 ---
 
