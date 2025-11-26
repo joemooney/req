@@ -1049,13 +1049,92 @@ impl RequirementsApp {
     }
 
     /// Get indices of requirements that pass the current filters (in display order)
+    /// For flat view, returns in storage order. For tree views, returns in tree traversal order.
     fn get_filtered_indices(&self) -> Vec<usize> {
-        self.store.requirements
-            .iter()
-            .enumerate()
-            .filter(|(_, req)| self.passes_filters(req))
-            .map(|(idx, _)| idx)
-            .collect()
+        match &self.perspective {
+            Perspective::Flat => {
+                // Flat view: simple filtered list in storage order
+                self.store.requirements
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, req)| self.passes_filters(req))
+                    .map(|(idx, _)| idx)
+                    .collect()
+            }
+            _ => {
+                // Tree view: traverse in display order
+                let Some((outgoing_type, _)) = self.perspective.relationship_types() else {
+                    return Vec::new();
+                };
+
+                let mut result = Vec::new();
+                match self.perspective_direction {
+                    PerspectiveDirection::TopDown => {
+                        let leaves = self.find_tree_leaves(&outgoing_type);
+                        for leaf_idx in leaves {
+                            self.collect_tree_indices_bottom_up(leaf_idx, &outgoing_type, &mut result);
+                        }
+                    }
+                    PerspectiveDirection::BottomUp => {
+                        let roots = self.find_tree_roots(&outgoing_type);
+                        for root_idx in roots {
+                            self.collect_tree_indices_top_down(root_idx, &outgoing_type, &mut result);
+                        }
+                    }
+                }
+                result
+            }
+        }
+    }
+
+    /// Collect tree indices in top-down order (roots first, then children)
+    fn collect_tree_indices_top_down(&self, idx: usize, outgoing_rel_type: &RelationshipType, result: &mut Vec<usize>) {
+        // Don't add duplicates
+        if result.contains(&idx) {
+            return;
+        }
+
+        // Check if this node is collapsed
+        let is_collapsed = self.store.requirements.get(idx)
+            .map(|req| self.tree_collapsed.get(&req.id).copied().unwrap_or(false))
+            .unwrap_or(false);
+
+        result.push(idx);
+
+        // If not collapsed, add children recursively
+        if !is_collapsed {
+            if let Some(req) = self.store.requirements.get(idx) {
+                let children = self.get_children(&req.id, outgoing_rel_type);
+                for child_idx in children {
+                    self.collect_tree_indices_top_down(child_idx, outgoing_rel_type, result);
+                }
+            }
+        }
+    }
+
+    /// Collect tree indices in bottom-up order (leaves first, then parents)
+    fn collect_tree_indices_bottom_up(&self, idx: usize, outgoing_rel_type: &RelationshipType, result: &mut Vec<usize>) {
+        // Don't add duplicates
+        if result.contains(&idx) {
+            return;
+        }
+
+        // Check if this node is collapsed
+        let is_collapsed = self.store.requirements.get(idx)
+            .map(|req| self.tree_collapsed.get(&req.id).copied().unwrap_or(false))
+            .unwrap_or(false);
+
+        result.push(idx);
+
+        // If not collapsed, add parents recursively
+        if !is_collapsed {
+            if let Some(req) = self.store.requirements.get(idx) {
+                let parents = self.get_parents(&req.id, outgoing_rel_type);
+                for parent_idx in parents {
+                    self.collect_tree_indices_bottom_up(parent_idx, outgoing_rel_type, result);
+                }
+            }
+        }
     }
 
     /// Check if a requirement passes the current filters
