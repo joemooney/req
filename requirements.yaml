@@ -185,6 +185,9 @@ requirements:
   req_type: Functional
   dependencies: []
   tags: []
+  relationships:
+  - rel_type: Child
+    target_id: 61b19487-4000-4b67-87f0-5fd554bfebfa
 - id: 055530de-326d-4362-aab1-639239f363e5
   spec_id: FR-011
   title: Arrow keys should move between requirements in the list
@@ -192,7 +195,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: NAV
+  feature: 14-NAV
   created_at: 2025-11-25T22:36:17.393702816Z
   modified_at: 2025-11-26T04:26:38.748992425Z
   req_type: Functional
@@ -446,7 +449,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: DOC
+  feature: 15-DOC
   created_at: 2025-11-26T04:28:47.348005694Z
   modified_at: 2025-11-26T04:28:47.348005694Z
   req_type: Functional
@@ -455,6 +458,22 @@ requirements:
   relationships:
   - rel_type: Parent
     target_id: 055530de-326d-4362-aab1-639239f363e5
+- id: 61b19487-4000-4b67-87f0-5fd554bfebfa
+  spec_id: FR-024
+  title: In Add or Edit, ESC should cancel
+  description: ' if we have not made hand changes, if we have then bring up a confirmation dialog to confirm cancel.'
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-26T05:59:43.548438869Z
+  modified_at: 2025-11-26T05:59:43.548438869Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 04cff76c-978d-4e3a-845a-1d6f6b885cea
 id_config:
   format: SingleLevel
   numbering: Global
@@ -476,6 +495,6 @@ id_config:
     prefix: CR
     description: Change requests for modifications to existing functionality
 features: []
-next_feature_number: 14
-next_spec_number: 24
+next_feature_number: 16
+next_spec_number: 25
 prefix_counters: {}

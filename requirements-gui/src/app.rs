@@ -2044,16 +2044,22 @@ impl RequirementsApp {
     }
 
     fn show_comment_form(&mut self, ui: &mut egui::Ui, _req_idx: usize) {
+        let available_width = ui.available_width();
+
         ui.group(|ui| {
             ui.label(if self.reply_to_comment.is_some() { "Add Reply" } else { "Add Comment" });
 
             ui.horizontal(|ui| {
                 ui.label("Author:");
-                ui.text_edit_singleline(&mut self.comment_author);
+                ui.add(egui::TextEdit::singleline(&mut self.comment_author)
+                    .desired_width(200.0));
             });
 
             ui.label("Content:");
-            ui.text_edit_multiline(&mut self.comment_content);
+            ui.add(egui::TextEdit::multiline(&mut self.comment_content)
+                .desired_width(available_width - 20.0)  // Account for group padding
+                .desired_rows(4)
+                .hint_text("Enter comment..."));
 
             ui.horizontal(|ui| {
                 if ui.button("💾 Save").clicked() {
