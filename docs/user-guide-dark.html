@@ -555,8 +555,50 @@ to cancel. Click “Reset to Defaults” to restore default bindings.</p>
 </tr>
 </tbody>
 </table>
-<p>Settings are stored in:
+<p>User settings are stored in:
 <code>~/.requirements_gui_settings.yaml</code></p>
+<h3 id="project-settings">Project Settings</h3>
+<p>Configure how requirement IDs are formatted and numbered. These
+settings are stored in the project’s <code>requirements.yaml</code>
+file.</p>
+<table>
+<colgroup>
+<col style="width: 40%" />
+<col style="width: 59%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Setting</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>ID Format</strong></td>
+<td>Single Level (PREFIX-NNN) or Two Level (FEATURE-TYPE-NNN)</td>
+</tr>
+<tr class="even">
+<td><strong>Numbering</strong></td>
+<td>Global Sequential, Per Prefix, or Per Feature+Type</td>
+</tr>
+<tr class="odd">
+<td><strong>Digits</strong></td>
+<td>Number of digits in the numeric portion (1-6)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>ID Format Options:</strong> - <strong>Single Level</strong>:
+<code>AUTH-001</code>, <code>FR-002</code> - Simple prefix with number -
+<strong>Two Level</strong>: <code>AUTH-FR-001</code>,
+<code>PAY-NFR-001</code> - Feature prefix, type prefix, then number</p>
+<p><strong>Numbering Options:</strong> - <strong>Global
+Sequential</strong>: All requirements share one counter (AUTH-001,
+FR-002, PAY-003) - <strong>Per Prefix</strong>: Each prefix has its own
+counter (AUTH-001, FR-001, PAY-001) - <strong>Per Feature+Type</strong>:
+Each feature+type combination has its own counter (only for Two Level
+format)</p>
+<p>Note: Changing these settings affects new requirements only. Existing
+requirement IDs are not modified.</p>
 <h3 id="environment-variables">Environment Variables</h3>
 <table>
 <thead>

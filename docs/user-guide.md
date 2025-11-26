@@ -339,7 +339,28 @@ The Keybindings tab shows all customizable keyboard shortcuts. Click "Change" ne
 | Zoom Out | Ctrl+Minus |
 | Reset Zoom | Ctrl+0 |
 
-Settings are stored in: `~/.requirements_gui_settings.yaml`
+User settings are stored in: `~/.requirements_gui_settings.yaml`
+
+### Project Settings
+
+Configure how requirement IDs are formatted and numbered. These settings are stored in the project's `requirements.yaml` file.
+
+| Setting | Description |
+|---------|-------------|
+| **ID Format** | Single Level (PREFIX-NNN) or Two Level (FEATURE-TYPE-NNN) |
+| **Numbering** | Global Sequential, Per Prefix, or Per Feature+Type |
+| **Digits** | Number of digits in the numeric portion (1-6) |
+
+**ID Format Options:**
+- **Single Level**: `AUTH-001`, `FR-002` - Simple prefix with number
+- **Two Level**: `AUTH-FR-001`, `PAY-NFR-001` - Feature prefix, type prefix, then number
+
+**Numbering Options:**
+- **Global Sequential**: All requirements share one counter (AUTH-001, FR-002, PAY-003)
+- **Per Prefix**: Each prefix has its own counter (AUTH-001, FR-001, PAY-001)
+- **Per Feature+Type**: Each feature+type combination has its own counter (only for Two Level format)
+
+Note: Changing these settings affects new requirements only. Existing requirement IDs are not modified.
 
 ### Environment Variables
 

@@ -199,6 +199,17 @@ A chronological record of development sessions and changes made to the Requireme
   - Replaced hardcoded key checks with keybinding lookups
   - Keybindings persist to user settings file
 
+### Project Settings Tab
+- **Prompt**: Add project settings for ID naming schemes in settings
+- **Actions**:
+  - Added Project tab to settings dialog
+  - IdFormat selection (Single Level vs Two Level naming)
+  - NumberingStrategy selection (Global, Per Prefix, Per Feature+Type)
+  - Digit count configuration (1-6 digits)
+  - Live example preview showing resulting ID format
+  - Project settings stored in requirements.yaml file
+  - Settings loaded on dialog open, saved with other settings
+
 ---
 
 ## Git Operations Summary

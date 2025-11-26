@@ -2,7 +2,7 @@ use eframe::egui;
 use requirements_core::{
     Requirement, RequirementPriority, RequirementStatus, RequirementType,
     RequirementsStore, Storage, determine_requirements_path, Comment, FieldChange,
-    RelationshipType, User,
+    RelationshipType, User, IdFormat, NumberingStrategy,
 };
 use std::collections::{HashSet, HashMap};
 use std::path::PathBuf;
@@ -473,6 +473,7 @@ enum SettingsTab {
     User,
     Appearance,
     Keybindings,
+    Project,
     Administration,
 }
 
@@ -589,6 +590,11 @@ pub struct RequirementsApp {
     settings_form_keybindings: KeyBindings,
     capturing_key_for: Option<KeyAction>,  // Which action we're capturing a key for
 
+    // Project settings form fields
+    settings_form_id_format: IdFormat,
+    settings_form_numbering: NumberingStrategy,
+    settings_form_digits: u8,
+
     // User management
     show_user_form: bool,
     editing_user_id: Option<Uuid>,
@@ -623,6 +629,11 @@ impl RequirementsApp {
         let storage = Storage::new(requirements_path);
         let store = storage.load().unwrap_or_else(|_| RequirementsStore::new());
         let user_settings = UserSettings::load();
+
+        // Extract project settings before store is moved
+        let initial_id_format = store.id_config.format.clone();
+        let initial_numbering = store.id_config.numbering.clone();
+        let initial_digits = store.id_config.digits;
 
         // Apply saved preferences
         let initial_font_size = user_settings.base_font_size;
@@ -667,6 +678,9 @@ impl RequirementsApp {
             settings_form_theme: Theme::default(),
             settings_form_keybindings: KeyBindings::default(),
             capturing_key_for: None,
+            settings_form_id_format: initial_id_format,
+            settings_form_numbering: initial_numbering,
+            settings_form_digits: initial_digits,
             show_user_form: false,
             editing_user_id: None,
             user_form_name: String::new(),
@@ -1019,7 +1033,7 @@ impl RequirementsApp {
                 // Settings and help buttons (right-aligned)
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     if ui.button("⚙").on_hover_text("Settings").clicked() {
-                        // Load current settings into form
+                        // Load current user settings into form
                         self.settings_form_name = self.user_settings.name.clone();
                         self.settings_form_email = self.user_settings.email.clone();
                         self.settings_form_handle = self.user_settings.handle.clone();
@@ -1028,6 +1042,10 @@ impl RequirementsApp {
                         self.settings_form_theme = self.user_settings.theme.clone();
                         self.settings_form_keybindings = self.user_settings.keybindings.clone();
                         self.capturing_key_for = None;
+                        // Load current project settings into form
+                        self.settings_form_id_format = self.store.id_config.format.clone();
+                        self.settings_form_numbering = self.store.id_config.numbering.clone();
+                        self.settings_form_digits = self.store.id_config.digits;
                         self.show_settings_dialog = true;
                     }
                     if ui.button("?").on_hover_text("Help - Open User Guide").clicked() {
@@ -1056,6 +1074,7 @@ impl RequirementsApp {
                     ui.selectable_value(&mut self.settings_tab, SettingsTab::User, "👤 User");
                     ui.selectable_value(&mut self.settings_tab, SettingsTab::Appearance, "🎨 Appearance");
                     ui.selectable_value(&mut self.settings_tab, SettingsTab::Keybindings, "⌨ Keys");
+                    ui.selectable_value(&mut self.settings_tab, SettingsTab::Project, "📋 Project");
                     ui.selectable_value(&mut self.settings_tab, SettingsTab::Administration, "🔧 Admin");
                 });
 
@@ -1073,6 +1092,9 @@ impl RequirementsApp {
                     SettingsTab::Keybindings => {
                         self.show_settings_keybindings_tab(ui, ctx);
                     }
+                    SettingsTab::Project => {
+                        self.show_settings_project_tab(ui);
+                    }
                     SettingsTab::Administration => {
                         self.show_settings_admin_tab(ui);
                     }
@@ -1084,7 +1106,7 @@ impl RequirementsApp {
 
                 ui.horizontal(|ui| {
                     if ui.button("💾 Save").clicked() {
-                        // Update settings from form
+                        // Update user settings from form
                         self.user_settings.name = self.settings_form_name.clone();
                         self.user_settings.email = self.settings_form_email.clone();
                         self.user_settings.handle = self.settings_form_handle.clone();
@@ -1092,6 +1114,11 @@ impl RequirementsApp {
                         self.user_settings.preferred_perspective = self.settings_form_perspective.clone();
                         self.user_settings.theme = self.settings_form_theme.clone();
                         self.user_settings.keybindings = self.settings_form_keybindings.clone();
+
+                        // Update project settings (stored in requirements file)
+                        self.store.id_config.format = self.settings_form_id_format.clone();
+                        self.store.id_config.numbering = self.settings_form_numbering.clone();
+                        self.store.id_config.digits = self.settings_form_digits;
 
                         // Apply the new base font size as current
                         self.current_font_size = self.settings_form_font_size;
@@ -1101,13 +1128,25 @@ impl RequirementsApp {
 
                         // Theme will be applied on next frame via update()
 
-                        // Save to file
+                        // Save user settings to file
+                        let mut save_success = true;
                         match self.user_settings.save() {
-                            Ok(()) => {
-                                self.message = Some(("Settings saved successfully".to_string(), false));
-                            }
+                            Ok(()) => {}
                             Err(e) => {
-                                self.message = Some((format!("Failed to save settings: {}", e), true));
+                                self.message = Some((format!("Failed to save user settings: {}", e), true));
+                                save_success = false;
+                            }
+                        }
+
+                        // Save project settings (requirements store) to file
+                        if save_success {
+                            match self.storage.save(&self.store) {
+                                Ok(()) => {
+                                    self.message = Some(("Settings saved successfully".to_string(), false));
+                                }
+                                Err(e) => {
+                                    self.message = Some((format!("Failed to save project settings: {}", e), true));
+                                }
                             }
                         }
                         self.show_settings_dialog = false;
@@ -1290,6 +1329,112 @@ impl RequirementsApp {
         if ui.button("Reset to Defaults").clicked() {
             self.settings_form_keybindings = KeyBindings::default();
         }
+    }
+
+    fn show_settings_project_tab(&mut self, ui: &mut egui::Ui) {
+        ui.heading("Requirement ID Configuration");
+        ui.add_space(10.0);
+
+        egui::Grid::new("settings_project_grid")
+            .num_columns(2)
+            .spacing([20.0, 10.0])
+            .show(ui, |ui| {
+                // ID Format selection
+                ui.label("ID Format:");
+                egui::ComboBox::from_id_salt("settings_id_format_combo")
+                    .selected_text(match self.settings_form_id_format {
+                        IdFormat::SingleLevel => "Single Level (PREFIX-NNN)",
+                        IdFormat::TwoLevel => "Two Level (FEATURE-TYPE-NNN)",
+                    })
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(
+                            &mut self.settings_form_id_format,
+                            IdFormat::SingleLevel,
+                            "Single Level (PREFIX-NNN)"
+                        ).on_hover_text("e.g., AUTH-001, FR-002");
+                        ui.selectable_value(
+                            &mut self.settings_form_id_format,
+                            IdFormat::TwoLevel,
+                            "Two Level (FEATURE-TYPE-NNN)"
+                        ).on_hover_text("e.g., AUTH-FR-001, PAY-NFR-001");
+                    });
+                ui.end_row();
+
+                // Numbering Strategy selection
+                ui.label("Numbering:");
+                egui::ComboBox::from_id_salt("settings_numbering_combo")
+                    .selected_text(match self.settings_form_numbering {
+                        NumberingStrategy::Global => "Global Sequential",
+                        NumberingStrategy::PerPrefix => "Per Prefix",
+                        NumberingStrategy::PerFeatureType => "Per Feature+Type",
+                    })
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(
+                            &mut self.settings_form_numbering,
+                            NumberingStrategy::Global,
+                            "Global Sequential"
+                        ).on_hover_text("All requirements share one counter: AUTH-001, FR-002, PAY-003");
+                        ui.selectable_value(
+                            &mut self.settings_form_numbering,
+                            NumberingStrategy::PerPrefix,
+                            "Per Prefix"
+                        ).on_hover_text("Each prefix has its own counter: AUTH-001, FR-001, PAY-001");
+                        // Only show PerFeatureType for TwoLevel format
+                        if self.settings_form_id_format == IdFormat::TwoLevel {
+                            ui.selectable_value(
+                                &mut self.settings_form_numbering,
+                                NumberingStrategy::PerFeatureType,
+                                "Per Feature+Type"
+                            ).on_hover_text("Each feature+type combo has its own counter: AUTH-FR-001, AUTH-NFR-001");
+                        }
+                    });
+                ui.end_row();
+
+                // Number of digits
+                ui.label("Digits:");
+                ui.horizontal(|ui| {
+                    ui.add(egui::Slider::new(&mut self.settings_form_digits, 1..=6)
+                        .step_by(1.0));
+                    ui.label(format!("(e.g., {:0>width$})", 1, width = self.settings_form_digits as usize));
+                });
+                ui.end_row();
+            });
+
+        ui.add_space(15.0);
+        ui.separator();
+        ui.add_space(10.0);
+
+        // Show examples based on current settings
+        ui.heading("Example IDs");
+        ui.add_space(5.0);
+
+        let width = self.settings_form_digits as usize;
+        let examples = match self.settings_form_id_format {
+            IdFormat::SingleLevel => {
+                vec![
+                    format!("AUTH-{:0>width$}", 1, width = width),
+                    format!("FR-{:0>width$}", 2, width = width),
+                    format!("PAY-{:0>width$}", 3, width = width),
+                ]
+            }
+            IdFormat::TwoLevel => {
+                vec![
+                    format!("AUTH-FR-{:0>width$}", 1, width = width),
+                    format!("AUTH-NFR-{:0>width$}", 2, width = width),
+                    format!("PAY-FR-{:0>width$}", 3, width = width),
+                ]
+            }
+        };
+
+        for example in examples {
+            ui.monospace(&example);
+        }
+
+        ui.add_space(10.0);
+        ui.colored_label(
+            egui::Color32::from_rgb(180, 180, 100),
+            "Note: Changing these settings affects new requirements only.\nExisting requirement IDs are not modified."
+        );
     }
 
     fn show_settings_admin_tab(&mut self, ui: &mut egui::Ui) {
