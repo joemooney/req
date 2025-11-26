@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Requirements Manager User Guide</title>
+<style>
+:root {
+    --bg-color: #1a1a2e;
+    --text-color: #e0e0e0;
+    --heading-color: #ffffff;
+    --link-color: #6db3f2;
+    --code-bg: #16213e;
+    --border-color: #404040;
+    --table-stripe: #1f1f3a;
+}
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.6;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+}
+h1, h2, h3, h4 { color: var(--heading-color); margin-top: 1.5em; }
+h1 { border-bottom: 2px solid var(--border-color); padding-bottom: 0.3em; }
+h2 { border-bottom: 1px solid var(--border-color); padding-bottom: 0.2em; }
+a { color: var(--link-color); text-decoration: none; }
+a:hover { text-decoration: underline; }
+code {
+    background-color: var(--code-bg);
+    padding: 0.2em 0.4em;
+    border-radius: 3px;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.9em;
+}
+pre {
+    background-color: var(--code-bg);
+    padding: 1em;
+    border-radius: 5px;
+    overflow-x: auto;
+    border: 1px solid var(--border-color);
+}
+pre code { background: none; padding: 0; }
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1em 0;
+}
+th, td {
+    border: 1px solid var(--border-color);
+    padding: 0.5em 1em;
+    text-align: left;
+}
+th { background-color: var(--code-bg); font-weight: 600; }
+tr:nth-child(even) { background-color: var(--table-stripe); }
+blockquote {
+    border-left: 4px solid var(--link-color);
+    margin: 1em 0;
+    padding-left: 1em;
+    color: #999;
+}
+hr { border: none; border-top: 1px solid var(--border-color); margin: 2em 0; }
+ul, ol { padding-left: 2em; }
+li { margin: 0.3em 0; }
+.mode-switcher {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    padding: 8px 16px;
+    background: var(--code-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text-color);
+    text-decoration: none !important;
+}
+.mode-switcher:hover { background: var(--border-color); }
+</style>
+</head>
+<body>
+<a href="user-guide.html" class="mode-switcher">Switch to Light Mode</a>
+<h1 id="requirements-manager-user-guide">Requirements Manager User Guide</h1>
+
+<p>A professional requirements management system with both CLI and GUI interfaces.</p>
+
+<h2 id="table-of-contents">Table of Contents</h2>
+
+<ul>
+<li><a href="#getting-started">Getting Started</a></li>
+<li><a href="#cli-usage">CLI Usage</a></li>
+<li><a href="#gui-usage">GUI Usage</a></li>
+<li><a href="#working-with-requirements">Working with Requirements</a></li>
+<li><a href="#features-and-organization">Features and Organization</a></li>
+<li><a href="#multi-project-support">Multi-Project Support</a></li>
+<li><a href="#keyboard-shortcuts">Keyboard Shortcuts</a></li>
+<li><a href="#settings">Settings</a></li>
+</ul>
+
+<hr>
+
+<h2 id="getting-started">Getting Started</h2>
+
+<h3 id="installation">Installation</h3>
+
+<p>Build the project from source:</p>
+
+<pre><code class="language-bash">
+cargo build --workspace --release
+</code></pre>
+
+<p>This creates two binaries in <code>target/release/</code>:</p>
+<ul>
+<li><code>req</code> - Command-line interface</li>
+<li><code>req-gui</code> - Graphical user interface</li>
+</ul>
+
+<h3 id="quick-start">Quick Start</h3>
+
+<ol>
+<li><strong>Create your first requirement:</strong></li>
+</ol>
+<p>   ```bash</p>
+<p>   req add --title &quot;User login&quot; --description &quot;Users can log in with email and password&quot;</p>
+<p>   ```</p>
+
+<ol>
+<li><strong>List all requirements:</strong></li>
+</ol>
+<p>   ```bash</p>
+<p>   req list</p>
+<p>   ```</p>
+
+<ol>
+<li><strong>Or launch the GUI:</strong></li>
+</ol>
+<p>   ```bash</p>
+<p>   req-gui</p>
+<p>   ```</p>
+
+<hr>
+
+<h2 id="cli-usage">CLI Usage</h2>
+
+<h3 id="basic-commands">Basic Commands</h3>
+
+<table>
+<tr><th>Command</th><th>Description</th></tr>
+<tr><td><code>req list</code></td><td>List all requirements</td></tr>
+<tr><td><code>req add</code></td><td>Add a new requirement</td></tr>
+<tr><td><code>req show &lt;ID&gt;</code></td><td>Show requirement details</td></tr>
+<tr><td><code>req edit &lt;ID&gt;</code></td><td>Edit a requirement</td></tr>
+<tr><td><code>req delete &lt;ID&gt;</code></td><td>Delete a requirement</td></tr>
+</table>
+
+<h3 id="adding-requirements">Adding Requirements</h3>
+
+<p><strong>Interactive mode:</strong></p>
+<pre><code class="language-bash">
+req add --interactive
+</code></pre>
+
+<p><strong>Command line mode:</strong></p>
+<pre><code class="language-bash">
+req add --title &quot;Feature name&quot; \
+        --description &quot;Detailed description&quot; \
+        --priority High \
+        --status Draft \
+        --type Functional \
+        --feature &quot;Authentication&quot;
+</code></pre>
+
+<h3 id="filtering-and-searching">Filtering and Searching</h3>
+
+<pre><code class="language-bash">
+# Filter by status
+req list --status Approved
+
+# Filter by priority
+req list --priority High
+
+# Filter by feature
+req list --feature &quot;Authentication&quot;
+
+# Search by text
+req list --search &quot;login&quot;
+</code></pre>
+
+<h3 id="working-with-relationships">Working with Relationships</h3>
+
+<pre><code class="language-bash">
+# Add a parent-child relationship
+req rel add --from SPEC-001 --to SPEC-002 --type parent
+
+# Add bidirectional relationship
+req rel add --from SPEC-001 --to SPEC-002 --type verifies -b
+
+# List relationships
+req rel list SPEC-001
+</code></pre>
+
+<h3 id="feature-management">Feature Management</h3>
+
+<pre><code class="language-bash">
+# List features
+req feature list
+
+# Rename a feature
+req feature rename &quot;Old Name&quot; &quot;New Name&quot;
+
+# Move requirements between features
+req feature move SPEC-001 &quot;New Feature&quot;
+</code></pre>
+
+<h3 id="database-management">Database Management</h3>
+
+<pre><code class="language-bash">
+# List registered projects
+req db list
+
+# Add a new project
+req db add --name &quot;my-project&quot; --path &quot;/path/to/requirements.yaml&quot;
+
+# Set default project
+req db default &quot;my-project&quot;
+
+# Remove a project
+req db remove &quot;my-project&quot;
+</code></pre>
+
+<h3 id="opening-the-user-guide">Opening the User Guide</h3>
+
+<pre><code class="language-bash">
+# Open in default browser (light mode)
+req user-guide
+
+# Open in dark mode
+req user-guide --dark
+</code></pre>
+
+<hr>
+
+<h2 id="gui-usage">GUI Usage</h2>
+
+<p>Launch the GUI application:</p>
+<pre><code class="language-bash">
+req-gui
+</code></pre>
+
+<h3 id="main-interface">Main Interface</h3>
+
+<p>The GUI consists of three main areas:</p>
+
+<ol>
+<li><strong>Top Bar</strong> - Contains action buttons, requirement count, and settings</li>
+<li><strong>Left Panel</strong> - Requirements list with search filter</li>
+<li><strong>Main Area</strong> - Detail view, forms, or welcome screen</li>
+</ol>
+
+<h3 id="navigation">Navigation</h3>
+
+<ul>
+<li>Click a requirement in the left panel to view its details</li>
+<li>Use the search box to filter requirements by title or description</li>
+<li>Click tabs (Description, Comments, Links, History) to switch views</li>
+</ul>
+
+<h3 id="actions">Actions</h3>
+
+<table>
+<tr><th>Button</th><th>Action</th></tr>
+<tr><td><strong>+ Add</strong></td><td>Create a new requirement</td></tr>
+<tr><td><strong>Reload</strong></td><td>Refresh from disk</td></tr>
+<tr><td><strong>Edit</strong></td><td>Edit selected requirement</td></tr>
+<tr><td><strong>Delete</strong></td><td>Delete selected requirement</td></tr>
+<tr><td><strong>Settings</strong></td><td>Open settings dialog</td></tr>
+<tr><td><strong>Help</strong></td><td>Open this user guide</td></tr>
+</table>
+
+<h3 id="adding-comments">Adding Comments</h3>
+
+<ol>
+<li>Select a requirement</li>
+<li>Click the &quot;Comments&quot; tab</li>
+<li>Click &quot;+ Add Comment&quot;</li>
+<li>Enter your comment and click Save</li>
+</ol>
+
+<p>Comments support threading - click &quot;Reply&quot; on any comment to add a nested reply.</p>
+
+<hr>
+
+<h2 id="working-with-requirements">Working with Requirements</h2>
+
+<h3 id="requirement-fields">Requirement Fields</h3>
+
+<table>
+<tr><th>Field</th><th>Description</th></tr>
+<tr><td><strong>SPEC-ID</strong></td><td>Auto-generated identifier (e.g., SPEC-001)</td></tr>
+<tr><td><strong>Title</strong></td><td>Short descriptive name</td></tr>
+<tr><td><strong>Description</strong></td><td>Detailed explanation</td></tr>
+<tr><td><strong>Status</strong></td><td>Draft, Approved, Completed, or Rejected</td></tr>
+<tr><td><strong>Priority</strong></td><td>High, Medium, or Low</td></tr>
+<tr><td><strong>Type</strong></td><td>Functional, NonFunctional, System, or User</td></tr>
+<tr><td><strong>Feature</strong></td><td>Grouping category</td></tr>
+<tr><td><strong>Owner</strong></td><td>Person responsible</td></tr>
+<tr><td><strong>Tags</strong></td><td>Comma-separated labels</td></tr>
+</table>
+
+<h3 id="status-workflow">Status Workflow</h3>
+
+<pre><code>
+Draft -&gt; Approved -&gt; Completed
+              |
+              v
+          Rejected
+</code></pre>
+
+<ul>
+<li><strong>Draft</strong>: Initial state, work in progress</li>
+<li><strong>Approved</strong>: Reviewed and accepted</li>
+<li><strong>Completed</strong>: Implementation finished</li>
+<li><strong>Rejected</strong>: Not accepted or deprecated</li>
+</ul>
+
+<h3 id="relationship-types">Relationship Types</h3>
+
+<table>
+<tr><th>Type</th><th>Description</th></tr>
+<tr><td><strong>Parent</strong></td><td>Hierarchical parent-child</td></tr>
+<tr><td><strong>Verifies</strong></td><td>Test/verification relationship</td></tr>
+<tr><td><strong>References</strong></td><td>General reference link</td></tr>
+<tr><td><strong>Custom</strong></td><td>User-defined relationship</td></tr>
+</table>
+
+<hr>
+
+<h2 id="features-and-organization">Features and Organization</h2>
+
+<p>Requirements are organized into numbered features for better management.</p>
+
+<h3 id="feature-naming">Feature Naming</h3>
+
+<p>Features are automatically numbered:</p>
+<ul>
+<li><code>1-Authentication</code></li>
+<li><code>2-User-Management</code></li>
+<li><code>3-Reporting</code></li>
+</ul>
+
+<h3 id="default-feature">Default Feature</h3>
+
+<p>Requirements without a specified feature go to &quot;Uncategorized&quot;. Set a default feature using the <code>REQ_FEATURE</code> environment variable:</p>
+
+<pre><code class="language-bash">
+export REQ_FEATURE=&quot;Authentication&quot;
+req add --title &quot;New auth requirement&quot;  # Automatically uses Authentication
+</code></pre>
+
+<hr>
+
+<h2 id="multi-project-support">Multi-Project Support</h2>
+
+<p>Manage multiple requirement sets using the registry system.</p>
+
+<h3 id="registry-location">Registry Location</h3>
+
+<p>Default: <code>~/.requirements.config</code></p>
+
+<p>Override with: <code>REQ_REGISTRY_PATH</code> environment variable</p>
+
+<h3 id="project-resolution-order">Project Resolution Order</h3>
+
+<ol>
+<li>Local <code>requirements.yaml</code> in current directory</li>
+<li><code>--project</code> command line option</li>
+<li><code>REQ_DB_NAME</code> environment variable</li>
+<li>Single project in registry (if only one exists)</li>
+<li>Default project from registry</li>
+<li>Interactive prompt</li>
+</ol>
+
+<h3 id="example-setup">Example Setup</h3>
+
+<pre><code class="language-bash">
+# Register projects
+req db add --name &quot;frontend&quot; --path ~/projects/frontend/requirements.yaml
+req db add --name &quot;backend&quot; --path ~/projects/backend/requirements.yaml
+
+# Set default
+req db default frontend
+
+# Work with specific project
+req list --project backend
+</code></pre>
+
+<hr>
+
+<h2 id="keyboard-shortcuts">Keyboard Shortcuts</h2>
+
+<h3 id="gui-shortcuts">GUI Shortcuts</h3>
+
+<table>
+<tr><th>Shortcut</th><th>Action</th></tr>
+<tr><td><strong>Ctrl+MouseWheel</strong></td><td>Zoom in/out</td></tr>
+<tr><td><strong>Ctrl+Shift++</strong></td><td>Zoom in</td></tr>
+<tr><td><strong>Ctrl+-</strong></td><td>Zoom out</td></tr>
+<tr><td><strong>Ctrl+0</strong></td><td>Reset zoom to base size</td></tr>
+</table>
+
+<hr>
+
+<h2 id="settings">Settings</h2>
+
+<h3 id="user-profile">User Profile</h3>
+
+<p>Access settings via the gear icon (top-right) in the GUI.</p>
+
+<table>
+<tr><th>Setting</th><th>Description</th></tr>
+<tr><td><strong>Name</strong></td><td>Your full name (used in comments/history)</td></tr>
+<tr><td><strong>Email</strong></td><td>Your email address</td></tr>
+<tr><td><strong>Handle</strong></td><td>Nickname for @mentions in comments</td></tr>
+<tr><td><strong>Base Font Size</strong></td><td>Default font size (8-32pt)</td></tr>
+</table>
+
+<p>Settings are stored in: <code>~/.requirements_gui_settings.yaml</code></p>
+
+<h3 id="environment-variables">Environment Variables</h3>
+
+<table>
+<tr><th>Variable</th><th>Description</th></tr>
+<tr><td><code>REQ_DB_NAME</code></td><td>Default project name</td></tr>
+<tr><td><code>REQ_FEATURE</code></td><td>Default feature for new requirements</td></tr>
+<tr><td><code>REQ_REGISTRY_PATH</code></td><td>Custom registry file location</td></tr>
+</table>
+
+<hr>
+
+<h2 id="tips-and-best-practices">Tips and Best Practices</h2>
+
+<ol>
+<li><strong>Use meaningful SPEC-IDs</strong>: Reference requirements by their SPEC-ID in documentation and code comments</li>
+</ol>
+
+<ol>
+<li><strong>Organize by features</strong>: Group related requirements together for better navigation</li>
+</ol>
+
+<ol>
+<li><strong>Track relationships</strong>: Link requirements to tests using &quot;verifies&quot; relationships</li>
+</ol>
+
+<ol>
+<li><strong>Use comments for discussions</strong>: Keep requirement discussions in the comments, not the description</li>
+</ol>
+
+<ol>
+<li><strong>Regular status updates</strong>: Keep status current to track project progress</li>
+</ol>
+
+<ol>
+<li><strong>Backup your data</strong>: The YAML format is human-readable and version-control friendly</li>
+</ol>
+
+<hr>
+
+<h2 id="troubleshooting">Troubleshooting</h2>
+
+<h3 id="common-issues">Common Issues</h3>
+
+<p><strong>&quot;No requirements file found&quot;</strong></p>
+<ul>
+<li>Create a <code>requirements.yaml</code> in the current directory, or</li>
+<li>Register a project with <code>req db add</code></li>
+</ul>
+
+<p><strong>&quot;Failed to save&quot;</strong></p>
+<ul>
+<li>Check file permissions</li>
+<li>Ensure the directory exists</li>
+</ul>
+
+<p><strong>GUI won&#x27;t start</strong></p>
+<ul>
+<li>Ensure you have a display server running</li>
+<li>Check for missing system libraries (OpenGL, etc.)</li>
+</ul>
+
+<h3 id="getting-help">Getting Help</h3>
+
+<ul>
+<li>Run <code>req --help</code> for CLI help</li>
+<li>Run <code>req &lt;command&gt; --help</code> for command-specific help</li>
+<li>Open this guide with <code>req user-guide</code></li>
+</ul>
+
+<hr>
+
+<p><em>Generated for Requirements Manager v0.1.0</em></p>
+</body>
+</html>

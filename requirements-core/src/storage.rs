@@ -18,6 +18,11 @@ impl Storage {
         }
     }
 
+    /// Returns the path to the storage file
+    pub fn path(&self) -> &Path {
+        &self.file_path
+    }
+
     /// Loads requirements from the YAML file
     pub fn load(&self) -> Result<RequirementsStore> {
         // Create the file if it doesn't exist

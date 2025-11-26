@@ -1,1 +1,454 @@
-requirements: []
+requirements:
+- id: 37be9566-a051-430b-b47b-1890a395a524
+  spec_id: FR-001
+  title: Default owner depending on state
+  description: When we transition a feature we want the owner to be assigned based on state
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 1-REQ
+  created_at: 2025-11-25T19:45:25.234562378Z
+  modified_at: 2025-11-25T19:45:25.234562378Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+- id: 59d3cc0b-25a5-4076-8966-94b8ef4e36b1
+  spec_id: FR-002
+  title: Add child requirement button
+  description: when a requirement is selected we should be able to add one of the relationship links like child requirement
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 2-Uncategorized
+  created_at: 2025-11-25T19:47:01.146320499Z
+  modified_at: 2025-11-25T19:47:01.146320499Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 043639ed-7c12-4d99-acc2-587a38b0d25d
+- id: 043639ed-7c12-4d99-acc2-587a38b0d25d
+  spec_id: FR-003
+  title: Drag a requirement to make child
+  description: dragging a requirement in the left panel on top of another requirement should make it a child (or whatever the relationship view that we have selected)
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 2-Uncategorized
+  created_at: 2025-11-25T19:48:24.400247266Z
+  modified_at: 2025-11-25T19:48:24.400247266Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Child
+    target_id: 59d3cc0b-25a5-4076-8966-94b8ef4e36b1
+- id: 5a8cda55-badf-48c6-82c9-b9ea53f3f69f
+  spec_id: FR-004
+  title: relationship view shall how requirements in a tree structure
+  description: relationship was created. But I don't see any way to expand the parent to show the child. I would expect to see a '+'or some indicator for expanding.
+  status: Draft
+  priority: High
+  owner: ''
+  feature: 3-Uncategorized
+  created_at: 2025-11-25T21:02:35.527467685Z
+  modified_at: 2025-11-25T22:59:34.933875468Z
+  req_type: ChangeRequest
+  dependencies: []
+  tags: []
+  comments:
+  - id: d4a26b03-f489-4f5f-b24c-223091388caf
+    author: Unknown User
+    content: relationship was created. But I don't see any way to expand the parent to show the child. I would expect to see a '+'or some indicator for expanding.
+    created_at: 2025-11-25T21:05:50.814215220Z
+    modified_at: 2025-11-25T21:05:50.814215220Z
+    replies:
+    - id: cafe82f0-7e5c-4e94-85da-f5db0203b16a
+      author: '@joe'
+      content: this should be displayed nested
+      created_at: 2025-11-25T21:15:08.798361288Z
+      modified_at: 2025-11-25T21:15:08.798361288Z
+      parent_id: d4a26b03-f489-4f5f-b24c-223091388caf
+      replies:
+      - id: 3ef108e6-6fa3-4bba-bc24-0628d0cb6952
+        author: '@joe'
+        content: |
+          a reply content box should be the width of the panel
+        created_at: 2025-11-25T21:27:29.489008478Z
+        modified_at: 2025-11-25T21:27:29.489008478Z
+        parent_id: cafe82f0-7e5c-4e94-85da-f5db0203b16a
+  history:
+  - id: b7f3da72-a3b3-4317-8848-50f50c65a2c4
+    author: Unknown User
+    timestamp: 2025-11-25T21:05:11.665763983Z
+    changes:
+    - field_name: priority
+      old_value: Medium
+      new_value: High
+  - id: 709b3514-ded3-4711-b027-b5f6a58ce00f
+    author: '@joe'
+    timestamp: 2025-11-25T22:59:34.933874933Z
+    changes:
+    - field_name: type
+      old_value: Functional
+      new_value: ChangeRequest
+- id: b8621169-8a34-4001-a2e8-936229497c62
+  spec_id: FR-005
+  title: Ability to edit existing comment
+  description: Even after submitting a comment, we should allow the original comment to text to be updated.
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 3-Uncategorized
+  created_at: 2025-11-25T21:06:58.790215612Z
+  modified_at: 2025-11-25T21:06:58.790215612Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+- id: eed922f2-03d7-49c6-9c13-31dda6880c27
+  spec_id: FR-006
+  title: maintain list of users
+  description: For simplicity maintain a list of users. We could have a role associated with features. That would limit whether a user can perform certain actions based on feature and/or requirement type.
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 3-Uncategorized
+  created_at: 2025-11-25T21:10:21.360247533Z
+  modified_at: 2025-11-25T21:10:21.360247533Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+- id: 93c22e3a-bb6c-4933-9c35-d9b8fd9173c5
+  spec_id: FR-007
+  title: Title and description width should be width of window
+  description: the title and description is way too narrow. We should expand to the width of the window.
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 3-Uncategorized
+  created_at: 2025-11-25T21:14:25.964300983Z
+  modified_at: 2025-11-25T21:14:25.964300983Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+- id: 39824b9c-6ff0-49b9-988d-6819978e547b
+  spec_id: FR-008
+  title: comments should be displayed nested
+  description: 'the comment replies are being displayed at the same level of indentation without an obvious indication of it being a reply. '
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 10-COMMENTS
+  created_at: 2025-11-25T21:16:56.190236240Z
+  modified_at: 2025-11-26T00:57:38.868416164Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 848840ae-7005-4fab-b478-163f9139359e
+  history:
+  - id: 07363a30-3f77-4f08-a484-bf0aa488c7eb
+    author: '@joe'
+    timestamp: 2025-11-26T00:57:38.868415547Z
+    changes:
+    - field_name: feature
+      old_value: 3-Uncategorized
+      new_value: COMMENTS
+- id: d0f16bc7-788b-4d6c-ac49-3a48fc678e50
+  spec_id: FR-009
+  title: comment emojiis
+  description: Have several (configuable) emojii that we can attach to a comment. A checkmark for resolved would be a minimal need.
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 3-Uncategorized
+  created_at: 2025-11-25T21:19:10.021746590Z
+  modified_at: 2025-11-25T21:19:10.021746590Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 848840ae-7005-4fab-b478-163f9139359e
+- id: 04cff76c-978d-4e3a-845a-1d6f6b885cea
+  spec_id: FR-010
+  title: Change Request support
+  description: 'Change Request should be one of the default requirement types. '
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 3-Uncategorized
+  created_at: 2025-11-25T21:30:08.455035192Z
+  modified_at: 2025-11-25T21:30:08.455035192Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+- id: 055530de-326d-4362-aab1-639239f363e5
+  spec_id: FR-011
+  title: Arrow keys should move between requirements in the list
+  description: The arrow keys should work for the different panels and behave intuitively.
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 3-Uncategorized
+  created_at: 2025-11-25T22:36:17.393702816Z
+  modified_at: 2025-11-25T22:36:17.393702816Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+- id: f1a64c4d-3086-4010-be4e-3eaf6bc3df5d
+  spec_id: CR-012
+  title: broken expand/collapse
+  description: ''
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 4-Uncategorized
+  created_at: 2025-11-25T22:42:42.983254022Z
+  modified_at: 2025-11-25T23:06:24.442043152Z
+  req_type: ChangeRequest
+  dependencies: []
+  tags: []
+  comments:
+  - id: 5c445d24-4481-45fe-a8ad-23a3e2eff543
+    author: '@joe'
+    content: change the REQ- prefix of CRs to CR-
+    created_at: 2025-11-25T23:01:05.633852672Z
+    modified_at: 2025-11-25T23:01:05.633852672Z
+  history:
+  - id: d0a9272b-dbcf-4576-a243-697b4055a140
+    author: '@joe'
+    timestamp: 2025-11-25T23:06:14.344494337Z
+    changes:
+    - field_name: type
+      old_value: ChangeRequest
+      new_value: User
+    - field_name: spec_id
+      old_value: REQ-012
+      new_value: UR-012
+  - id: d4319241-5515-413b-bb65-f1fe3ca7b21e
+    author: '@joe'
+    timestamp: 2025-11-25T23:06:24.442042241Z
+    changes:
+    - field_name: type
+      old_value: User
+      new_value: ChangeRequest
+    - field_name: spec_id
+      old_value: UR-012
+      new_value: CR-012
+- id: 87b1dacb-6c52-4f19-b6f8-a5bf41de3529
+  spec_id: FR-013
+  title: 'Change/configure window title '
+  description: This should be part of the configuration file.
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 4-Uncategorized
+  created_at: 2025-11-25T22:48:26.624041526Z
+  modified_at: 2025-11-25T22:48:26.624041526Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+- id: da7e6650-4dd3-43ac-8804-55dfb58f3cb5
+  spec_id: FR-014
+  title: add a light theme
+  description: ''
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 5-Uncategorized
+  created_at: 2025-11-25T23:02:47.788464927Z
+  modified_at: 2025-11-25T23:02:47.788464927Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+- id: b9c26c5d-ab38-4e9b-a493-8f4a84f88019
+  spec_id: CR-015
+  title: add created by
+  description: ''
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 5-Uncategorized
+  created_at: 2025-11-25T23:03:34.032116653Z
+  modified_at: 2025-11-25T23:05:53.961976672Z
+  req_type: ChangeRequest
+  dependencies: []
+  tags: []
+  history:
+  - id: e3075819-c16e-4bbc-ba07-709489dd788c
+    author: '@joe'
+    timestamp: 2025-11-25T23:05:45.637968582Z
+    changes:
+    - field_name: type
+      old_value: ChangeRequest
+      new_value: Functional
+    - field_name: spec_id
+      old_value: REQ-015
+      new_value: FR-015
+  - id: 4325213f-e6c5-4acd-8970-9414445b3b19
+    author: '@joe'
+    timestamp: 2025-11-25T23:05:53.961975927Z
+    changes:
+    - field_name: type
+      old_value: Functional
+      new_value: ChangeRequest
+    - field_name: spec_id
+      old_value: FR-015
+      new_value: CR-015
+- id: 848840ae-7005-4fab-b478-163f9139359e
+  spec_id: FR-016
+  title: Support comments
+  description: ''
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 6-Uncategorized
+  created_at: 2025-11-25T23:51:23.542112733Z
+  modified_at: 2025-11-25T23:51:23.542112733Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Child
+    target_id: 39824b9c-6ff0-49b9-988d-6819978e547b
+  - rel_type: Child
+    target_id: d0f16bc7-788b-4d6c-ac49-3a48fc678e50
+  - rel_type: Child
+    target_id: 0f47519b-83fa-4e45-9e64-44ae833033a8
+- id: 6da186f2-cae3-4b75-bc46-d487ced9e96b
+  spec_id: FR-017
+  title: Double click on link to switch requirement
+  description: In the requirement Links tab, double clicking on a requirement should switch to that requirement
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 7-Uncategorized
+  created_at: 2025-11-26T00:42:10.981736725Z
+  modified_at: 2025-11-26T00:42:10.981736725Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+- id: 02a28ce8-28aa-4e56-88e3-ae29813a3fe0
+  spec_id: FR-018
+  title: Break link relationship
+  description: support breaking a relationship, a button to delete a relationship.
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 8-Uncategorized
+  created_at: 2025-11-26T00:44:24.763195784Z
+  modified_at: 2025-11-26T00:44:24.763195784Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+- id: 2a82a590-b200-42ad-843a-456db9d55359
+  spec_id: FR-019
+  title: Archive state
+  description: 'Add a button to allow archiving a requirement. Achived requirements should not show up unless we explicitly Filter to include Archive. '
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 9-Uncategorized
+  created_at: 2025-11-26T00:49:32.639633273Z
+  modified_at: 2025-11-26T00:55:10.811330075Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  history:
+  - id: 80aedc3c-6687-40b1-a420-955ce9032237
+    author: '@joe'
+    timestamp: 2025-11-26T00:54:47.129467811Z
+    changes:
+    - field_name: archived
+      old_value: 'false'
+      new_value: 'true'
+  - id: 31447c08-d593-4b45-9086-b5f995df133b
+    author: '@joe'
+    timestamp: 2025-11-26T00:54:58.015798873Z
+    changes:
+    - field_name: archived
+      old_value: 'true'
+      new_value: 'false'
+  - id: b9b64ce4-6957-4995-8b0e-cf57e1619f86
+    author: '@joe'
+    timestamp: 2025-11-26T00:55:04.416441461Z
+    changes:
+    - field_name: archived
+      old_value: 'false'
+      new_value: 'true'
+  - id: f81a9c59-bddf-4fa5-b4ec-d68e0f5945d0
+    author: '@joe'
+    timestamp: 2025-11-26T00:55:10.811329310Z
+    changes:
+    - field_name: archived
+      old_value: 'true'
+      new_value: 'false'
+- id: 0f47519b-83fa-4e45-9e64-44ae833033a8
+  spec_id: FR-020
+  title: Indented relies to comments
+  description: ''
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 11-Uncategorized
+  created_at: 2025-11-26T01:11:45.857312446Z
+  modified_at: 2025-11-26T01:11:45.857312446Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 848840ae-7005-4fab-b478-163f9139359e
+- id: 07f7e655-742d-44c9-ba9d-c77762ae7090
+  spec_id: FR-021
+  title: scroll wheel changes selected requirement
+  description: ''
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 12-Uncategorized
+  created_at: 2025-11-26T01:15:26.926247061Z
+  modified_at: 2025-11-26T01:15:26.926247061Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+- id: 967615c7-1128-4f6d-a02e-b13917942460
+  spec_id: FR-022
+  title: search textbox should expand as panel is widened
+  description: ''
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: STYLE
+  created_at: 2025-11-26T01:18:30.246370231Z
+  modified_at: 2025-11-26T01:18:30.246370231Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+id_config:
+  format: SingleLevel
+  numbering: Global
+  digits: 3
+  requirement_types:
+  - name: Functional
+    prefix: FR
+    description: Functional requirements
+  - name: Non-Functional
+    prefix: NFR
+    description: Non-functional requirements (performance, security, etc.)
+  - name: System
+    prefix: SR
+    description: System-level requirements
+  - name: User
+    prefix: UR
+    description: User story requirements
+  - name: Change Request
+    prefix: CR
+    description: Change requests for modifications to existing functionality
+features: []
+next_feature_number: 13
+next_spec_number: 23
+prefix_counters: {}

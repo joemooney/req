@@ -44,12 +44,13 @@ impl fmt::Display for RequirementPriority {
 }
 
 /// Represents the type of a requirement
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum RequirementType {
     Functional,
     NonFunctional,
     System,
     User,
+    ChangeRequest,
 }
 
 impl fmt::Display for RequirementType {
@@ -59,6 +60,7 @@ impl fmt::Display for RequirementType {
             RequirementType::NonFunctional => write!(f, "Non-Functional"),
             RequirementType::System => write!(f, "System"),
             RequirementType::User => write!(f, "User"),
+            RequirementType::ChangeRequest => write!(f, "Change Request"),
         }
     }
 }
@@ -123,6 +125,166 @@ impl RelationshipType {
         }
     }
 }
+
+// ============================================================================
+// Configurable ID System
+// ============================================================================
+
+/// ID format style for requirement identifiers
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
+pub enum IdFormat {
+    /// Single-level format: PREFIX-NNN (e.g., AUTH-001, FR-002)
+    /// Features and types share the same namespace
+    #[default]
+    SingleLevel,
+    /// Two-level format: FEATURE-TYPE-NNN (e.g., AUTH-FR-001)
+    /// Hierarchical with feature prefix, type prefix, and number
+    TwoLevel,
+}
+
+/// Numbering strategy for requirement IDs
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
+pub enum NumberingStrategy {
+    /// Global sequential numbering across all prefixes
+    /// e.g., AUTH-001, FR-002, PAY-003
+    #[default]
+    Global,
+    /// Per-prefix numbering (each prefix has its own counter)
+    /// e.g., AUTH-001, FR-001, PAY-001
+    PerPrefix,
+    /// Per feature+type combination (only for TwoLevel format)
+    /// e.g., AUTH-FR-001, AUTH-FR-002, AUTH-NFR-001
+    PerFeatureType,
+}
+
+/// Configuration for a requirement type with its prefix
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct RequirementTypeDefinition {
+    /// Display name for the type (e.g., "Functional")
+    pub name: String,
+    /// Prefix used in IDs (e.g., "FR")
+    pub prefix: String,
+    /// Optional description
+    #[serde(default)]
+    pub description: String,
+}
+
+impl RequirementTypeDefinition {
+    pub fn new(name: &str, prefix: &str, description: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            prefix: prefix.to_uppercase(),
+            description: description.to_string(),
+        }
+    }
+}
+
+/// Default requirement types with prefixes
+fn default_requirement_types() -> Vec<RequirementTypeDefinition> {
+    vec![
+        RequirementTypeDefinition::new("Functional", "FR", "Functional requirements"),
+        RequirementTypeDefinition::new("Non-Functional", "NFR", "Non-functional requirements (performance, security, etc.)"),
+        RequirementTypeDefinition::new("System", "SR", "System-level requirements"),
+        RequirementTypeDefinition::new("User", "UR", "User story requirements"),
+        RequirementTypeDefinition::new("Change Request", "CR", "Change requests for modifications to existing functionality"),
+    ]
+}
+
+/// Configuration for a feature with its prefix
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct FeatureDefinition {
+    /// Sequential number for ordering
+    pub number: u32,
+    /// Display name for the feature
+    pub name: String,
+    /// Prefix used in IDs (e.g., "AUTH" for Authentication)
+    pub prefix: String,
+    /// Optional description
+    #[serde(default)]
+    pub description: String,
+}
+
+impl FeatureDefinition {
+    pub fn new(number: u32, name: &str, prefix: &str) -> Self {
+        Self {
+            number,
+            name: name.to_string(),
+            prefix: prefix.to_uppercase(),
+            description: String::new(),
+        }
+    }
+
+    pub fn with_description(mut self, description: &str) -> Self {
+        self.description = description.to_string();
+        self
+    }
+}
+
+/// ID system configuration
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct IdConfiguration {
+    /// Format style for IDs
+    #[serde(default)]
+    pub format: IdFormat,
+    /// Numbering strategy
+    #[serde(default)]
+    pub numbering: NumberingStrategy,
+    /// Number of digits for the numeric portion (default 3 = 001)
+    #[serde(default = "default_id_digits")]
+    pub digits: u8,
+    /// Configured requirement types
+    #[serde(default = "default_requirement_types")]
+    pub requirement_types: Vec<RequirementTypeDefinition>,
+}
+
+fn default_id_digits() -> u8 {
+    3
+}
+
+impl Default for IdConfiguration {
+    fn default() -> Self {
+        Self {
+            format: IdFormat::default(),
+            numbering: NumberingStrategy::default(),
+            digits: 3,
+            requirement_types: default_requirement_types(),
+        }
+    }
+}
+
+impl IdConfiguration {
+    /// Get all reserved prefixes (type prefixes that cannot be used as feature prefixes)
+    pub fn reserved_prefixes(&self) -> Vec<String> {
+        self.requirement_types.iter().map(|t| t.prefix.clone()).collect()
+    }
+
+    /// Check if a prefix is reserved (used by a requirement type)
+    pub fn is_prefix_reserved(&self, prefix: &str) -> bool {
+        let upper = prefix.to_uppercase();
+        self.requirement_types.iter().any(|t| t.prefix == upper)
+    }
+
+    /// Get a requirement type definition by name
+    pub fn get_type_by_name(&self, name: &str) -> Option<&RequirementTypeDefinition> {
+        let lower = name.to_lowercase();
+        self.requirement_types.iter().find(|t| t.name.to_lowercase() == lower)
+    }
+
+    /// Get a requirement type definition by prefix
+    pub fn get_type_by_prefix(&self, prefix: &str) -> Option<&RequirementTypeDefinition> {
+        let upper = prefix.to_uppercase();
+        self.requirement_types.iter().find(|t| t.prefix == upper)
+    }
+
+    /// Format a number with the configured digit width
+    pub fn format_number(&self, num: u32) -> String {
+        format!("{:0>width$}", num, width = self.digits as usize)
+    }
+}
+
+// ============================================================================
+// Original structures continue below
+// ============================================================================
 
 /// Represents a relationship between two requirements
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -268,6 +430,43 @@ impl Comment {
     }
 }
 
+/// Represents a user in the system
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct User {
+    /// Unique identifier for the user
+    pub id: Uuid,
+
+    /// User's full name
+    pub name: String,
+
+    /// User's email address
+    pub email: String,
+
+    /// User's handle for @mentions (without the @)
+    pub handle: String,
+
+    /// When the user was created
+    pub created_at: DateTime<Utc>,
+
+    /// Whether the user is archived
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub archived: bool,
+}
+
+impl User {
+    /// Creates a new user
+    pub fn new(name: String, email: String, handle: String) -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            name,
+            email,
+            handle,
+            created_at: Utc::now(),
+            archived: false,
+        }
+    }
+}
+
 /// Represents a single requirement in the system
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Requirement {
@@ -322,6 +521,10 @@ pub struct Requirement {
     /// History of changes to this requirement
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub history: Vec<HistoryEntry>,
+
+    /// Whether this requirement is archived
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub archived: bool,
 }
 
 impl Requirement {
@@ -349,6 +552,7 @@ impl Requirement {
             relationships: Vec::new(),
             comments: Vec::new(),
             history: Vec::new(),
+            archived: false,
         }
     }
 
@@ -431,10 +635,31 @@ impl Requirement {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RequirementsStore {
     pub requirements: Vec<Requirement>,
+
+    /// Users in the system
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub users: Vec<User>,
+
+    /// ID system configuration
+    #[serde(default)]
+    pub id_config: IdConfiguration,
+
+    /// Defined features with their prefixes
+    #[serde(default)]
+    pub features: Vec<FeatureDefinition>,
+
+    /// Counter for feature numbers (used when creating new features)
     #[serde(default = "default_next_feature_number")]
     pub next_feature_number: u32,
+
+    /// Global counter for requirement IDs (used with Global numbering strategy)
     #[serde(default = "default_next_spec_number")]
     pub next_spec_number: u32,
+
+    /// Per-prefix counters for requirement IDs (used with PerPrefix numbering)
+    /// Key is the prefix (e.g., "FR", "AUTH"), value is the next number
+    #[serde(default)]
+    pub prefix_counters: std::collections::HashMap<String, u32>,
 }
 
 /// Default value for next_feature_number
@@ -452,14 +677,38 @@ impl RequirementsStore {
     pub fn new() -> Self {
         Self {
             requirements: Vec::new(),
+            users: Vec::new(),
+            id_config: IdConfiguration::default(),
+            features: Vec::new(),
             next_feature_number: 1,
             next_spec_number: 1,
+            prefix_counters: std::collections::HashMap::new(),
         }
     }
 
     /// Adds a requirement to the store
     pub fn add_requirement(&mut self, req: Requirement) {
         self.requirements.push(req);
+    }
+
+    /// Adds a user to the store
+    pub fn add_user(&mut self, user: User) {
+        self.users.push(user);
+    }
+
+    /// Gets a mutable reference to a user by ID
+    pub fn get_user_by_id_mut(&mut self, id: &Uuid) -> Option<&mut User> {
+        self.users.iter_mut().find(|u| &u.id == id)
+    }
+
+    /// Removes a user by ID
+    pub fn remove_user(&mut self, id: &Uuid) -> bool {
+        if let Some(pos) = self.users.iter().position(|u| &u.id == id) {
+            self.users.remove(pos);
+            true
+        } else {
+            false
+        }
     }
 
     /// Gets a requirement by ID
@@ -600,13 +849,262 @@ impl RequirementsStore {
         Ok(())
     }
 
-    /// Adds a requirement and assigns it a SPEC-ID
+    /// Adds a requirement and assigns it a SPEC-ID (legacy method for backward compatibility)
     pub fn add_requirement_with_spec_id(&mut self, mut req: Requirement) {
         if req.spec_id.is_none() {
             req.spec_id = Some(format!("SPEC-{:03}", self.next_spec_number));
             self.next_spec_number += 1;
         }
         self.requirements.push(req);
+    }
+
+    // ========================================================================
+    // New ID System Methods
+    // ========================================================================
+
+    /// Add a new feature definition
+    /// Returns error if the prefix is reserved or already in use
+    pub fn add_feature(&mut self, name: &str, prefix: &str) -> anyhow::Result<FeatureDefinition> {
+        let prefix_upper = prefix.to_uppercase();
+
+        // Check if prefix is reserved by a requirement type
+        if self.id_config.is_prefix_reserved(&prefix_upper) {
+            anyhow::bail!(
+                "Prefix '{}' is reserved for requirement type '{}'",
+                prefix_upper,
+                self.id_config.get_type_by_prefix(&prefix_upper)
+                    .map(|t| t.name.as_str())
+                    .unwrap_or("unknown")
+            );
+        }
+
+        // Check if prefix is already used by another feature
+        if self.features.iter().any(|f| f.prefix == prefix_upper) {
+            anyhow::bail!("Prefix '{}' is already used by another feature", prefix_upper);
+        }
+
+        let feature = FeatureDefinition::new(self.next_feature_number, name, &prefix_upper);
+        self.next_feature_number += 1;
+        self.features.push(feature.clone());
+        Ok(feature)
+    }
+
+    /// Get a feature by name
+    pub fn get_feature_by_name(&self, name: &str) -> Option<&FeatureDefinition> {
+        let lower = name.to_lowercase();
+        self.features.iter().find(|f| f.name.to_lowercase() == lower)
+    }
+
+    /// Get a feature by prefix
+    pub fn get_feature_by_prefix(&self, prefix: &str) -> Option<&FeatureDefinition> {
+        let upper = prefix.to_uppercase();
+        self.features.iter().find(|f| f.prefix == upper)
+    }
+
+    /// Get the next counter value for a given prefix
+    fn get_next_counter_for_prefix(&mut self, prefix: &str) -> u32 {
+        let upper = prefix.to_uppercase();
+        let counter = self.prefix_counters.entry(upper).or_insert(1);
+        let current = *counter;
+        *counter += 1;
+        current
+    }
+
+    /// Generate a new requirement ID based on configuration
+    /// - feature_prefix: Optional feature prefix (e.g., "AUTH")
+    /// - type_prefix: Optional type prefix (e.g., "FR")
+    pub fn generate_requirement_id(
+        &mut self,
+        feature_prefix: Option<&str>,
+        type_prefix: Option<&str>,
+    ) -> String {
+        let digits = self.id_config.digits;
+
+        match self.id_config.format {
+            IdFormat::SingleLevel => {
+                // Use either feature or type prefix, type takes precedence
+                let prefix = type_prefix
+                    .or(feature_prefix)
+                    .map(|s| s.to_uppercase())
+                    .unwrap_or_else(|| "REQ".to_string());
+
+                let number = match self.id_config.numbering {
+                    NumberingStrategy::Global => {
+                        let n = self.next_spec_number;
+                        self.next_spec_number += 1;
+                        n
+                    }
+                    NumberingStrategy::PerPrefix | NumberingStrategy::PerFeatureType => {
+                        self.get_next_counter_for_prefix(&prefix)
+                    }
+                };
+
+                format!("{}-{:0>width$}", prefix, number, width = digits as usize)
+            }
+            IdFormat::TwoLevel => {
+                let feat = feature_prefix
+                    .map(|s| s.to_uppercase())
+                    .unwrap_or_else(|| "GEN".to_string()); // GEN = General
+                let typ = type_prefix
+                    .map(|s| s.to_uppercase())
+                    .unwrap_or_else(|| "REQ".to_string());
+
+                let number = match self.id_config.numbering {
+                    NumberingStrategy::Global => {
+                        let n = self.next_spec_number;
+                        self.next_spec_number += 1;
+                        n
+                    }
+                    NumberingStrategy::PerPrefix => {
+                        // Per feature prefix only
+                        self.get_next_counter_for_prefix(&feat)
+                    }
+                    NumberingStrategy::PerFeatureType => {
+                        // Per feature+type combination
+                        let combo_key = format!("{}-{}", feat, typ);
+                        self.get_next_counter_for_prefix(&combo_key)
+                    }
+                };
+
+                format!("{}-{}-{:0>width$}", feat, typ, number, width = digits as usize)
+            }
+        }
+    }
+
+    /// Add a requirement with the new ID system
+    /// If spec_id is already set, uses that; otherwise generates one
+    pub fn add_requirement_with_id(
+        &mut self,
+        mut req: Requirement,
+        feature_prefix: Option<&str>,
+        type_prefix: Option<&str>,
+    ) {
+        if req.spec_id.is_none() {
+            req.spec_id = Some(self.generate_requirement_id(feature_prefix, type_prefix));
+        }
+        self.requirements.push(req);
+    }
+
+    /// Get the type prefix for a RequirementType enum value
+    pub fn get_type_prefix(&self, req_type: &RequirementType) -> Option<String> {
+        let type_name = match req_type {
+            RequirementType::Functional => "Functional",
+            RequirementType::NonFunctional => "Non-Functional",
+            RequirementType::System => "System",
+            RequirementType::User => "User",
+            RequirementType::ChangeRequest => "Change Request",
+        };
+        self.id_config.get_type_by_name(type_name).map(|t| t.prefix.clone())
+    }
+
+    /// Update a requirement's spec_id when its type changes
+    /// Replaces the type prefix portion while keeping the number
+    pub fn update_spec_id_for_type_change(
+        &self,
+        current_spec_id: Option<&str>,
+        new_type: &RequirementType,
+    ) -> Option<String> {
+        let spec_id = current_spec_id?;
+        let new_prefix = self.get_type_prefix(new_type)?;
+
+        // Parse the current spec_id to extract the number
+        // Formats: "PREFIX-NNN" (SingleLevel) or "FEATURE-TYPE-NNN" (TwoLevel)
+        let parts: Vec<&str> = spec_id.split('-').collect();
+
+        match self.id_config.format {
+            IdFormat::SingleLevel => {
+                // Format: PREFIX-NNN
+                if parts.len() >= 2 {
+                    let number = parts.last()?;
+                    Some(format!("{}-{}", new_prefix, number))
+                } else {
+                    None
+                }
+            }
+            IdFormat::TwoLevel => {
+                // Format: FEATURE-TYPE-NNN
+                if parts.len() >= 3 {
+                    let feature = parts[0];
+                    let number = parts.last()?;
+                    Some(format!("{}-{}-{}", feature, new_prefix, number))
+                } else {
+                    None
+                }
+            }
+        }
+    }
+
+    /// Migrate all existing SPEC-XXX IDs to the new format
+    /// This will regenerate all IDs based on the current configuration
+    pub fn migrate_to_new_id_format(&mut self) {
+        // Reset counters
+        self.next_spec_number = 1;
+        self.prefix_counters.clear();
+
+        // Migrate each requirement
+        for req in &mut self.requirements {
+            // Get the feature prefix from the feature field (if defined)
+            let feature_prefix = self.features.iter()
+                .find(|f| req.feature.contains(&f.name) || req.feature.ends_with(&f.prefix))
+                .map(|f| f.prefix.clone());
+
+            // Get the type prefix from the requirement type
+            let type_prefix = match req.req_type {
+                RequirementType::Functional => Some("FR".to_string()),
+                RequirementType::NonFunctional => Some("NFR".to_string()),
+                RequirementType::System => Some("SR".to_string()),
+                RequirementType::User => Some("UR".to_string()),
+                RequirementType::ChangeRequest => Some("CR".to_string()),
+            };
+
+            // Generate new ID (we need to generate without borrowing self mutably)
+            // This is a simplified version - the full implementation handles this better
+            req.spec_id = None; // Clear old ID
+        }
+
+        // Now assign new IDs
+        let req_data: Vec<(usize, Option<String>, Option<String>)> = self.requirements.iter()
+            .enumerate()
+            .map(|(i, req)| {
+                let feature_prefix = self.features.iter()
+                    .find(|f| req.feature.contains(&f.name))
+                    .map(|f| f.prefix.clone());
+                let type_prefix = match req.req_type {
+                    RequirementType::Functional => Some("FR".to_string()),
+                    RequirementType::NonFunctional => Some("NFR".to_string()),
+                    RequirementType::System => Some("SR".to_string()),
+                    RequirementType::User => Some("UR".to_string()),
+                    RequirementType::ChangeRequest => Some("CR".to_string()),
+                };
+                (i, feature_prefix, type_prefix)
+            })
+            .collect();
+
+        for (i, feature_prefix, type_prefix) in req_data {
+            let new_id = self.generate_requirement_id(
+                feature_prefix.as_deref(),
+                type_prefix.as_deref(),
+            );
+            self.requirements[i].spec_id = Some(new_id);
+        }
+    }
+
+    /// Add a new requirement type definition
+    pub fn add_requirement_type(&mut self, name: &str, prefix: &str, description: &str) -> anyhow::Result<()> {
+        let prefix_upper = prefix.to_uppercase();
+
+        // Check if prefix is already used
+        if self.id_config.get_type_by_prefix(&prefix_upper).is_some() {
+            anyhow::bail!("Prefix '{}' is already used by another requirement type", prefix_upper);
+        }
+
+        // Check if it conflicts with a feature prefix
+        if self.get_feature_by_prefix(&prefix_upper).is_some() {
+            anyhow::bail!("Prefix '{}' is already used by a feature", prefix_upper);
+        }
+
+        self.id_config.requirement_types.push(RequirementTypeDefinition::new(name, &prefix_upper, description));
+        Ok(())
     }
 
     /// Add a relationship between two requirements
@@ -675,6 +1173,63 @@ impl RequirementsStore {
         }
 
         Ok(())
+    }
+
+    /// Set a unique relationship, removing any existing relationship of the same type first
+    /// This is useful for Parent relationships where a requirement can only have one parent
+    pub fn set_relationship(
+        &mut self,
+        source_id: &Uuid,
+        rel_type: RelationshipType,
+        target_id: &Uuid,
+        bidirectional: bool,
+    ) -> anyhow::Result<()> {
+        // Validate both requirements exist
+        if !self.requirements.iter().any(|r| r.id == *source_id) {
+            anyhow::bail!("Source requirement not found: {}", source_id);
+        }
+        if !self.requirements.iter().any(|r| r.id == *target_id) {
+            anyhow::bail!("Target requirement not found: {}", target_id);
+        }
+
+        // Don't allow self-relationships
+        if source_id == target_id {
+            anyhow::bail!("Cannot create relationship to self");
+        }
+
+        // Remove any existing relationships of this type from the source
+        // For Parent relationships, this ensures a child can only have one parent
+        {
+            let source_req = self
+                .get_requirement_by_id_mut(source_id)
+                .ok_or_else(|| anyhow::anyhow!("Source requirement not found"))?;
+
+            // Find and remove existing relationships of this type
+            let old_targets: Vec<Uuid> = source_req
+                .relationships
+                .iter()
+                .filter(|r| r.rel_type == rel_type)
+                .map(|r| r.target_id)
+                .collect();
+
+            source_req.relationships.retain(|r| r.rel_type != rel_type);
+
+            // Remove inverse relationships from old targets
+            if bidirectional {
+                if let Some(inverse_type) = rel_type.inverse() {
+                    for old_target in old_targets {
+                        if let Some(old_target_req) = self.get_requirement_by_id_mut(&old_target) {
+                            old_target_req
+                                .relationships
+                                .retain(|r| !(r.target_id == *source_id && r.rel_type == inverse_type));
+                        }
+                    }
+                }
+            }
+        }
+
+        // Now add the new relationship
+        self.add_relationship(source_id, rel_type, target_id, bidirectional)
     }
 
     /// Remove a relationship between two requirements

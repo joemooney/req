@@ -51,11 +51,15 @@ pub enum DbCommand {
 
 #[derive(Subcommand, Debug)]
 pub enum FeatureCommand {
-    /// Add a new feature
+    /// Add a new feature with a prefix for IDs
     Add {
-        /// Name of the feature
+        /// Name of the feature (e.g., "Authentication")
         #[clap(long)]
         name: Option<String>,
+
+        /// Prefix for requirement IDs (e.g., "AUTH")
+        #[clap(long)]
+        prefix: Option<String>,
 
         /// Use interactive mode (prompts)
         #[clap(long)]
@@ -67,22 +71,88 @@ pub enum FeatureCommand {
 
     /// Show details for a specific feature
     Show {
-        /// The name or ID of the feature to show
+        /// The name or prefix of the feature to show
         name: String,
     },
 
     /// Edit an existing feature
     Edit {
-        /// The name or ID of the feature to edit
+        /// The name or prefix of the feature to edit
         name: String,
 
         /// New name for the feature
         #[clap(long)]
         new_name: Option<String>,
 
+        /// New prefix for the feature
+        #[clap(long)]
+        new_prefix: Option<String>,
+
         /// Use interactive mode (prompts)
         #[clap(long)]
         interactive: bool,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum ConfigCommand {
+    /// Show current ID configuration
+    Show,
+
+    /// Set the ID format (single-level or two-level)
+    Format {
+        /// Format: "single" for PREFIX-NNN, "two" for FEATURE-TYPE-NNN
+        format: String,
+    },
+
+    /// Set the numbering strategy
+    Numbering {
+        /// Strategy: "global", "per-prefix", or "per-feature-type"
+        strategy: String,
+    },
+
+    /// Set the number of digits in IDs
+    Digits {
+        /// Number of digits (1-6)
+        digits: u8,
+    },
+
+    /// Migrate existing SPEC-XXX IDs to new format
+    Migrate {
+        /// Skip confirmation prompt
+        #[clap(long, short = 'y')]
+        yes: bool,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum TypeCommand {
+    /// List all requirement types
+    List,
+
+    /// Add a new requirement type
+    Add {
+        /// Name of the type (e.g., "Business")
+        #[clap(long)]
+        name: String,
+
+        /// Prefix for the type (e.g., "BR")
+        #[clap(long)]
+        prefix: String,
+
+        /// Description of the type
+        #[clap(long)]
+        description: Option<String>,
+    },
+
+    /// Remove a requirement type
+    Remove {
+        /// Name or prefix of the type to remove
+        name: String,
+
+        /// Skip confirmation prompt
+        #[clap(long, short = 'y')]
+        yes: bool,
     },
 }
 
@@ -297,6 +367,14 @@ pub enum Command {
     #[clap(subcommand)]
     Comment(CommentCommand),
 
+    /// ID configuration commands
+    #[clap(subcommand)]
+    Config(ConfigCommand),
+
+    /// Requirement type management commands
+    #[clap(subcommand, name = "type")]
+    Type(TypeCommand),
+
     /// Export requirements to different formats
     Export {
         /// Output format (mapping, json)
@@ -306,5 +384,12 @@ pub enum Command {
         /// Output file path
         #[clap(long, short = 'o')]
         output: Option<PathBuf>,
+    },
+
+    /// Open the user guide in the default browser
+    UserGuide {
+        /// Open in dark mode
+        #[clap(long)]
+        dark: bool,
     },
 }

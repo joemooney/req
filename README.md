@@ -58,6 +58,8 @@ The GUI provides:
 - Detail view for each requirement
 - Relationship visualization
 - Search functionality
+- User settings (name, email, handle for @mentions)
+- Comment system with threaded replies
 
 ## Features
 

@@ -13,6 +13,7 @@ release/
 *.orig
 *.rej
 *.patch
+.history/
 
 # IDE
 .vscode/

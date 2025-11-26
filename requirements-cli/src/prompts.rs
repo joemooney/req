@@ -41,6 +41,7 @@ pub fn prompt_new_requirement(store: &mut requirements_core::RequirementsStore) 
         RequirementType::NonFunctional,
         RequirementType::System,
         RequirementType::User,
+        RequirementType::ChangeRequest,
     ];
     let req_type = Select::new("Type:", type_options).prompt()?;
     req.req_type = req_type;

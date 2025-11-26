@@ -85,3 +85,10 @@ The pattern is implemented in functions like `add_requirement_interactive()` vs 
 - Colored output using the `colored` crate with semantic colors (green=completed, red=rejected, etc.)
 - UUID parsing and requirement lookup by ID throughout
 - Editor integration for multi-line description editing via `inquire::Editor`
+
+### Documentation and Help
+- **User guide HTML generation**: Generate HTML versions of user guides from markdown sources
+- **Dark mode support**: Provide both light and dark mode versions of documentation
+- **Browser viewing**: Open user guides in default browser with mode selection
+- **Pre-generated files**: Commit generated HTML files to repository for browser refresh capability
+- **Helper scripts**: Provide scripts in helper directory for regenerating documentation

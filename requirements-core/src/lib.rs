@@ -8,7 +8,10 @@ pub mod project;
 pub use models::{
     Requirement, RequirementPriority, RequirementStatus, RequirementType,
     RequirementsStore, Relationship, RelationshipType, Comment,
-    HistoryEntry, FieldChange,
+    HistoryEntry, FieldChange, User,
+    // New ID system types
+    IdFormat, NumberingStrategy, IdConfiguration,
+    RequirementTypeDefinition, FeatureDefinition,
 };
 pub use storage::Storage;
 pub use registry::{Registry, get_registry_path};

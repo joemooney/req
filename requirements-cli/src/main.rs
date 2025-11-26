@@ -11,12 +11,10 @@ use requirements_core::{
     export, RelationshipType, Requirement, RequirementPriority,
     RequirementStatus, RequirementType, RequirementsStore, Storage,
     Registry, get_registry_path, determine_requirements_path, Comment,
-    HistoryEntry, FieldChange,
+    FieldChange, IdFormat, NumberingStrategy,
 };
 
-use chrono;
-
-use crate::cli::{Cli, Command, DbCommand, FeatureCommand, RelationshipCommand, CommentCommand};
+use crate::cli::{Cli, Command, DbCommand, FeatureCommand, RelationshipCommand, CommentCommand, ConfigCommand, TypeCommand};
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
@@ -63,8 +61,17 @@ fn main() -> Result<()> {
         Command::Comment(comment_cmd) => {
             handle_comment_command(comment_cmd, &storage)?;
         }
+        Command::Config(config_cmd) => {
+            handle_config_command(config_cmd, &storage)?;
+        }
+        Command::Type(type_cmd) => {
+            handle_type_command(type_cmd, &storage)?;
+        }
         Command::Export { format, output } => {
             handle_export_command(&storage, format, output.as_deref())?;
+        }
+        Command::UserGuide { dark } => {
+            open_user_guide(*dark)?;
         }
     }
 
@@ -79,17 +86,26 @@ fn add_requirement_interactive(storage: &Storage) -> Result<()> {
     let requirement = crate::prompts::prompt_new_requirement(&mut store)?;
     let id = requirement.id;
 
-    // Add the requirement with auto-assigned SPEC-ID
-    store.add_requirement_with_spec_id(requirement);
+    // Get prefixes for ID generation
+    let feature_prefix = store.get_feature_by_name(&requirement.feature)
+        .map(|f| f.prefix.clone());
+    let type_prefix = store.get_type_prefix(&requirement.req_type);
+
+    // Add the requirement with auto-assigned ID based on configuration
+    store.add_requirement_with_id(
+        requirement,
+        feature_prefix.as_deref(),
+        type_prefix.as_deref(),
+    );
     storage.save(&store)?;
 
-    // Get the added requirement to show SPEC-ID
+    // Get the added requirement to show its ID
     let added_req = store.get_requirement_by_id(&id).expect("Just added requirement");
 
     println!("{}", "Requirement added successfully!".green());
-    println!("ID: {}", id);
+    println!("UUID: {}", id);
     if let Some(spec_id) = &added_req.spec_id {
-        println!("SPEC-ID: {}", spec_id.green());
+        println!("ID: {}", spec_id.green());
     }
 
     Ok(())
@@ -155,17 +171,26 @@ fn add_requirement_cli(
 
     let id = requirement.id;
 
-    // Add the requirement with auto-assigned SPEC-ID
-    store.add_requirement_with_spec_id(requirement);
+    // Get prefixes for ID generation
+    let feature_prefix = store.get_feature_by_name(&requirement.feature)
+        .map(|f| f.prefix.clone());
+    let type_prefix = store.get_type_prefix(&requirement.req_type);
+
+    // Add the requirement with auto-assigned ID based on configuration
+    store.add_requirement_with_id(
+        requirement,
+        feature_prefix.as_deref(),
+        type_prefix.as_deref(),
+    );
     storage.save(&store)?;
 
-    // Get the added requirement to show SPEC-ID
+    // Get the added requirement to show its ID
     let added_req = store.get_requirement_by_id(&id).expect("Just added requirement");
 
     println!("{}", "Requirement added successfully!".green());
-    println!("ID: {}", id);
+    println!("UUID: {}", id);
     if let Some(spec_id) = &added_req.spec_id {
-        println!("SPEC-ID: {}", spec_id.green());
+        println!("ID: {}", spec_id.green());
     }
 
     Ok(())
@@ -286,6 +311,7 @@ fn show_requirement(storage: &Storage, id_str: &str) -> Result<()> {
         RequirementType::NonFunctional => "Non-Functional",
         RequirementType::System => "System",
         RequirementType::User => "User",
+        RequirementType::ChangeRequest => "Change Request",
     };
     println!("{}: {}", "Type".blue(), type_str);
 
@@ -559,151 +585,313 @@ fn parse_type(type_str: &str) -> Result<RequirementType> {
         "non-functional" | "nonfunctional" => Ok(RequirementType::NonFunctional),
         "system" => Ok(RequirementType::System),
         "user" => Ok(RequirementType::User),
+        "change-request" | "changerequest" | "cr" => Ok(RequirementType::ChangeRequest),
         _ => anyhow::bail!("Invalid requirement type: {}", type_str),
     }
 }
 
-/// Handle database management subcommands
+/// Handle feature management subcommands
 fn handle_feature_command(cmd: &FeatureCommand, storage: &Storage) -> Result<()> {
     // Load existing requirements
     let mut store = storage.load()?;
 
     match cmd {
-        FeatureCommand::Add { name, interactive } => {
-            let should_be_interactive = *interactive || name.is_none();
+        FeatureCommand::Add { name, prefix, interactive } => {
+            let should_be_interactive = *interactive || name.is_none() || prefix.is_none();
 
-            // Get feature name
-            let feature_name = if should_be_interactive {
+            if should_be_interactive {
                 // Use interactive prompting
-                crate::prompts::prompt_new_feature(&mut store)?
+                let feature_name = crate::prompts::prompt_new_feature(&mut store)?;
+                println!("{} Feature '{}' created successfully.", "✓".green(), feature_name);
             } else {
-                // Use command line argument
+                // Use command line arguments
                 let name = name.clone().ok_or_else(|| anyhow::anyhow!("Feature name is required"))?;
+                let prefix = prefix.clone().ok_or_else(|| anyhow::anyhow!("Feature prefix is required"))?;
 
-                // Format with sequential number
-                let next_number = store.get_next_feature_number();
-                format!("{}-{}", next_number, name)
-            };
+                // Add feature with prefix to the new system
+                let feature = store.add_feature(&name, &prefix)?;
+                println!("{} Feature '{}' created with prefix '{}'.", "✓".green(), feature.name, feature.prefix);
+            }
 
-            println!("{} Feature '{}' created successfully.", "✓".green(), feature_name);
-
-            // Save the updated store to preserve the next feature number
+            // Save the updated store
             storage.save(&store)?;
         },
         FeatureCommand::List => {
-            let features = store.get_feature_names();
+            // Show both legacy features and new feature definitions
+            println!("{}", "Defined Features:".blue().bold());
+            println!("{:<10} | {:<10} | {:<30}", "Number", "Prefix", "Name");
+            println!("{}", "-".repeat(55));
 
-            if features.is_empty() {
-                println!("{}", "No features found.".yellow());
-                return Ok(());
+            if store.features.is_empty() {
+                println!("{}", "(No features defined yet)".dimmed());
+            } else {
+                for feature in &store.features {
+                    println!("{:<10} | {:<10} | {:<30}", feature.number, feature.prefix, feature.name);
+                }
             }
 
-            println!("{:<15} | {}", "Number", "Feature Name");
-            println!("{}", "-".repeat(50));
-
-            for feature in features {
-                // Split feature by hyphen to get number and name
-                if let Some((number, name)) = feature.split_once('-') {
-                    if number.parse::<u32>().is_ok() {
-                        println!("{:<15} | {}", number, name);
-                    } else {
-                        println!("{:<15} | {}", "N/A", feature);
-                    }
-                } else {
-                    println!("{:<15} | {}", "N/A", feature);
+            // Also show legacy feature names from requirements
+            let legacy_features = store.get_feature_names();
+            if !legacy_features.is_empty() {
+                println!("\n{}", "Legacy Features (from requirements):".yellow());
+                for feature in legacy_features {
+                    println!("  - {}", feature);
                 }
             }
         },
         FeatureCommand::Show { name } => {
-            let features = store.get_feature_names();
-            let mut found = false;
+            // Try to find in new feature definitions first
+            if let Some(feature) = store.get_feature_by_name(name).or_else(|| store.get_feature_by_prefix(name)) {
+                println!("{}: {}", "Feature".blue(), feature.name);
+                println!("{}: {}", "Prefix".blue(), feature.prefix);
+                println!("{}: {}", "Number".blue(), feature.number);
+                if !feature.description.is_empty() {
+                    println!("{}: {}", "Description".blue(), feature.description);
+                }
+            } else {
+                // Fall back to legacy feature search
+                let features = store.get_feature_names();
+                let mut found = false;
 
-            for feature in features {
-                if feature.contains(name) {
-                    println!("{}: {}", "Feature".blue(), feature);
+                for feature in features {
+                    if feature.contains(name) {
+                        println!("{}: {}", "Feature".blue(), feature);
 
-                    // Find requirements with this feature
-                    println!("\n{}", "Requirements:".blue());
-                    let requirements: Vec<&Requirement> = store.requirements.iter()
-                        .filter(|r| r.feature == feature)
-                        .collect();
+                        // Find requirements with this feature
+                        println!("\n{}", "Requirements:".blue());
+                        let requirements: Vec<&Requirement> = store.requirements.iter()
+                            .filter(|r| r.feature == feature)
+                            .collect();
 
-                    if requirements.is_empty() {
-                        println!("No requirements found with this feature.");
-                    } else {
-                        println!("{:<36} | {:<30} | {:<10} | {:<10}", "ID", "Title", "Status", "Priority");
-                        println!("{}", "-".repeat(90));
+                        if requirements.is_empty() {
+                            println!("No requirements found with this feature.");
+                        } else {
+                            println!("{:<12} | {:<30} | {:<10} | {:<10}", "ID", "Title", "Status", "Priority");
+                            println!("{}", "-".repeat(70));
 
-                        for req in requirements {
-                            let status_str = match req.status {
-                                RequirementStatus::Draft => "Draft".yellow(),
-                                RequirementStatus::Approved => "Approved".blue(),
-                                RequirementStatus::Completed => "Completed".green(),
-                                RequirementStatus::Rejected => "Rejected".red(),
-                            };
+                            for req in requirements {
+                                let spec_id = req.spec_id.as_deref().unwrap_or("-");
+                                let status_str = format!("{:?}", req.status);
+                                let priority_str = format!("{:?}", req.priority);
 
-                            let priority_str = match req.priority {
-                                RequirementPriority::High => "High".red(),
-                                RequirementPriority::Medium => "Medium".yellow(),
-                                RequirementPriority::Low => "Low".green(),
-                            };
-
-                            println!("{:<36} | {:<30} | {:<10} | {:<10}",
-                                req.id.to_string(),
-                                req.title,
-                                status_str,
-                                priority_str);
+                                println!("{:<12} | {:<30} | {:<10} | {:<10}",
+                                    spec_id,
+                                    &req.title[..req.title.len().min(30)],
+                                    status_str,
+                                    priority_str);
+                            }
                         }
-                    }
 
-                    found = true;
-                    break;
+                        found = true;
+                        break;
+                    }
+                }
+
+                if !found {
+                    println!("{} Feature '{}' not found.", "!".yellow(), name);
                 }
             }
-
-            if !found {
-                println!("{} Feature '{}' not found.", "!".yellow(), name);
-            }
         },
-        FeatureCommand::Edit { name, new_name, interactive } => {
-            let features = store.get_feature_names();
-            let mut found = false;
+        FeatureCommand::Edit { name, new_name, new_prefix, interactive } => {
+            // Try to find in new feature definitions first
+            if let Some(idx) = store.features.iter().position(|f|
+                f.name.to_lowercase() == name.to_lowercase() || f.prefix == name.to_uppercase()
+            ) {
+                let old_name = store.features[idx].name.clone();
+                let old_prefix = store.features[idx].prefix.clone();
 
-            // Find the feature
-            for feature in features {
-                if feature.contains(name) {
-                    // Get new name for the feature
-                    let new_feature_name = if *interactive || new_name.is_none() {
-                        crate::prompts::prompt_edit_feature(&feature)?
-                    } else {
-                        // Use command line argument but preserve number prefix
-                        let new_name = new_name.clone().unwrap();
+                if *interactive || (new_name.is_none() && new_prefix.is_none()) {
+                    // Interactive mode
+                    let updated_name = inquire::Text::new("New name:")
+                        .with_default(&old_name)
+                        .prompt()?;
+                    let updated_prefix = inquire::Text::new("New prefix:")
+                        .with_default(&old_prefix)
+                        .prompt()?;
 
-                        if let Some((prefix, _)) = feature.split_once('-') {
-                            if prefix.parse::<u32>().is_ok() {
-                                format!("{}-{}", prefix, new_name)
+                    store.features[idx].name = updated_name;
+                    store.features[idx].prefix = updated_prefix.to_uppercase();
+                } else {
+                    if let Some(n) = new_name {
+                        store.features[idx].name = n.clone();
+                    }
+                    if let Some(p) = new_prefix {
+                        store.features[idx].prefix = p.to_uppercase();
+                    }
+                }
+
+                storage.save(&store)?;
+                println!("{} Feature updated successfully.", "✓".green());
+            } else {
+                // Fall back to legacy feature handling
+                let features = store.get_feature_names();
+                let mut found = false;
+
+                for feature in features {
+                    if feature.contains(name) {
+                        let new_feature_name = if *interactive || new_name.is_none() {
+                            crate::prompts::prompt_edit_feature(&feature)?
+                        } else {
+                            let new_name = new_name.clone().unwrap();
+                            if let Some((prefix, _)) = feature.split_once('-') {
+                                if prefix.parse::<u32>().is_ok() {
+                                    format!("{}-{}", prefix, new_name)
+                                } else {
+                                    new_name
+                                }
                             } else {
                                 new_name
                             }
-                        } else {
-                            new_name
-                        }
-                    };
+                        };
 
-                    // Update all requirements with this feature
-                    store.update_feature_name(&feature, &new_feature_name);
+                        store.update_feature_name(&feature, &new_feature_name);
+                        storage.save(&store)?;
+                        println!("{} Feature '{}' renamed to '{}'.", "✓".green(), feature, new_feature_name);
+                        found = true;
+                        break;
+                    }
+                }
 
-                    // Save the updated store
-                    storage.save(&store)?;
+                if !found {
+                    println!("{} Feature '{}' not found.", "!".yellow(), name);
+                }
+            }
+        }
+    }
 
-                    println!("{} Feature '{}' renamed to '{}'.", "✓".green(), feature, new_feature_name);
-                    found = true;
-                    break;
+    Ok(())
+}
+
+/// Handle ID configuration commands
+fn handle_config_command(cmd: &ConfigCommand, storage: &Storage) -> Result<()> {
+    let mut store = storage.load()?;
+
+    match cmd {
+        ConfigCommand::Show => {
+            println!("{}", "ID Configuration:".blue().bold());
+            println!();
+
+            let format_str = match store.id_config.format {
+                IdFormat::SingleLevel => "Single-level (PREFIX-NNN)",
+                IdFormat::TwoLevel => "Two-level (FEATURE-TYPE-NNN)",
+            };
+            println!("{}: {}", "Format".cyan(), format_str);
+
+            let numbering_str = match store.id_config.numbering {
+                NumberingStrategy::Global => "Global (one counter for all)",
+                NumberingStrategy::PerPrefix => "Per-prefix (separate counter per prefix)",
+                NumberingStrategy::PerFeatureType => "Per feature+type combination",
+            };
+            println!("{}: {}", "Numbering".cyan(), numbering_str);
+
+            println!("{}: {}", "Digits".cyan(), store.id_config.digits);
+            println!("{}: {}", "Next global number".cyan(), store.next_spec_number);
+
+            if !store.prefix_counters.is_empty() {
+                println!("\n{}", "Prefix Counters:".blue());
+                for (prefix, counter) in &store.prefix_counters {
+                    println!("  {}: {}", prefix, counter);
+                }
+            }
+        }
+        ConfigCommand::Format { format } => {
+            store.id_config.format = match format.to_lowercase().as_str() {
+                "single" | "single-level" | "1" => IdFormat::SingleLevel,
+                "two" | "two-level" | "2" => IdFormat::TwoLevel,
+                _ => anyhow::bail!("Invalid format. Use 'single' or 'two'."),
+            };
+            storage.save(&store)?;
+            println!("{} ID format set to {:?}", "✓".green(), store.id_config.format);
+        }
+        ConfigCommand::Numbering { strategy } => {
+            store.id_config.numbering = match strategy.to_lowercase().as_str() {
+                "global" => NumberingStrategy::Global,
+                "per-prefix" | "prefix" => NumberingStrategy::PerPrefix,
+                "per-feature-type" | "feature-type" => NumberingStrategy::PerFeatureType,
+                _ => anyhow::bail!("Invalid strategy. Use 'global', 'per-prefix', or 'per-feature-type'."),
+            };
+            storage.save(&store)?;
+            println!("{} Numbering strategy set to {:?}", "✓".green(), store.id_config.numbering);
+        }
+        ConfigCommand::Digits { digits } => {
+            if *digits < 1 || *digits > 6 {
+                anyhow::bail!("Digits must be between 1 and 6");
+            }
+            store.id_config.digits = *digits;
+            storage.save(&store)?;
+            println!("{} ID digits set to {}", "✓".green(), digits);
+        }
+        ConfigCommand::Migrate { yes } => {
+            if !*yes {
+                println!("{}", "This will regenerate all requirement IDs based on current configuration.".yellow());
+                println!("Current requirements: {}", store.requirements.len());
+                let confirm = inquire::Confirm::new("Are you sure you want to migrate?")
+                    .with_default(false)
+                    .prompt()?;
+                if !confirm {
+                    println!("Migration cancelled.");
+                    return Ok(());
                 }
             }
 
-            if !found {
-                println!("{} Feature '{}' not found.", "!".yellow(), name);
+            store.migrate_to_new_id_format();
+            storage.save(&store)?;
+            println!("{} Successfully migrated {} requirements to new ID format.",
+                "✓".green(), store.requirements.len());
+        }
+    }
+
+    Ok(())
+}
+
+/// Handle requirement type commands
+fn handle_type_command(cmd: &TypeCommand, storage: &Storage) -> Result<()> {
+    let mut store = storage.load()?;
+
+    match cmd {
+        TypeCommand::List => {
+            println!("{}", "Requirement Types:".blue().bold());
+            println!("{:<20} | {:<10} | {}", "Name", "Prefix", "Description");
+            println!("{}", "-".repeat(60));
+
+            for type_def in &store.id_config.requirement_types {
+                println!("{:<20} | {:<10} | {}",
+                    type_def.name,
+                    type_def.prefix,
+                    type_def.description);
+            }
+        }
+        TypeCommand::Add { name, prefix, description } => {
+            let desc = description.clone().unwrap_or_default();
+            store.add_requirement_type(name, prefix, &desc)?;
+            storage.save(&store)?;
+            println!("{} Requirement type '{}' added with prefix '{}'.",
+                "✓".green(), name, prefix.to_uppercase());
+        }
+        TypeCommand::Remove { name, yes } => {
+            // Find the type
+            let idx = store.id_config.requirement_types.iter()
+                .position(|t| t.name.to_lowercase() == name.to_lowercase() || t.prefix == name.to_uppercase());
+
+            if let Some(idx) = idx {
+                let type_def = &store.id_config.requirement_types[idx];
+
+                if !*yes {
+                    println!("About to remove type '{}' (prefix: {})", type_def.name, type_def.prefix);
+                    let confirm = inquire::Confirm::new("Are you sure?")
+                        .with_default(false)
+                        .prompt()?;
+                    if !confirm {
+                        println!("Removal cancelled.");
+                        return Ok(());
+                    }
+                }
+
+                let removed = store.id_config.requirement_types.remove(idx);
+                storage.save(&store)?;
+                println!("{} Requirement type '{}' removed.", "✓".green(), removed.name);
+            } else {
+                println!("{} Type '{}' not found.", "!".yellow(), name);
             }
         }
     }
@@ -1176,4 +1364,84 @@ fn delete_comment(storage: &Storage, req_id: &str, comment_id: &str) -> Result<(
     storage.save(&store)?;
     println!("{}", "Comment deleted successfully".green());
     Ok(())
+}
+
+fn open_user_guide(dark_mode: bool) -> Result<()> {
+    // Get the path to the docs directory relative to the executable
+    let exe_path = std::env::current_exe()
+        .context("Failed to get executable path")?;
+
+    // Try multiple possible locations for the docs
+    let possible_paths = [
+        // Relative to executable (for installed binaries)
+        exe_path.parent().unwrap().join("../docs"),
+        exe_path.parent().unwrap().join("../../docs"),
+        // Development paths
+        exe_path.parent().unwrap().join("../../../docs"),
+        exe_path.parent().unwrap().join("../../../../docs"),
+        // Current directory
+        std::env::current_dir().unwrap_or_default().join("docs"),
+        // Project root (when running from project directory)
+        std::path::PathBuf::from("docs"),
+    ];
+
+    let filename = if dark_mode {
+        "user-guide-dark.html"
+    } else {
+        "user-guide.html"
+    };
+
+    // Find the first path that exists
+    let doc_path = possible_paths.iter()
+        .map(|p| p.join(filename))
+        .find(|p| p.exists());
+
+    match doc_path {
+        Some(path) => {
+            let path_str = path.canonicalize()
+                .unwrap_or(path.clone())
+                .to_string_lossy()
+                .to_string();
+
+            // Convert to file:// URL
+            let url = format!("file://{}", path_str);
+
+            println!("Opening user guide{}...", if dark_mode { " (dark mode)" } else { "" });
+
+            // Try to open in browser using platform-specific commands
+            #[cfg(target_os = "linux")]
+            {
+                std::process::Command::new("xdg-open")
+                    .arg(&url)
+                    .spawn()
+                    .context("Failed to open browser. Try opening manually: {}")?;
+            }
+
+            #[cfg(target_os = "macos")]
+            {
+                std::process::Command::new("open")
+                    .arg(&url)
+                    .spawn()
+                    .context("Failed to open browser")?;
+            }
+
+            #[cfg(target_os = "windows")]
+            {
+                std::process::Command::new("cmd")
+                    .args(["/C", "start", &url])
+                    .spawn()
+                    .context("Failed to open browser")?;
+            }
+
+            println!("{}", "User guide opened in browser".green());
+            Ok(())
+        }
+        None => {
+            println!("{}", "User guide not found.".yellow());
+            println!("Expected location: docs/{}", filename);
+            println!("\nTo generate the documentation, run:");
+            println!("  ./helper/generate-docs.sh");
+            anyhow::bail!("User guide not found")
+        }
+    }
 }
