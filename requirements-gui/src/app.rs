@@ -112,6 +112,267 @@ impl Theme {
     }
 }
 
+/// Actions that can be bound to keys
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum KeyAction {
+    NavigateUp,
+    NavigateDown,
+    Edit,
+    ToggleExpand,
+    ZoomIn,
+    ZoomOut,
+    ZoomReset,
+}
+
+impl KeyAction {
+    fn label(&self) -> &'static str {
+        match self {
+            KeyAction::NavigateUp => "Navigate Up",
+            KeyAction::NavigateDown => "Navigate Down",
+            KeyAction::Edit => "Edit Requirement",
+            KeyAction::ToggleExpand => "Toggle Expand/Collapse",
+            KeyAction::ZoomIn => "Zoom In",
+            KeyAction::ZoomOut => "Zoom Out",
+            KeyAction::ZoomReset => "Reset Zoom",
+        }
+    }
+
+    fn all() -> &'static [KeyAction] {
+        &[
+            KeyAction::NavigateUp,
+            KeyAction::NavigateDown,
+            KeyAction::Edit,
+            KeyAction::ToggleExpand,
+            KeyAction::ZoomIn,
+            KeyAction::ZoomOut,
+            KeyAction::ZoomReset,
+        ]
+    }
+}
+
+/// A key binding with optional modifiers
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct KeyBinding {
+    pub key_name: String,  // Store as string for serialization
+    pub ctrl: bool,
+    pub shift: bool,
+    pub alt: bool,
+}
+
+impl KeyBinding {
+    fn new(key: egui::Key) -> Self {
+        Self { key_name: key_to_string(key).to_string(), ctrl: false, shift: false, alt: false }
+    }
+
+    fn with_ctrl(mut self) -> Self {
+        self.ctrl = true;
+        self
+    }
+
+    fn with_shift(mut self) -> Self {
+        self.shift = true;
+        self
+    }
+
+    fn key(&self) -> Option<egui::Key> {
+        string_to_key(&self.key_name)
+    }
+
+    fn display(&self) -> String {
+        let mut parts = Vec::new();
+        if self.ctrl { parts.push("Ctrl"); }
+        if self.shift { parts.push("Shift"); }
+        if self.alt { parts.push("Alt"); }
+        parts.push(&self.key_name);
+        parts.join("+")
+    }
+
+    fn matches(&self, ctx: &egui::Context) -> bool {
+        let Some(key) = self.key() else { return false };
+        ctx.input(|i| {
+            let modifiers_match =
+                i.modifiers.ctrl == self.ctrl &&
+                i.modifiers.shift == self.shift &&
+                i.modifiers.alt == self.alt;
+            modifiers_match && i.key_pressed(key)
+        })
+    }
+}
+
+fn key_to_string(key: egui::Key) -> &'static str {
+    match key {
+        egui::Key::ArrowUp => "Up",
+        egui::Key::ArrowDown => "Down",
+        egui::Key::ArrowLeft => "Left",
+        egui::Key::ArrowRight => "Right",
+        egui::Key::Enter => "Enter",
+        egui::Key::Space => "Space",
+        egui::Key::Tab => "Tab",
+        egui::Key::Escape => "Escape",
+        egui::Key::Backspace => "Backspace",
+        egui::Key::Delete => "Delete",
+        egui::Key::Home => "Home",
+        egui::Key::End => "End",
+        egui::Key::PageUp => "PageUp",
+        egui::Key::PageDown => "PageDown",
+        egui::Key::Plus => "Plus",
+        egui::Key::Minus => "Minus",
+        egui::Key::Equals => "Equals",
+        egui::Key::Num0 => "0",
+        egui::Key::Num1 => "1",
+        egui::Key::Num2 => "2",
+        egui::Key::Num3 => "3",
+        egui::Key::Num4 => "4",
+        egui::Key::Num5 => "5",
+        egui::Key::Num6 => "6",
+        egui::Key::Num7 => "7",
+        egui::Key::Num8 => "8",
+        egui::Key::Num9 => "9",
+        egui::Key::A => "A",
+        egui::Key::B => "B",
+        egui::Key::C => "C",
+        egui::Key::D => "D",
+        egui::Key::E => "E",
+        egui::Key::F => "F",
+        egui::Key::G => "G",
+        egui::Key::H => "H",
+        egui::Key::I => "I",
+        egui::Key::J => "J",
+        egui::Key::K => "K",
+        egui::Key::L => "L",
+        egui::Key::M => "M",
+        egui::Key::N => "N",
+        egui::Key::O => "O",
+        egui::Key::P => "P",
+        egui::Key::Q => "Q",
+        egui::Key::R => "R",
+        egui::Key::S => "S",
+        egui::Key::T => "T",
+        egui::Key::U => "U",
+        egui::Key::V => "V",
+        egui::Key::W => "W",
+        egui::Key::X => "X",
+        egui::Key::Y => "Y",
+        egui::Key::Z => "Z",
+        egui::Key::F1 => "F1",
+        egui::Key::F2 => "F2",
+        egui::Key::F3 => "F3",
+        egui::Key::F4 => "F4",
+        egui::Key::F5 => "F5",
+        egui::Key::F6 => "F6",
+        egui::Key::F7 => "F7",
+        egui::Key::F8 => "F8",
+        egui::Key::F9 => "F9",
+        egui::Key::F10 => "F10",
+        egui::Key::F11 => "F11",
+        egui::Key::F12 => "F12",
+        _ => "?",
+    }
+}
+
+fn string_to_key(s: &str) -> Option<egui::Key> {
+    match s {
+        "Up" => Some(egui::Key::ArrowUp),
+        "Down" => Some(egui::Key::ArrowDown),
+        "Left" => Some(egui::Key::ArrowLeft),
+        "Right" => Some(egui::Key::ArrowRight),
+        "Enter" => Some(egui::Key::Enter),
+        "Space" => Some(egui::Key::Space),
+        "Tab" => Some(egui::Key::Tab),
+        "Escape" => Some(egui::Key::Escape),
+        "Backspace" => Some(egui::Key::Backspace),
+        "Delete" => Some(egui::Key::Delete),
+        "Home" => Some(egui::Key::Home),
+        "End" => Some(egui::Key::End),
+        "PageUp" => Some(egui::Key::PageUp),
+        "PageDown" => Some(egui::Key::PageDown),
+        "Plus" => Some(egui::Key::Plus),
+        "Minus" => Some(egui::Key::Minus),
+        "Equals" => Some(egui::Key::Equals),
+        "0" => Some(egui::Key::Num0),
+        "1" => Some(egui::Key::Num1),
+        "2" => Some(egui::Key::Num2),
+        "3" => Some(egui::Key::Num3),
+        "4" => Some(egui::Key::Num4),
+        "5" => Some(egui::Key::Num5),
+        "6" => Some(egui::Key::Num6),
+        "7" => Some(egui::Key::Num7),
+        "8" => Some(egui::Key::Num8),
+        "9" => Some(egui::Key::Num9),
+        "A" => Some(egui::Key::A),
+        "B" => Some(egui::Key::B),
+        "C" => Some(egui::Key::C),
+        "D" => Some(egui::Key::D),
+        "E" => Some(egui::Key::E),
+        "F" => Some(egui::Key::F),
+        "G" => Some(egui::Key::G),
+        "H" => Some(egui::Key::H),
+        "I" => Some(egui::Key::I),
+        "J" => Some(egui::Key::J),
+        "K" => Some(egui::Key::K),
+        "L" => Some(egui::Key::L),
+        "M" => Some(egui::Key::M),
+        "N" => Some(egui::Key::N),
+        "O" => Some(egui::Key::O),
+        "P" => Some(egui::Key::P),
+        "Q" => Some(egui::Key::Q),
+        "R" => Some(egui::Key::R),
+        "S" => Some(egui::Key::S),
+        "T" => Some(egui::Key::T),
+        "U" => Some(egui::Key::U),
+        "V" => Some(egui::Key::V),
+        "W" => Some(egui::Key::W),
+        "X" => Some(egui::Key::X),
+        "Y" => Some(egui::Key::Y),
+        "Z" => Some(egui::Key::Z),
+        "F1" => Some(egui::Key::F1),
+        "F2" => Some(egui::Key::F2),
+        "F3" => Some(egui::Key::F3),
+        "F4" => Some(egui::Key::F4),
+        "F5" => Some(egui::Key::F5),
+        "F6" => Some(egui::Key::F6),
+        "F7" => Some(egui::Key::F7),
+        "F8" => Some(egui::Key::F8),
+        "F9" => Some(egui::Key::F9),
+        "F10" => Some(egui::Key::F10),
+        "F11" => Some(egui::Key::F11),
+        "F12" => Some(egui::Key::F12),
+        _ => None,
+    }
+}
+
+/// Collection of key bindings
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct KeyBindings {
+    pub bindings: HashMap<KeyAction, KeyBinding>,
+}
+
+impl Default for KeyBindings {
+    fn default() -> Self {
+        let mut bindings = HashMap::new();
+        bindings.insert(KeyAction::NavigateUp, KeyBinding::new(egui::Key::ArrowUp));
+        bindings.insert(KeyAction::NavigateDown, KeyBinding::new(egui::Key::ArrowDown));
+        bindings.insert(KeyAction::Edit, KeyBinding::new(egui::Key::Enter));
+        bindings.insert(KeyAction::ToggleExpand, KeyBinding::new(egui::Key::Space));
+        bindings.insert(KeyAction::ZoomIn, KeyBinding::new(egui::Key::Plus).with_ctrl().with_shift());
+        bindings.insert(KeyAction::ZoomOut, KeyBinding::new(egui::Key::Minus).with_ctrl());
+        bindings.insert(KeyAction::ZoomReset, KeyBinding::new(egui::Key::Num0).with_ctrl());
+        Self { bindings }
+    }
+}
+
+impl KeyBindings {
+    fn get(&self, action: KeyAction) -> Option<&KeyBinding> {
+        self.bindings.get(&action)
+    }
+
+    fn is_pressed(&self, action: KeyAction, ctx: &egui::Context) -> bool {
+        self.bindings.get(&action)
+            .map(|binding| binding.matches(ctx))
+            .unwrap_or(false)
+    }
+}
+
 /// User settings for the GUI application
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserSettings {
@@ -130,6 +391,9 @@ pub struct UserSettings {
     /// Color theme
     #[serde(default)]
     pub theme: Theme,
+    /// Key bindings
+    #[serde(default)]
+    pub keybindings: KeyBindings,
 }
 
 fn default_font_size() -> f32 {
@@ -145,6 +409,7 @@ impl Default for UserSettings {
             base_font_size: DEFAULT_FONT_SIZE,
             preferred_perspective: Perspective::default(),
             theme: Theme::default(),
+            keybindings: KeyBindings::default(),
         }
     }
 }
@@ -207,6 +472,7 @@ enum SettingsTab {
     #[default]
     User,
     Appearance,
+    Keybindings,
     Administration,
 }
 
@@ -320,6 +586,8 @@ pub struct RequirementsApp {
     settings_form_font_size: f32,
     settings_form_perspective: Perspective,
     settings_form_theme: Theme,
+    settings_form_keybindings: KeyBindings,
+    capturing_key_for: Option<KeyAction>,  // Which action we're capturing a key for
 
     // User management
     show_user_form: bool,
@@ -397,6 +665,8 @@ impl RequirementsApp {
             settings_form_font_size: DEFAULT_FONT_SIZE,
             settings_form_perspective: Perspective::default(),
             settings_form_theme: Theme::default(),
+            settings_form_keybindings: KeyBindings::default(),
+            capturing_key_for: None,
             show_user_form: false,
             editing_user_id: None,
             user_form_name: String::new(),
@@ -756,6 +1026,8 @@ impl RequirementsApp {
                         self.settings_form_font_size = self.user_settings.base_font_size;
                         self.settings_form_perspective = self.user_settings.preferred_perspective.clone();
                         self.settings_form_theme = self.user_settings.theme.clone();
+                        self.settings_form_keybindings = self.user_settings.keybindings.clone();
+                        self.capturing_key_for = None;
                         self.show_settings_dialog = true;
                     }
                     if ui.button("?").on_hover_text("Help - Open User Guide").clicked() {
@@ -783,7 +1055,8 @@ impl RequirementsApp {
                 ui.horizontal(|ui| {
                     ui.selectable_value(&mut self.settings_tab, SettingsTab::User, "👤 User");
                     ui.selectable_value(&mut self.settings_tab, SettingsTab::Appearance, "🎨 Appearance");
-                    ui.selectable_value(&mut self.settings_tab, SettingsTab::Administration, "🔧 Administration");
+                    ui.selectable_value(&mut self.settings_tab, SettingsTab::Keybindings, "⌨ Keys");
+                    ui.selectable_value(&mut self.settings_tab, SettingsTab::Administration, "🔧 Admin");
                 });
 
                 ui.separator();
@@ -796,6 +1069,9 @@ impl RequirementsApp {
                     }
                     SettingsTab::Appearance => {
                         self.show_settings_appearance_tab(ui);
+                    }
+                    SettingsTab::Keybindings => {
+                        self.show_settings_keybindings_tab(ui, ctx);
                     }
                     SettingsTab::Administration => {
                         self.show_settings_admin_tab(ui);
@@ -815,6 +1091,7 @@ impl RequirementsApp {
                         self.user_settings.base_font_size = self.settings_form_font_size;
                         self.user_settings.preferred_perspective = self.settings_form_perspective.clone();
                         self.user_settings.theme = self.settings_form_theme.clone();
+                        self.user_settings.keybindings = self.settings_form_keybindings.clone();
 
                         // Apply the new base font size as current
                         self.current_font_size = self.settings_form_font_size;
@@ -913,6 +1190,106 @@ impl RequirementsApp {
 
         ui.add_space(5.0);
         ui.label("Tip: Use Ctrl+MouseWheel or Ctrl+Plus/Minus to zoom");
+    }
+
+    fn show_settings_keybindings_tab(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
+        ui.heading("Keyboard Shortcuts");
+        ui.add_space(10.0);
+
+        // If we're capturing a key, show instructions
+        if let Some(action) = self.capturing_key_for {
+            ui.colored_label(egui::Color32::YELLOW, format!("Press a key for '{}' (Escape to cancel)", action.label()));
+            ui.add_space(5.0);
+
+            // Check for key press
+            let captured = ctx.input(|i| {
+                // Cancel with Escape
+                if i.key_pressed(egui::Key::Escape) {
+                    return Some(None);
+                }
+                // Check for any key press
+                for key in [
+                    egui::Key::ArrowUp, egui::Key::ArrowDown, egui::Key::ArrowLeft, egui::Key::ArrowRight,
+                    egui::Key::Enter, egui::Key::Space, egui::Key::Tab, egui::Key::Backspace, egui::Key::Delete,
+                    egui::Key::Home, egui::Key::End, egui::Key::PageUp, egui::Key::PageDown,
+                    egui::Key::Plus, egui::Key::Minus, egui::Key::Equals,
+                    egui::Key::Num0, egui::Key::Num1, egui::Key::Num2, egui::Key::Num3, egui::Key::Num4,
+                    egui::Key::Num5, egui::Key::Num6, egui::Key::Num7, egui::Key::Num8, egui::Key::Num9,
+                    egui::Key::A, egui::Key::B, egui::Key::C, egui::Key::D, egui::Key::E, egui::Key::F,
+                    egui::Key::G, egui::Key::H, egui::Key::I, egui::Key::J, egui::Key::K, egui::Key::L,
+                    egui::Key::M, egui::Key::N, egui::Key::O, egui::Key::P, egui::Key::Q, egui::Key::R,
+                    egui::Key::S, egui::Key::T, egui::Key::U, egui::Key::V, egui::Key::W, egui::Key::X,
+                    egui::Key::Y, egui::Key::Z,
+                    egui::Key::F1, egui::Key::F2, egui::Key::F3, egui::Key::F4, egui::Key::F5, egui::Key::F6,
+                    egui::Key::F7, egui::Key::F8, egui::Key::F9, egui::Key::F10, egui::Key::F11, egui::Key::F12,
+                ] {
+                    if i.key_pressed(key) {
+                        let binding = KeyBinding {
+                            key_name: key_to_string(key).to_string(),
+                            ctrl: i.modifiers.ctrl,
+                            shift: i.modifiers.shift,
+                            alt: i.modifiers.alt,
+                        };
+                        return Some(Some(binding));
+                    }
+                }
+                None
+            });
+
+            if let Some(result) = captured {
+                if let Some(binding) = result {
+                    // Set the new binding
+                    self.settings_form_keybindings.bindings.insert(action, binding);
+                }
+                self.capturing_key_for = None;
+            }
+        }
+
+        // Keybindings table
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            egui::Grid::new("keybindings_grid")
+                .num_columns(3)
+                .spacing([20.0, 8.0])
+                .striped(true)
+                .show(ui, |ui| {
+                    // Header
+                    ui.strong("Action");
+                    ui.strong("Key");
+                    ui.strong("");
+                    ui.end_row();
+
+                    for action in KeyAction::all() {
+                        ui.label(action.label());
+
+                        let binding_display = self.settings_form_keybindings.bindings
+                            .get(action)
+                            .map(|b| b.display())
+                            .unwrap_or_else(|| "Unbound".to_string());
+
+                        // Highlight if we're capturing for this action
+                        if self.capturing_key_for == Some(*action) {
+                            ui.colored_label(egui::Color32::YELLOW, "...");
+                        } else {
+                            ui.monospace(&binding_display);
+                        }
+
+                        if self.capturing_key_for.is_none() {
+                            if ui.button("Change").clicked() {
+                                self.capturing_key_for = Some(*action);
+                            }
+                        } else {
+                            ui.label("");
+                        }
+                        ui.end_row();
+                    }
+                });
+        });
+
+        ui.add_space(10.0);
+
+        if ui.button("Reset to Defaults").clicked() {
+            self.settings_form_keybindings = KeyBindings::default();
+        }
     }
 
     fn show_settings_admin_tab(&mut self, ui: &mut egui::Ui) {
@@ -2421,22 +2798,25 @@ impl eframe::App for RequirementsApp {
 
         // Handle keyboard shortcuts for zoom
         let mut zoom_delta: f32 = 0.0;
+        let mut zoom_reset = false;
+
+        // Check for zoom keybindings
+        if self.user_settings.keybindings.is_pressed(KeyAction::ZoomIn, ctx) {
+            zoom_delta = 1.0;
+        }
+        if self.user_settings.keybindings.is_pressed(KeyAction::ZoomOut, ctx) {
+            zoom_delta = -1.0;
+        }
+        if self.user_settings.keybindings.is_pressed(KeyAction::ZoomReset, ctx) {
+            zoom_reset = true;
+        }
+
+        // Also handle Ctrl+= as alternate zoom in (common on keyboards)
         ctx.input(|i| {
             let ctrl = i.modifiers.ctrl || i.modifiers.mac_cmd;
             let shift = i.modifiers.shift;
-
-            // Ctrl+Shift+Plus or Ctrl+= to zoom in
-            if ctrl && (i.key_pressed(egui::Key::Plus) || (shift && i.key_pressed(egui::Key::Equals))) {
+            if ctrl && shift && i.key_pressed(egui::Key::Equals) {
                 zoom_delta = 1.0;
-            }
-            // Ctrl+Minus to zoom out
-            if ctrl && i.key_pressed(egui::Key::Minus) {
-                zoom_delta = -1.0;
-            }
-            // Ctrl+0 to reset zoom
-            if ctrl && i.key_pressed(egui::Key::Num0) {
-                zoom_delta = 0.0;
-                self.reset_zoom();
             }
 
             // Ctrl+MouseWheel to zoom - use raw scroll delta and check for events
@@ -2462,6 +2842,10 @@ impl eframe::App for RequirementsApp {
             }
         });
 
+        if zoom_reset {
+            self.reset_zoom();
+        }
+
         // Apply zoom after input closure
         if zoom_delta > 0.0 {
             self.zoom_in();
@@ -2475,32 +2859,24 @@ impl eframe::App for RequirementsApp {
             && !ctx.wants_keyboard_input()
         {
             let mut nav_delta: i32 = 0;
-            let mut enter_pressed = false;
-            let mut space_pressed = false;
-            ctx.input(|i| {
-                if i.key_pressed(egui::Key::ArrowDown) {
-                    nav_delta = 1;
-                } else if i.key_pressed(egui::Key::ArrowUp) {
-                    nav_delta = -1;
-                }
-                if i.key_pressed(egui::Key::Enter) {
-                    enter_pressed = true;
-                }
-                if i.key_pressed(egui::Key::Space) {
-                    space_pressed = true;
-                }
-            });
 
-            // Enter key edits the selected requirement
-            if enter_pressed {
+            // Check navigation keybindings
+            if self.user_settings.keybindings.is_pressed(KeyAction::NavigateDown, ctx) {
+                nav_delta = 1;
+            } else if self.user_settings.keybindings.is_pressed(KeyAction::NavigateUp, ctx) {
+                nav_delta = -1;
+            }
+
+            // Edit keybinding
+            if self.user_settings.keybindings.is_pressed(KeyAction::Edit, ctx) {
                 if let Some(idx) = self.selected_idx {
                     self.load_form_from_requirement(idx);
                     self.pending_view_change = Some(View::Edit);
                 }
             }
 
-            // Space bar toggles expand/collapse in tree views
-            if space_pressed {
+            // Toggle expand/collapse in tree views
+            if self.user_settings.keybindings.is_pressed(KeyAction::ToggleExpand, ctx) {
                 if self.perspective != Perspective::Flat {
                     if let Some(idx) = self.selected_idx {
                         if let Some(req) = self.store.requirements.get(idx) {

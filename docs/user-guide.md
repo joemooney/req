@@ -316,7 +316,28 @@ Access settings via the gear icon (top-right) in the GUI.
 | **Name** | Your full name (used in comments/history) |
 | **Email** | Your email address |
 | **Handle** | Nickname for @mentions in comments |
+
+### Appearance
+
+| Setting | Description |
+|---------|-------------|
+| **Theme** | Color scheme (Dark, Light, High Contrast Dark, Solarized Dark, Nord) |
 | **Base Font Size** | Default font size (8-32pt) |
+| **Default View** | Preferred perspective (Flat List, Parent/Child, etc.) |
+
+### Keyboard Shortcuts
+
+The Keybindings tab shows all customizable keyboard shortcuts. Click "Change" next to any action to set a new key combination. Press Escape to cancel. Click "Reset to Defaults" to restore default bindings.
+
+| Action | Default Key |
+|--------|-------------|
+| Navigate Up | Up Arrow |
+| Navigate Down | Down Arrow |
+| Edit Requirement | Enter |
+| Toggle Expand/Collapse | Space |
+| Zoom In | Ctrl+Shift+Plus |
+| Zoom Out | Ctrl+Minus |
+| Reset Zoom | Ctrl+0 |
 
 Settings are stored in: `~/.requirements_gui_settings.yaml`
 

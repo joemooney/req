@@ -152,6 +152,53 @@ A chronological record of development sessions and changes made to the Requireme
   - Regenerated HTML documentation
   - Updated CLAUDE.md to reflect current workspace structure
 
+### GUI Enhancements (Continued)
+- **Prompt**: Various UI improvements
+- **Actions**:
+  - Enter key to edit selected requirement
+  - Double-click to edit requirement
+  - Spacebar to expand/collapse tree nodes
+  - Full-width title and description fields in forms
+  - Full-width comment content field
+  - Proper indentation for threaded comments with +/- icons
+  - Fixed-width expand/collapse buttons (18x18)
+  - Comment text wrapping within panel width
+
+### Theme Selection
+- **Prompt**: Add theme selection in preferences
+- **Actions**:
+  - Added Theme enum (Dark, Light, High Contrast Dark, Solarized Dark, Nord)
+  - Implemented theme application via egui::Visuals
+  - Added theme selector in Appearance settings tab
+  - Themes persist to user settings file
+
+### Preferred View Setting
+- **Prompt**: Save preferred view in preferences
+- **Actions**:
+  - Added Perspective enum (Flat, ParentChild, Verification, References)
+  - Added preferred_perspective to UserSettings
+  - Load saved perspective on startup
+  - Perspective selector in Appearance settings tab
+
+### Tree View Navigation Fix
+- **Prompt**: Arrow keys should follow tree view display order
+- **Actions**:
+  - Implemented collect_tree_indices_top_down() for Parent/Child and Verification views
+  - Implemented collect_tree_indices_bottom_up() for References view
+  - Navigation now follows actual display order in all perspectives
+
+### Customizable Keybindings
+- **Prompt**: Add keyboard mappings panel in settings
+- **Actions**:
+  - Added KeyAction enum for all bindable actions
+  - Created KeyBinding struct with key name, modifiers (ctrl, shift, alt)
+  - Added KeyBindings collection with defaults
+  - Implemented Keybindings settings tab with capture mode
+  - Key capture shows "Press a key..." with Escape to cancel
+  - Reset to Defaults button restores default bindings
+  - Replaced hardcoded key checks with keybinding lookups
+  - Keybindings persist to user settings file
+
 ---
 
 ## Git Operations Summary
