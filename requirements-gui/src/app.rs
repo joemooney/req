@@ -30,6 +30,9 @@ pub struct UserSettings {
     /// Base font size in points
     #[serde(default = "default_font_size")]
     pub base_font_size: f32,
+    /// Preferred view perspective
+    #[serde(default)]
+    pub preferred_perspective: Perspective,
 }
 
 fn default_font_size() -> f32 {
@@ -43,6 +46,7 @@ impl Default for UserSettings {
             email: String::new(),
             handle: String::new(),
             base_font_size: DEFAULT_FONT_SIZE,
+            preferred_perspective: Perspective::default(),
         }
     }
 }
@@ -118,8 +122,8 @@ enum View {
 }
 
 /// Perspective defines how requirements are organized in the list
-#[derive(Default, PartialEq, Clone)]
-enum Perspective {
+#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
+pub(crate) enum Perspective {
     /// Simple flat list of all requirements
     #[default]
     Flat,
@@ -216,6 +220,7 @@ pub struct RequirementsApp {
     settings_form_email: String,
     settings_form_handle: String,
     settings_form_font_size: f32,
+    settings_form_perspective: Perspective,
 
     // User management
     show_user_form: bool,
@@ -252,6 +257,10 @@ impl RequirementsApp {
         let store = storage.load().unwrap_or_else(|_| RequirementsStore::new());
         let user_settings = UserSettings::load();
 
+        // Apply saved preferences
+        let initial_font_size = user_settings.base_font_size;
+        let initial_perspective = user_settings.preferred_perspective.clone();
+
         Self {
             storage,
             store,
@@ -279,7 +288,7 @@ impl RequirementsApp {
             pending_view_change: None,
             pending_comment_add: None,
             pending_comment_delete: None,
-            current_font_size: user_settings.base_font_size,
+            current_font_size: initial_font_size,
             user_settings,
             show_settings_dialog: false,
             settings_tab: SettingsTab::default(),
@@ -287,13 +296,14 @@ impl RequirementsApp {
             settings_form_email: String::new(),
             settings_form_handle: String::new(),
             settings_form_font_size: DEFAULT_FONT_SIZE,
+            settings_form_perspective: Perspective::default(),
             show_user_form: false,
             editing_user_id: None,
             user_form_name: String::new(),
             user_form_email: String::new(),
             user_form_handle: String::new(),
             show_archived_users: false,
-            perspective: Perspective::default(),
+            perspective: initial_perspective,
             perspective_direction: PerspectiveDirection::default(),
             filter_types: HashSet::new(),
             filter_features: HashSet::new(),
@@ -644,6 +654,7 @@ impl RequirementsApp {
                         self.settings_form_email = self.user_settings.email.clone();
                         self.settings_form_handle = self.user_settings.handle.clone();
                         self.settings_form_font_size = self.user_settings.base_font_size;
+                        self.settings_form_perspective = self.user_settings.preferred_perspective.clone();
                         self.show_settings_dialog = true;
                     }
                     if ui.button("?").on_hover_text("Help - Open User Guide").clicked() {
@@ -701,9 +712,13 @@ impl RequirementsApp {
                         self.user_settings.email = self.settings_form_email.clone();
                         self.user_settings.handle = self.settings_form_handle.clone();
                         self.user_settings.base_font_size = self.settings_form_font_size;
+                        self.user_settings.preferred_perspective = self.settings_form_perspective.clone();
 
                         // Apply the new base font size as current
                         self.current_font_size = self.settings_form_font_size;
+
+                        // Apply the new preferred perspective
+                        self.perspective = self.settings_form_perspective.clone();
 
                         // Save to file
                         match self.user_settings.save() {
@@ -766,6 +781,17 @@ impl RequirementsApp {
                         self.settings_form_font_size = DEFAULT_FONT_SIZE;
                     }
                 });
+                ui.end_row();
+
+                ui.label("Default View:");
+                egui::ComboBox::from_id_salt("settings_perspective_combo")
+                    .selected_text(self.settings_form_perspective.label())
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(&mut self.settings_form_perspective, Perspective::Flat, Perspective::Flat.label());
+                        ui.selectable_value(&mut self.settings_form_perspective, Perspective::ParentChild, Perspective::ParentChild.label());
+                        ui.selectable_value(&mut self.settings_form_perspective, Perspective::Verification, Perspective::Verification.label());
+                        ui.selectable_value(&mut self.settings_form_perspective, Perspective::References, Perspective::References.label());
+                    });
                 ui.end_row();
             });
 
