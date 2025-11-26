@@ -1620,14 +1620,15 @@ impl RequirementsApp {
             ui.add_space(depth as f32 * 20.0);
 
             // Expand/collapse button or placeholder of same size
+            let btn_size = egui::vec2(18.0, 18.0);
             if has_children {
                 let btn_text = if is_collapsed { "+" } else { "-" };
-                if ui.small_button(btn_text).clicked() {
+                if ui.add_sized(btn_size, egui::Button::new(btn_text)).clicked() {
                     self.tree_collapsed.insert(req_id, !is_collapsed);
                 }
             } else {
-                // Use a label with same text to maintain exact same spacing as the expand/collapse button
-                let _ = ui.small_button(" ");
+                // Placeholder with same size to maintain alignment
+                ui.add_space(btn_size.x + 4.0); // Button width + spacing
             }
 
             // Show the draggable requirement inline
@@ -1745,14 +1746,15 @@ impl RequirementsApp {
             ui.add_space(depth as f32 * 20.0);
 
             // Expand/collapse button or placeholder of same size
+            let btn_size = egui::vec2(18.0, 18.0);
             if has_parents {
                 let btn_text = if is_collapsed { "+" } else { "-" };
-                if ui.small_button(btn_text).clicked() {
+                if ui.add_sized(btn_size, egui::Button::new(btn_text)).clicked() {
                     self.tree_collapsed.insert(req_id, !is_collapsed);
                 }
             } else {
-                // Use a label with same text to maintain exact same spacing as the expand/collapse button
-                let _ = ui.small_button(" ");
+                // Placeholder with same size to maintain alignment
+                ui.add_space(btn_size.x + 4.0); // Button width + spacing
             }
 
             // Show the draggable requirement inline
@@ -2208,13 +2210,14 @@ impl RequirementsApp {
 
                     ui.horizontal(|ui| {
                         // Collapse/expand button if there are replies
+                        let btn_size = egui::vec2(18.0, 18.0);
                         if !comment.replies.is_empty() {
                             let button_text = if is_collapsed { "+" } else { "-" };
-                            if ui.small_button(button_text).clicked() {
+                            if ui.add_sized(btn_size, egui::Button::new(button_text)).clicked() {
                                 self.collapsed_comments.insert(comment.id, !is_collapsed);
                             }
                         } else {
-                            ui.add_space(18.0); // Spacing when no collapse button
+                            ui.add_space(btn_size.x + 4.0); // Spacing when no collapse button
                         }
 
                         ui.label(format!("👤 {}", comment.author));
