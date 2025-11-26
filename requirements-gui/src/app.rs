@@ -2191,41 +2191,51 @@ impl RequirementsApp {
         let indent = depth as f32 * 24.0;
         let is_collapsed = self.collapsed_comments.get(&comment.id).copied().unwrap_or(false);
 
+        // Calculate available width for the comment (account for indent)
+        let available_width = ui.available_width() - indent - 20.0; // 20.0 for group padding
+
         ui.horizontal(|ui| {
             // Add horizontal indentation
             if indent > 0.0 {
                 ui.add_space(indent);
             }
 
-            ui.group(|ui| {
-                ui.horizontal(|ui| {
-                    // Collapse/expand button if there are replies
-                    if !comment.replies.is_empty() {
-                        let button_text = if is_collapsed { "+" } else { "-" };
-                        if ui.small_button(button_text).clicked() {
-                            self.collapsed_comments.insert(comment.id, !is_collapsed);
+            ui.vertical(|ui| {
+                ui.set_max_width(available_width);
+
+                ui.group(|ui| {
+                    ui.set_max_width(available_width - 16.0); // Account for group border
+
+                    ui.horizontal(|ui| {
+                        // Collapse/expand button if there are replies
+                        if !comment.replies.is_empty() {
+                            let button_text = if is_collapsed { "+" } else { "-" };
+                            if ui.small_button(button_text).clicked() {
+                                self.collapsed_comments.insert(comment.id, !is_collapsed);
+                            }
+                        } else {
+                            ui.add_space(18.0); // Spacing when no collapse button
                         }
-                    } else {
-                        ui.add_space(18.0); // Spacing when no collapse button
-                    }
 
-                    ui.label(format!("👤 {}", comment.author));
-                    ui.label(format!("🕒 {}", comment.created_at.format("%Y-%m-%d %H:%M")));
-                });
+                        ui.label(format!("👤 {}", comment.author));
+                        ui.label(format!("🕒 {}", comment.created_at.format("%Y-%m-%d %H:%M")));
+                    });
 
-                ui.label(&comment.content);
+                    // Comment content on its own line with text wrapping
+                    ui.add(egui::Label::new(&comment.content).wrap());
 
-                ui.horizontal(|ui| {
-                    if ui.small_button("💬 Reply").clicked() {
-                        self.show_add_comment = true;
-                        self.reply_to_comment = Some(comment.id);
-                        // Pre-fill author from user settings
-                        self.comment_author = self.user_settings.display_name();
-                        self.comment_content.clear();
-                    }
-                    if ui.small_button("🗑 Delete").clicked() {
-                        self.pending_comment_delete = Some(comment.id);
-                    }
+                    ui.horizontal(|ui| {
+                        if ui.small_button("💬 Reply").clicked() {
+                            self.show_add_comment = true;
+                            self.reply_to_comment = Some(comment.id);
+                            // Pre-fill author from user settings
+                            self.comment_author = self.user_settings.display_name();
+                            self.comment_content.clear();
+                        }
+                        if ui.small_button("🗑 Delete").clicked() {
+                            self.pending_comment_delete = Some(comment.id);
+                        }
+                    });
                 });
             });
         });
