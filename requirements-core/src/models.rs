@@ -492,6 +492,12 @@ pub struct Requirement {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub spec_id: Option<String>,
 
+    /// Optional prefix override for the spec_id (e.g., "SEC" for security requirements)
+    /// If set, uses this prefix instead of deriving from feature/type
+    /// Must be uppercase letters only (A-Z)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prefix_override: Option<String>,
+
     /// Short title describing the requirement
     pub title: String,
 
@@ -553,6 +559,7 @@ impl Requirement {
         Self {
             id: Uuid::new_v4(),
             spec_id: None, // Will be assigned when added to store
+            prefix_override: None,
             title,
             description,
             status: RequirementStatus::Draft,
@@ -568,6 +575,39 @@ impl Requirement {
             comments: Vec::new(),
             history: Vec::new(),
             archived: false,
+        }
+    }
+
+    /// Validates and normalizes a prefix string
+    /// Returns Some(normalized_prefix) if valid, None if invalid
+    /// Valid prefixes contain only uppercase letters A-Z
+    pub fn validate_prefix(prefix: &str) -> Option<String> {
+        let trimmed = prefix.trim();
+        if trimmed.is_empty() {
+            return None;
+        }
+        let upper = trimmed.to_uppercase();
+        if upper.chars().all(|c| c.is_ascii_uppercase()) {
+            Some(upper)
+        } else {
+            None
+        }
+    }
+
+    /// Sets the prefix override with validation
+    /// Returns Ok if valid or empty, Err with message if invalid
+    pub fn set_prefix_override(&mut self, prefix: &str) -> Result<(), String> {
+        let trimmed = prefix.trim();
+        if trimmed.is_empty() {
+            self.prefix_override = None;
+            return Ok(());
+        }
+        match Self::validate_prefix(trimmed) {
+            Some(valid) => {
+                self.prefix_override = Some(valid);
+                Ok(())
+            }
+            None => Err("Prefix must contain only uppercase letters (A-Z)".to_string()),
         }
     }
 
@@ -988,6 +1028,7 @@ impl RequirementsStore {
 
     /// Add a requirement with the new ID system
     /// If spec_id is already set, uses that; otherwise generates one
+    /// If prefix_override is set on the requirement, uses that prefix instead of feature/type
     pub fn add_requirement_with_id(
         &mut self,
         mut req: Requirement,
@@ -995,9 +1036,35 @@ impl RequirementsStore {
         type_prefix: Option<&str>,
     ) {
         if req.spec_id.is_none() {
-            req.spec_id = Some(self.generate_requirement_id(feature_prefix, type_prefix));
+            // Check if requirement has a prefix override
+            if let Some(ref override_prefix) = req.prefix_override {
+                req.spec_id = Some(self.generate_requirement_id_with_override(override_prefix));
+            } else {
+                req.spec_id = Some(self.generate_requirement_id(feature_prefix, type_prefix));
+            }
         }
         self.requirements.push(req);
+    }
+
+    /// Generate a requirement ID using an explicit prefix override
+    /// Uses SingleLevel format with the override prefix, respects numbering strategy
+    fn generate_requirement_id_with_override(&mut self, prefix: &str) -> String {
+        let prefix_upper = prefix.to_uppercase();
+        let digits = self.id_config.digits;
+
+        let number = match self.id_config.numbering {
+            NumberingStrategy::Global => {
+                let n = self.next_spec_number;
+                self.next_spec_number += 1;
+                n
+            }
+            NumberingStrategy::PerPrefix | NumberingStrategy::PerFeatureType => {
+                // Treat the override prefix as its own counter
+                self.get_next_counter_for_prefix(&prefix_upper)
+            }
+        };
+
+        format!("{}-{:0>width$}", prefix_upper, number, width = digits as usize)
     }
 
     /// Get the type prefix for a RequirementType enum value
@@ -1051,36 +1118,24 @@ impl RequirementsStore {
 
     /// Migrate all existing SPEC-XXX IDs to the new format
     /// This will regenerate all IDs based on the current configuration
+    /// Requirements with prefix_override will use their override prefix
     pub fn migrate_to_new_id_format(&mut self) {
         // Reset counters
         self.next_spec_number = 1;
         self.prefix_counters.clear();
 
-        // Migrate each requirement
+        // Clear all spec_ids first
         for req in &mut self.requirements {
-            // Get the feature prefix from the feature field (if defined)
-            let feature_prefix = self.features.iter()
-                .find(|f| req.feature.contains(&f.name) || req.feature.ends_with(&f.prefix))
-                .map(|f| f.prefix.clone());
-
-            // Get the type prefix from the requirement type
-            let type_prefix = match req.req_type {
-                RequirementType::Functional => Some("FR".to_string()),
-                RequirementType::NonFunctional => Some("NFR".to_string()),
-                RequirementType::System => Some("SR".to_string()),
-                RequirementType::User => Some("UR".to_string()),
-                RequirementType::ChangeRequest => Some("CR".to_string()),
-            };
-
-            // Generate new ID (we need to generate without borrowing self mutably)
-            // This is a simplified version - the full implementation handles this better
-            req.spec_id = None; // Clear old ID
+            req.spec_id = None;
         }
 
-        // Now assign new IDs
-        let req_data: Vec<(usize, Option<String>, Option<String>)> = self.requirements.iter()
+        // Collect data needed for ID generation (to avoid borrow issues)
+        let req_data: Vec<(usize, Option<String>, Option<String>, Option<String>)> = self.requirements.iter()
             .enumerate()
             .map(|(i, req)| {
+                // Check for prefix_override first
+                let prefix_override = req.prefix_override.clone();
+
                 let feature_prefix = self.features.iter()
                     .find(|f| req.feature.contains(&f.name))
                     .map(|f| f.prefix.clone());
@@ -1091,15 +1146,22 @@ impl RequirementsStore {
                     RequirementType::User => Some("UR".to_string()),
                     RequirementType::ChangeRequest => Some("CR".to_string()),
                 };
-                (i, feature_prefix, type_prefix)
+                (i, prefix_override, feature_prefix, type_prefix)
             })
             .collect();
 
-        for (i, feature_prefix, type_prefix) in req_data {
-            let new_id = self.generate_requirement_id(
-                feature_prefix.as_deref(),
-                type_prefix.as_deref(),
-            );
+        // Now assign new IDs
+        for (i, prefix_override, feature_prefix, type_prefix) in req_data {
+            let new_id = if let Some(ref override_prefix) = prefix_override {
+                // Use the override prefix
+                self.generate_requirement_id_with_override(override_prefix)
+            } else {
+                // Use standard feature/type prefix logic
+                self.generate_requirement_id(
+                    feature_prefix.as_deref(),
+                    type_prefix.as_deref(),
+                )
+            };
             self.requirements[i].spec_id = Some(new_id);
         }
     }
@@ -1228,9 +1290,12 @@ impl RequirementsStore {
         self.prefix_counters.clear();
 
         // Collect requirement data for migration (to avoid borrow issues)
-        let req_data: Vec<(usize, Option<String>, Option<String>)> = self.requirements.iter()
+        let req_data: Vec<(usize, Option<String>, Option<String>, Option<String>)> = self.requirements.iter()
             .enumerate()
             .map(|(i, req)| {
+                // Check for prefix_override first
+                let prefix_override = req.prefix_override.clone();
+
                 let feature_prefix = self.features.iter()
                     .find(|f| req.feature.contains(&f.name))
                     .map(|f| f.prefix.clone());
@@ -1241,18 +1306,24 @@ impl RequirementsStore {
                     RequirementType::User => Some("UR".to_string()),
                     RequirementType::ChangeRequest => Some("CR".to_string()),
                 };
-                (i, feature_prefix, type_prefix)
+                (i, prefix_override, feature_prefix, type_prefix)
             })
             .collect();
 
         let mut migrated_count = 0;
 
         // Generate new IDs for all requirements
-        for (i, feature_prefix, type_prefix) in req_data {
-            let new_id = self.generate_requirement_id(
-                feature_prefix.as_deref(),
-                type_prefix.as_deref(),
-            );
+        for (i, prefix_override, feature_prefix, type_prefix) in req_data {
+            let new_id = if let Some(ref override_prefix) = prefix_override {
+                // Use the override prefix
+                self.generate_requirement_id_with_override(override_prefix)
+            } else {
+                // Use standard feature/type prefix logic
+                self.generate_requirement_id(
+                    feature_prefix.as_deref(),
+                    type_prefix.as_deref(),
+                )
+            };
             self.requirements[i].spec_id = Some(new_id);
             migrated_count += 1;
         }

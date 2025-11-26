@@ -24,17 +24,17 @@ fn main() -> Result<()> {
     let storage = Storage::new(requirements_path.clone());
 
     match &cli.command {
-        Command::Add { title, description, status, priority, r#type, owner, feature, tags, interactive } => {
+        Command::Add { title, description, status, priority, r#type, owner, feature, tags, prefix, interactive } => {
             // Default to interactive mode if no specific arguments are provided
             let should_be_interactive = *interactive
                 || (title.is_none() && description.is_none() && status.is_none()
                     && priority.is_none() && r#type.is_none() && owner.is_none()
-                    && feature.is_none() && tags.is_none());
+                    && feature.is_none() && tags.is_none() && prefix.is_none());
 
             if should_be_interactive {
                 add_requirement_interactive(&storage)?;
             } else {
-                add_requirement_cli(&storage, title, description, status, priority, r#type, owner, feature, tags)?;
+                add_requirement_cli(&storage, title, description, status, priority, r#type, owner, feature, tags, prefix)?;
             }
         }
         Command::List { status, priority, r#type, feature, tags } => {
@@ -121,6 +121,7 @@ fn add_requirement_cli(
     owner: &Option<String>,
     feature: &Option<String>,
     tags_str: &Option<String>,
+    prefix: &Option<String>,
 ) -> Result<()> {
     // Load existing requirements
     let mut store = storage.load()?;
@@ -167,6 +168,12 @@ fn add_requirement_cli(
             .filter(|s| !s.is_empty())
             .collect();
         requirement.tags = tag_set;
+    }
+
+    // Set prefix override if specified
+    if let Some(prefix_val) = prefix {
+        requirement.set_prefix_override(prefix_val)
+            .map_err(|e| anyhow::anyhow!(e))?;
     }
 
     let id = requirement.id;

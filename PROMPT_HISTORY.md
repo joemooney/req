@@ -245,6 +245,21 @@ A chronological record of development sessions and changes made to the Requireme
   - Reset preview mode when clearing form or loading requirement for edit
   - Updated user guide with Markdown support documentation
 
+### Custom ID Prefix Override
+- **Prompt**: Allow per-requirement prefix override for flexible ID organization
+- **Actions**:
+  - Added `prefix_override: Option<String>` field to Requirement model
+  - Added `validate_prefix()` and `set_prefix_override()` methods for validation
+  - Validation ensures prefix contains only uppercase letters (A-Z)
+  - Updated `add_requirement_with_id()` to use prefix_override when set
+  - Updated `generate_requirement_id_with_override()` for custom prefix ID generation
+  - Updated migration functions to respect prefix_override
+  - Added "ID Prefix" field to GUI form with validation indicator
+  - Added `--prefix` option to CLI `add` command
+  - Per Prefix numbering treats custom prefixes as their own counter
+  - Global Sequential numbering uses shared counter regardless of prefix
+  - Updated user guide documentation with custom prefix usage
+
 ---
 
 ## Git Operations Summary

@@ -572,6 +572,7 @@ pub struct RequirementsApp {
     form_owner: String,
     form_feature: String,
     form_tags: String,
+    form_prefix: String,           // Optional prefix override (uppercase letters only)
     form_parent_id: Option<Uuid>,  // Parent to link new requirement to
 
     // Messages
@@ -675,6 +676,7 @@ impl RequirementsApp {
             form_owner: String::new(),
             form_feature: String::from("Uncategorized"),
             form_tags: String::new(),
+            form_prefix: String::new(),
             form_parent_id: None,
             message: None,
             comment_author: String::new(),
@@ -827,6 +829,7 @@ impl RequirementsApp {
         self.form_owner.clear();
         self.form_feature = String::from("Uncategorized");
         self.form_tags.clear();
+        self.form_prefix.clear();
         self.show_description_preview = false;
 
         // If a requirement is selected, pre-populate parent relationship
@@ -846,6 +849,7 @@ impl RequirementsApp {
             self.form_feature = req.feature.clone();
             let tags_vec: Vec<String> = req.tags.iter().cloned().collect();
             self.form_tags = tags_vec.join(", ");
+            self.form_prefix = req.prefix_override.clone().unwrap_or_default();
             self.show_description_preview = false;
         }
     }
@@ -867,6 +871,15 @@ impl RequirementsApp {
         req.owner = self.form_owner.clone();
         req.feature = self.form_feature.clone();
         req.tags = tags;
+
+        // Set prefix override if specified
+        let prefix_trimmed = self.form_prefix.trim();
+        if !prefix_trimmed.is_empty() {
+            if let Err(e) = req.set_prefix_override(prefix_trimmed) {
+                self.message = Some((e, true));
+                return;
+            }
+        }
 
         // Store parent ID before clearing form
         let parent_id = self.form_parent_id;
@@ -986,6 +999,20 @@ impl RequirementsApp {
                 let new_tags_vec: Vec<String> = new_tags.iter().cloned().collect();
                 changes.push(Requirement::field_change("tags", old_tags_vec.join(", "), new_tags_vec.join(", ")));
                 req.tags = new_tags;
+            }
+
+            // Track prefix override change
+            let new_prefix = if self.form_prefix.trim().is_empty() {
+                None
+            } else {
+                Requirement::validate_prefix(&self.form_prefix)
+            };
+
+            if new_prefix != req.prefix_override {
+                let old_prefix = req.prefix_override.clone().unwrap_or_default();
+                let new_prefix_str = new_prefix.clone().unwrap_or_default();
+                changes.push(Requirement::field_change("prefix_override", old_prefix, new_prefix_str));
+                req.prefix_override = new_prefix;
             }
 
             // Record changes with author from user settings
@@ -2798,6 +2825,26 @@ impl RequirementsApp {
             ui.add(egui::TextEdit::singleline(&mut self.form_tags)
                 .desired_width(200.0)
                 .hint_text("comma-separated"));
+        });
+        ui.add_space(4.0);
+
+        ui.horizontal_wrapped(|ui| {
+            ui.label("ID Prefix:");
+            ui.add(egui::TextEdit::singleline(&mut self.form_prefix)
+                .desired_width(80.0)
+                .hint_text("e.g., SEC"))
+                .on_hover_text("Optional custom prefix (A-Z only). Leave blank to use default from feature/type.");
+
+            // Show validation status
+            let prefix_trimmed = self.form_prefix.trim();
+            if !prefix_trimmed.is_empty() {
+                if Requirement::validate_prefix(prefix_trimmed).is_some() {
+                    ui.label("✓").on_hover_text("Valid prefix");
+                } else {
+                    ui.colored_label(egui::Color32::RED, "✗")
+                        .on_hover_text("Prefix must contain only uppercase letters (A-Z)");
+                }
+            }
         });
         ui.add_space(4.0);
 

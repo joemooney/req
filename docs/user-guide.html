@@ -164,64 +164,69 @@ class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="
 <span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>        <span class="at">--status</span> Draft <span class="dt">\</span></span>
 <span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>        <span class="at">--type</span> Functional <span class="dt">\</span></span>
 <span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>        <span class="at">--feature</span> <span class="st">&quot;Authentication&quot;</span></span></code></pre></div>
-<h3 id="filtering-and-searching">Filtering and Searching</h3>
+<p><strong>With custom ID prefix:</strong></p>
 <div class="sourceCode" id="cb7"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter by status</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> list <span class="at">--status</span> Approved</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter by priority</span></span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> list <span class="at">--priority</span> High</span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter by feature</span></span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> list <span class="at">--feature</span> <span class="st">&quot;Authentication&quot;</span></span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Search by text</span></span>
-<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> list <span class="at">--search</span> <span class="st">&quot;login&quot;</span></span></code></pre></div>
-<h3 id="working-with-relationships">Working with Relationships</h3>
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> add <span class="at">--title</span> <span class="st">&quot;Security audit&quot;</span> <span class="dt">\</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>        <span class="at">--prefix</span> SEC <span class="dt">\</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>        <span class="at">--description</span> <span class="st">&quot;Perform security audit&quot;</span></span></code></pre></div>
+<h3 id="filtering-and-searching">Filtering and Searching</h3>
 <div class="sourceCode" id="cb8"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Add a parent-child relationship</span></span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> rel add <span class="at">--from</span> SPEC-001 <span class="at">--to</span> SPEC-002 <span class="at">--type</span> parent</span>
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter by status</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> list <span class="at">--status</span> Approved</span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Add bidirectional relationship</span></span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> rel add <span class="at">--from</span> SPEC-001 <span class="at">--to</span> SPEC-002 <span class="at">--type</span> verifies <span class="at">-b</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter by priority</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> list <span class="at">--priority</span> High</span>
 <span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="co"># List relationships</span></span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> rel list SPEC-001</span></code></pre></div>
-<h3 id="feature-management">Feature Management</h3>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter by feature</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> list <span class="at">--feature</span> <span class="st">&quot;Authentication&quot;</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Search by text</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> list <span class="at">--search</span> <span class="st">&quot;login&quot;</span></span></code></pre></div>
+<h3 id="working-with-relationships">Working with Relationships</h3>
 <div class="sourceCode" id="cb9"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># List features</span></span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> feature list</span>
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Add a parent-child relationship</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> rel add <span class="at">--from</span> SPEC-001 <span class="at">--to</span> SPEC-002 <span class="at">--type</span> parent</span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Rename a feature</span></span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> feature rename <span class="st">&quot;Old Name&quot;</span> <span class="st">&quot;New Name&quot;</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Add bidirectional relationship</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> rel add <span class="at">--from</span> SPEC-001 <span class="at">--to</span> SPEC-002 <span class="at">--type</span> verifies <span class="at">-b</span></span>
 <span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Move requirements between features</span></span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> feature move SPEC-001 <span class="st">&quot;New Feature&quot;</span></span></code></pre></div>
-<h3 id="database-management">Database Management</h3>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="co"># List relationships</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> rel list SPEC-001</span></code></pre></div>
+<h3 id="feature-management">Feature Management</h3>
 <div class="sourceCode" id="cb10"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># List registered projects</span></span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> db list</span>
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># List features</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> feature list</span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Add a new project</span></span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> db add <span class="at">--name</span> <span class="st">&quot;my-project&quot;</span> <span class="at">--path</span> <span class="st">&quot;/path/to/requirements.yaml&quot;</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Rename a feature</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> feature rename <span class="st">&quot;Old Name&quot;</span> <span class="st">&quot;New Name&quot;</span></span>
 <span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Set default project</span></span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> db default <span class="st">&quot;my-project&quot;</span></span>
-<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove a project</span></span>
-<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> db remove <span class="st">&quot;my-project&quot;</span></span></code></pre></div>
-<h3 id="opening-the-user-guide">Opening the User Guide</h3>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Move requirements between features</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> feature move SPEC-001 <span class="st">&quot;New Feature&quot;</span></span></code></pre></div>
+<h3 id="database-management">Database Management</h3>
 <div class="sourceCode" id="cb11"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Open in default browser (light mode)</span></span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> user-guide</span>
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># List registered projects</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> db list</span>
 <span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Open in dark mode</span></span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> user-guide <span class="at">--dark</span></span></code></pre></div>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Add a new project</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> db add <span class="at">--name</span> <span class="st">&quot;my-project&quot;</span> <span class="at">--path</span> <span class="st">&quot;/path/to/requirements.yaml&quot;</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Set default project</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> db default <span class="st">&quot;my-project&quot;</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove a project</span></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> db remove <span class="st">&quot;my-project&quot;</span></span></code></pre></div>
+<h3 id="opening-the-user-guide">Opening the User Guide</h3>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Open in default browser (light mode)</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> user-guide</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Open in dark mode</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> user-guide <span class="at">--dark</span></span></code></pre></div>
 <hr />
 <h2 id="gui-usage">GUI Usage</h2>
 <p>Launch the GUI application:</p>
-<div class="sourceCode" id="cb12"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="ex">req-gui</span></span></code></pre></div>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="ex">req-gui</span></span></code></pre></div>
 <h3 id="main-interface">Main Interface</h3>
 <p>The GUI consists of three main areas:</p>
 <ol type="1">
@@ -288,6 +293,10 @@ nested reply.</p>
 <h2 id="working-with-requirements">Working with Requirements</h2>
 <h3 id="requirement-fields">Requirement Fields</h3>
 <table>
+<colgroup>
+<col style="width: 35%" />
+<col style="width: 65%" />
+</colgroup>
 <thead>
 <tr class="header">
 <th>Field</th>
@@ -331,8 +340,30 @@ nested reply.</p>
 <td><strong>Tags</strong></td>
 <td>Comma-separated labels</td>
 </tr>
+<tr class="even">
+<td><strong>ID Prefix</strong></td>
+<td>Optional custom prefix override (uppercase letters only)</td>
+</tr>
 </tbody>
 </table>
+<h3 id="custom-id-prefixes">Custom ID Prefixes</h3>
+<p>By default, requirement IDs are generated based on the feature and/or
+type configuration. You can override this by specifying a custom
+prefix:</p>
+<ul>
+<li><strong>CLI</strong>: Use <code>--prefix SEC</code> when adding a
+requirement</li>
+<li><strong>GUI</strong>: Enter the prefix in the “ID Prefix” field
+(e.g., <code>SEC</code>, <code>PERF</code>, <code>API</code>)</li>
+</ul>
+<p>Custom prefixes must contain only uppercase letters (A-Z). Leave
+blank to use the default prefix derived from feature/type settings.</p>
+<p><strong>Examples:</strong> - <code>SEC-001</code> - Security
+requirement - <code>PERF-001</code> - Performance requirement -
+<code>API-001</code> - API requirement</p>
+<p>When using “Per Prefix” numbering strategy, each custom prefix gets
+its own counter. With “Global Sequential” numbering, all requirements
+share the same counter regardless of prefix.</p>
 <h3 id="markdown-support">Markdown Support</h3>
 <p>Requirement descriptions support Markdown formatting. When viewing a
 requirement, the description is rendered with full Markdown support
@@ -399,9 +430,9 @@ management.</p>
 <p>Requirements without a specified feature go to “Uncategorized”. Set a
 default feature using the <code>REQ_FEATURE</code> environment
 variable:</p>
-<div class="sourceCode" id="cb14"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">REQ_FEATURE</span><span class="op">=</span><span class="st">&quot;Authentication&quot;</span></span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> add <span class="at">--title</span> <span class="st">&quot;New auth requirement&quot;</span>  <span class="co"># Automatically uses Authentication</span></span></code></pre></div>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">REQ_FEATURE</span><span class="op">=</span><span class="st">&quot;Authentication&quot;</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> add <span class="at">--title</span> <span class="st">&quot;New auth requirement&quot;</span>  <span class="co"># Automatically uses Authentication</span></span></code></pre></div>
 <hr />
 <h2 id="multi-project-support">Multi-Project Support</h2>
 <p>Manage multiple requirement sets using the registry system.</p>
@@ -419,16 +450,16 @@ variable</p>
 <li>Interactive prompt</li>
 </ol>
 <h3 id="example-setup">Example Setup</h3>
-<div class="sourceCode" id="cb15"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Register projects</span></span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> db add <span class="at">--name</span> <span class="st">&quot;frontend&quot;</span> <span class="at">--path</span> ~/projects/frontend/requirements.yaml</span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> db add <span class="at">--name</span> <span class="st">&quot;backend&quot;</span> <span class="at">--path</span> ~/projects/backend/requirements.yaml</span>
-<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Set default</span></span>
-<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> db default frontend</span>
-<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Work with specific project</span></span>
-<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> list <span class="at">--project</span> backend</span></code></pre></div>
+<div class="sourceCode" id="cb16"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Register projects</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> db add <span class="at">--name</span> <span class="st">&quot;frontend&quot;</span> <span class="at">--path</span> ~/projects/frontend/requirements.yaml</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> db add <span class="at">--name</span> <span class="st">&quot;backend&quot;</span> <span class="at">--path</span> ~/projects/backend/requirements.yaml</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Set default</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> db default frontend</span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Work with specific project</span></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> list <span class="at">--project</span> backend</span></code></pre></div>
 <hr />
 <h2 id="keyboard-shortcuts">Keyboard Shortcuts</h2>
 <h3 id="gui-shortcuts">GUI Shortcuts</h3>

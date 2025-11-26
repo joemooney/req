@@ -301,6 +301,10 @@ pub enum Command {
         #[clap(long)]
         tags: Option<String>,
 
+        /// Custom ID prefix override (uppercase letters only, e.g., SEC, PERF)
+        #[clap(long)]
+        prefix: Option<String>,
+
         /// Use interactive mode (prompts)
         #[clap(long)]
         interactive: bool,

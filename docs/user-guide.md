@@ -77,6 +77,13 @@ req add --title "Feature name" \
         --feature "Authentication"
 ```
 
+**With custom ID prefix:**
+```bash
+req add --title "Security audit" \
+        --prefix SEC \
+        --description "Perform security audit"
+```
+
 ### Filtering and Searching
 
 ```bash
@@ -205,6 +212,23 @@ Comments support threading - click "Reply" on any comment to add a nested reply.
 | **Feature** | Grouping category |
 | **Owner** | Person responsible |
 | **Tags** | Comma-separated labels |
+| **ID Prefix** | Optional custom prefix override (uppercase letters only) |
+
+### Custom ID Prefixes
+
+By default, requirement IDs are generated based on the feature and/or type configuration. You can override this by specifying a custom prefix:
+
+- **CLI**: Use `--prefix SEC` when adding a requirement
+- **GUI**: Enter the prefix in the "ID Prefix" field (e.g., `SEC`, `PERF`, `API`)
+
+Custom prefixes must contain only uppercase letters (A-Z). Leave blank to use the default prefix derived from feature/type settings.
+
+**Examples:**
+- `SEC-001` - Security requirement
+- `PERF-001` - Performance requirement
+- `API-001` - API requirement
+
+When using "Per Prefix" numbering strategy, each custom prefix gets its own counter. With "Global Sequential" numbering, all requirements share the same counter regardless of prefix.
 
 ### Markdown Support
 
