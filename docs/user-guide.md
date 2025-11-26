@@ -295,6 +295,7 @@ req list --project backend
 | Shortcut | Action |
 |----------|--------|
 | **Arrow Up/Down** | Navigate requirements list |
+| **Enter** | Edit selected requirement |
 | **Ctrl+MouseWheel** | Zoom in/out |
 | **Ctrl+Shift++** | Zoom in |
 | **Ctrl+-** | Zoom out |

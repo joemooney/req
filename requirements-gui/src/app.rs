@@ -2195,19 +2195,31 @@ impl eframe::App for RequirementsApp {
             self.zoom_out();
         }
 
-        // Handle arrow key navigation in the requirements list
+        // Handle keyboard navigation in the requirements list
         // Only when in List or Detail view and no text field has focus
         if (self.current_view == View::List || self.current_view == View::Detail)
             && !ctx.wants_keyboard_input()
         {
             let mut nav_delta: i32 = 0;
+            let mut enter_pressed = false;
             ctx.input(|i| {
                 if i.key_pressed(egui::Key::ArrowDown) {
                     nav_delta = 1;
                 } else if i.key_pressed(egui::Key::ArrowUp) {
                     nav_delta = -1;
                 }
+                if i.key_pressed(egui::Key::Enter) {
+                    enter_pressed = true;
+                }
             });
+
+            // Enter key edits the selected requirement
+            if enter_pressed {
+                if let Some(idx) = self.selected_idx {
+                    self.load_form_from_requirement(idx);
+                    self.pending_view_change = Some(View::Edit);
+                }
+            }
 
             if nav_delta != 0 {
                 let filtered_indices = self.get_filtered_indices();
