@@ -1921,104 +1921,125 @@ impl RequirementsApp {
         ui.heading(title);
         ui.separator();
 
-        egui::ScrollArea::vertical().show(ui, |ui| {
-            egui::Grid::new("form_grid")
-                .num_columns(2)
-                .spacing([40.0, 8.0])
-                .show(ui, |ui| {
-                    ui.label("Title:");
-                    ui.text_edit_singleline(&mut self.form_title);
-                    ui.end_row();
+        // Calculate available width for text fields
+        let available_width = ui.available_width();
 
-                    ui.label("Description:");
-                    ui.text_edit_multiline(&mut self.form_description);
-                    ui.end_row();
+        // Title field - full width
+        ui.label("Title:");
+        ui.add(egui::TextEdit::singleline(&mut self.form_title)
+            .desired_width(available_width));
+        ui.add_space(8.0);
 
-                    ui.label("Status:");
-                    egui::ComboBox::new("status_combo", "")
-                        .selected_text(format!("{:?}", self.form_status))
-                        .show_ui(ui, |ui| {
-                            ui.selectable_value(&mut self.form_status, RequirementStatus::Draft, "Draft");
-                            ui.selectable_value(&mut self.form_status, RequirementStatus::Approved, "Approved");
-                            ui.selectable_value(&mut self.form_status, RequirementStatus::Completed, "Completed");
-                            ui.selectable_value(&mut self.form_status, RequirementStatus::Rejected, "Rejected");
-                        });
-                    ui.end_row();
-
-                    ui.label("Priority:");
-                    egui::ComboBox::new("priority_combo", "")
-                        .selected_text(format!("{:?}", self.form_priority))
-                        .show_ui(ui, |ui| {
-                            ui.selectable_value(&mut self.form_priority, RequirementPriority::High, "High");
-                            ui.selectable_value(&mut self.form_priority, RequirementPriority::Medium, "Medium");
-                            ui.selectable_value(&mut self.form_priority, RequirementPriority::Low, "Low");
-                        });
-                    ui.end_row();
-
-                    ui.label("Type:");
-                    egui::ComboBox::new("type_combo", "")
-                        .selected_text(format!("{:?}", self.form_type))
-                        .show_ui(ui, |ui| {
-                            ui.selectable_value(&mut self.form_type, RequirementType::Functional, "Functional");
-                            ui.selectable_value(&mut self.form_type, RequirementType::NonFunctional, "NonFunctional");
-                            ui.selectable_value(&mut self.form_type, RequirementType::System, "System");
-                            ui.selectable_value(&mut self.form_type, RequirementType::User, "User");
-                            ui.selectable_value(&mut self.form_type, RequirementType::ChangeRequest, "Change Request");
-                        });
-                    ui.end_row();
-
-                    ui.label("Owner:");
-                    ui.text_edit_singleline(&mut self.form_owner);
-                    ui.end_row();
-
-                    ui.label("Feature:");
-                    ui.text_edit_singleline(&mut self.form_feature);
-                    ui.end_row();
-
-                    ui.label("Tags (comma-separated):");
-                    ui.text_edit_singleline(&mut self.form_tags);
-                    ui.end_row();
-
-                    // Show parent relationship for new requirements (not edit)
-                    if !is_edit {
-                        if let Some(parent_id) = self.form_parent_id {
-                            let parent_info = self.store.requirements.iter()
-                                .find(|r| r.id == parent_id)
-                                .map(|r| {
-                                    let spec = r.spec_id.as_deref().unwrap_or("N/A");
-                                    format!("{} - {}", spec, r.title)
-                                });
-
-                            if let Some(parent_label) = parent_info {
-                                ui.label("Parent:");
-                                ui.horizontal(|ui| {
-                                    ui.label(&parent_label);
-                                    if ui.small_button("x").on_hover_text("Remove parent").clicked() {
-                                        self.form_parent_id = None;
-                                    }
-                                });
-                                ui.end_row();
-                            }
-                        }
-                    }
+        // Metadata row - Status, Priority, Type, Owner, Feature, Tags
+        ui.horizontal_wrapped(|ui| {
+            ui.label("Status:");
+            egui::ComboBox::new("status_combo", "")
+                .selected_text(format!("{:?}", self.form_status))
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut self.form_status, RequirementStatus::Draft, "Draft");
+                    ui.selectable_value(&mut self.form_status, RequirementStatus::Approved, "Approved");
+                    ui.selectable_value(&mut self.form_status, RequirementStatus::Completed, "Completed");
+                    ui.selectable_value(&mut self.form_status, RequirementStatus::Rejected, "Rejected");
                 });
 
-            ui.separator();
-            ui.horizontal(|ui| {
-                if ui.button("💾 Save").clicked() {
-                    if is_edit {
-                        if let Some(idx) = self.selected_idx {
-                            self.update_requirement(idx);
+            ui.add_space(16.0);
+            ui.label("Priority:");
+            egui::ComboBox::new("priority_combo", "")
+                .selected_text(format!("{:?}", self.form_priority))
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut self.form_priority, RequirementPriority::High, "High");
+                    ui.selectable_value(&mut self.form_priority, RequirementPriority::Medium, "Medium");
+                    ui.selectable_value(&mut self.form_priority, RequirementPriority::Low, "Low");
+                });
+
+            ui.add_space(16.0);
+            ui.label("Type:");
+            egui::ComboBox::new("type_combo", "")
+                .selected_text(format!("{:?}", self.form_type))
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut self.form_type, RequirementType::Functional, "Functional");
+                    ui.selectable_value(&mut self.form_type, RequirementType::NonFunctional, "NonFunctional");
+                    ui.selectable_value(&mut self.form_type, RequirementType::System, "System");
+                    ui.selectable_value(&mut self.form_type, RequirementType::User, "User");
+                    ui.selectable_value(&mut self.form_type, RequirementType::ChangeRequest, "Change Request");
+                });
+        });
+        ui.add_space(4.0);
+
+        ui.horizontal_wrapped(|ui| {
+            ui.label("Owner:");
+            ui.add(egui::TextEdit::singleline(&mut self.form_owner)
+                .desired_width(150.0));
+
+            ui.add_space(16.0);
+            ui.label("Feature:");
+            ui.add(egui::TextEdit::singleline(&mut self.form_feature)
+                .desired_width(150.0));
+
+            ui.add_space(16.0);
+            ui.label("Tags:");
+            ui.add(egui::TextEdit::singleline(&mut self.form_tags)
+                .desired_width(200.0)
+                .hint_text("comma-separated"));
+        });
+        ui.add_space(4.0);
+
+        // Show parent relationship for new requirements (not edit)
+        if !is_edit {
+            if let Some(parent_id) = self.form_parent_id {
+                let parent_info = self.store.requirements.iter()
+                    .find(|r| r.id == parent_id)
+                    .map(|r| {
+                        let spec = r.spec_id.as_deref().unwrap_or("N/A");
+                        format!("{} - {}", spec, r.title)
+                    });
+
+                if let Some(parent_label) = parent_info {
+                    ui.horizontal(|ui| {
+                        ui.label("Parent:");
+                        ui.label(&parent_label);
+                        if ui.small_button("x").on_hover_text("Remove parent").clicked() {
+                            self.form_parent_id = None;
                         }
-                    } else {
-                        self.add_requirement();
-                    }
+                    });
                 }
-                if ui.button("❌ Cancel").clicked() {
-                    self.clear_form();
-                    self.pending_view_change = Some(if is_edit { View::Detail } else { View::List });
-                }
+            }
+        }
+
+        ui.add_space(8.0);
+
+        // Description field - full width and takes remaining height
+        ui.label("Description:");
+
+        // Calculate remaining height for description (leave space for buttons)
+        let remaining_height = ui.available_height() - 50.0;
+        let description_height = remaining_height.max(8.0 * self.current_font_size * 1.4); // At least 8 lines
+
+        egui::ScrollArea::vertical()
+            .max_height(description_height)
+            .show(ui, |ui| {
+                ui.add(egui::TextEdit::multiline(&mut self.form_description)
+                    .desired_width(available_width)
+                    .desired_rows(8)
+                    .hint_text("Enter requirement description..."));
             });
+
+        ui.add_space(8.0);
+        ui.separator();
+        ui.horizontal(|ui| {
+            if ui.button("💾 Save").clicked() {
+                if is_edit {
+                    if let Some(idx) = self.selected_idx {
+                        self.update_requirement(idx);
+                    }
+                } else {
+                    self.add_requirement();
+                }
+            }
+            if ui.button("❌ Cancel").clicked() {
+                self.clear_form();
+                self.pending_view_change = Some(if is_edit { View::Detail } else { View::List });
+            }
         });
     }
 
