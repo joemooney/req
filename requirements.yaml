@@ -227,12 +227,12 @@ requirements:
   spec_id: CR-012
   title: broken expand/collapse
   description: ''
-  status: Draft
+  status: Completed
   priority: Medium
   owner: ''
   feature: 4-Uncategorized
   created_at: 2025-11-25T22:42:42.983254022Z
-  modified_at: 2025-11-25T23:06:24.442043152Z
+  modified_at: 2025-11-26T21:34:55.223455928Z
   req_type: ChangeRequest
   dependencies: []
   tags: []
@@ -263,6 +263,13 @@ requirements:
     - field_name: spec_id
       old_value: UR-012
       new_value: CR-012
+  - id: 0082cadd-1f71-4265-8084-e8e1f9f5f05c
+    author: '@joe'
+    timestamp: 2025-11-26T21:34:55.223454638Z
+    changes:
+    - field_name: status
+      old_value: Draft
+      new_value: Completed
 - id: 87b1dacb-6c52-4f19-b6f8-a5bf41de3529
   spec_id: FR-013
   title: 'Change/configure window title '

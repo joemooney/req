@@ -1813,7 +1813,12 @@ impl RequirementsApp {
         ui.painter().galley(text_pos, galley, text_color);
 
         // Handle interactions
-        if response.clicked() {
+        if response.double_clicked() {
+            // Double-click opens for editing
+            self.selected_idx = Some(idx);
+            self.load_form_from_requirement(idx);
+            self.pending_view_change = Some(View::Edit);
+        } else if response.clicked() {
             self.selected_idx = Some(idx);
             self.pending_view_change = Some(View::Detail);
         }

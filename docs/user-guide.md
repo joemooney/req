@@ -296,6 +296,7 @@ req list --project backend
 |----------|--------|
 | **Arrow Up/Down** | Navigate requirements list |
 | **Enter** | Edit selected requirement |
+| **Double-click** | Edit requirement |
 | **Space** | Expand/collapse tree node (in tree views) |
 | **Ctrl+MouseWheel** | Zoom in/out |
 | **Ctrl+Shift++** | Zoom in |
