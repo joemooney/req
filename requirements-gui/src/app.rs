@@ -1,4 +1,5 @@
 use eframe::egui;
+use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
 use requirements_core::{
     Requirement, RequirementPriority, RequirementStatus, RequirementType,
     RequirementsStore, Storage, determine_requirements_path, Comment, FieldChange,
@@ -635,6 +636,10 @@ pub struct RequirementsApp {
     drag_source: Option<usize>,                  // Index of requirement being dragged
     drop_target: Option<usize>,                  // Index of requirement being hovered over
     pending_relationship: Option<(usize, usize)>, // (source_idx, target_idx) to create relationship
+
+    // Markdown rendering
+    markdown_cache: CommonMarkCache,
+    show_description_preview: bool,              // Toggle preview mode in edit form
 }
 
 impl RequirementsApp {
@@ -715,6 +720,8 @@ impl RequirementsApp {
             drag_source: None,
             drop_target: None,
             pending_relationship: None,
+            markdown_cache: CommonMarkCache::default(),
+            show_description_preview: false,
         }
     }
 
@@ -820,6 +827,7 @@ impl RequirementsApp {
         self.form_owner.clear();
         self.form_feature = String::from("Uncategorized");
         self.form_tags.clear();
+        self.show_description_preview = false;
 
         // If a requirement is selected, pre-populate parent relationship
         self.form_parent_id = self.selected_idx
@@ -838,6 +846,7 @@ impl RequirementsApp {
             self.form_feature = req.feature.clone();
             let tags_vec: Vec<String> = req.tags.iter().cloned().collect();
             self.form_tags = tags_vec.join(", ");
+            self.show_description_preview = false;
         }
     }
 
@@ -2585,10 +2594,13 @@ impl RequirementsApp {
         }
     }
 
-    fn show_description_tab(&self, ui: &mut egui::Ui, req: &Requirement) {
+    fn show_description_tab(&mut self, ui: &mut egui::Ui, req: &Requirement) {
         ui.heading("Description");
         ui.add_space(10.0);
-        ui.label(&req.description);
+
+        // Render description as markdown
+        CommonMarkViewer::new()
+            .show(ui, &mut self.markdown_cache, &req.description);
     }
 
     fn show_comments_tab(&mut self, ui: &mut egui::Ui, req: &Requirement, idx: usize) {
@@ -2814,7 +2826,17 @@ impl RequirementsApp {
         ui.add_space(8.0);
 
         // Description field - full width and takes remaining height
-        ui.label("Description:");
+        ui.horizontal(|ui| {
+            ui.label("Description:");
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                // Preview toggle button
+                let preview_label = if self.show_description_preview { "✏ Edit" } else { "👁 Preview" };
+                if ui.button(preview_label).clicked() {
+                    self.show_description_preview = !self.show_description_preview;
+                }
+                ui.label("Supports Markdown");
+            });
+        });
 
         // Calculate remaining height for description (leave space for buttons)
         let remaining_height = ui.available_height() - 50.0;
@@ -2823,10 +2845,17 @@ impl RequirementsApp {
         egui::ScrollArea::vertical()
             .max_height(description_height)
             .show(ui, |ui| {
-                ui.add(egui::TextEdit::multiline(&mut self.form_description)
-                    .desired_width(available_width)
-                    .desired_rows(8)
-                    .hint_text("Enter requirement description..."));
+                if self.show_description_preview {
+                    // Preview mode - render as markdown
+                    CommonMarkViewer::new()
+                        .show(ui, &mut self.markdown_cache, &self.form_description);
+                } else {
+                    // Edit mode - text editor
+                    ui.add(egui::TextEdit::multiline(&mut self.form_description)
+                        .desired_width(available_width)
+                        .desired_rows(8)
+                        .hint_text("Enter requirement description (Markdown supported)..."));
+                }
             });
 
         ui.add_space(8.0);

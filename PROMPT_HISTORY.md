@@ -234,6 +234,17 @@ A chronological record of development sessions and changes made to the Requireme
   - Theme order: Dark → Light → High Contrast Dark → Solarized Dark → Nord → Dark
   - Updated user guide documentation with new shortcut
 
+### Markdown Support for Descriptions
+- **Prompt**: Add markdown editor/preview for requirement descriptions
+- **Actions**:
+  - Added `egui_commonmark` crate (v0.18) for markdown rendering
+  - Added `CommonMarkCache` to RequirementsApp state for caching rendered markdown
+  - Updated detail view to render descriptions as markdown
+  - Added preview toggle in edit form (Edit/Preview button)
+  - Shows "Supports Markdown" hint in description field header
+  - Reset preview mode when clearing form or loading requirement for edit
+  - Updated user guide with Markdown support documentation
+
 ---
 
 ## Git Operations Summary

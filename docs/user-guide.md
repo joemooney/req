@@ -198,13 +198,27 @@ Comments support threading - click "Reply" on any comment to add a nested reply.
 |-------|-------------|
 | **SPEC-ID** | Auto-generated identifier (e.g., SPEC-001) |
 | **Title** | Short descriptive name |
-| **Description** | Detailed explanation |
+| **Description** | Detailed explanation (supports Markdown) |
 | **Status** | Draft, Approved, Completed, or Rejected |
 | **Priority** | High, Medium, or Low |
 | **Type** | Functional, NonFunctional, System, or User |
 | **Feature** | Grouping category |
 | **Owner** | Person responsible |
 | **Tags** | Comma-separated labels |
+
+### Markdown Support
+
+Requirement descriptions support Markdown formatting. When viewing a requirement, the description is rendered with full Markdown support including:
+
+- **Headers** (`# H1`, `## H2`, etc.)
+- **Bold** and *italic* text
+- Bullet and numbered lists
+- Code blocks with syntax highlighting
+- Links and images
+- Tables
+- Task lists
+
+When editing a requirement, click the **👁 Preview** button to see how your Markdown will render. Click **✏ Edit** to return to the text editor.
 
 ### Status Workflow
 
