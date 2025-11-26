@@ -298,6 +298,7 @@ req list --project backend
 | **Enter** | Edit selected requirement |
 | **Double-click** | Edit requirement |
 | **Space** | Expand/collapse tree node (in tree views) |
+| **Ctrl+T** | Cycle through themes |
 | **Ctrl+MouseWheel** | Zoom in/out |
 | **Ctrl+Shift++** | Zoom in |
 | **Ctrl+-** | Zoom out |
@@ -338,6 +339,7 @@ The Keybindings tab shows all customizable keyboard shortcuts. Click "Change" ne
 | Zoom In | Ctrl+Shift+Plus |
 | Zoom Out | Ctrl+Minus |
 | Reset Zoom | Ctrl+0 |
+| Cycle Theme | Ctrl+T |
 
 User settings are stored in: `~/.requirements_gui_settings.yaml`
 

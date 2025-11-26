@@ -45,6 +45,16 @@ impl Theme {
         }
     }
 
+    fn next(&self) -> Theme {
+        match self {
+            Theme::Dark => Theme::Light,
+            Theme::Light => Theme::HighContrastDark,
+            Theme::HighContrastDark => Theme::SolarizedDark,
+            Theme::SolarizedDark => Theme::Nord,
+            Theme::Nord => Theme::Dark,
+        }
+    }
+
     fn apply(&self, ctx: &egui::Context) {
         match self {
             Theme::Dark => {
@@ -122,6 +132,7 @@ pub enum KeyAction {
     ZoomIn,
     ZoomOut,
     ZoomReset,
+    CycleTheme,
 }
 
 impl KeyAction {
@@ -134,6 +145,7 @@ impl KeyAction {
             KeyAction::ZoomIn => "Zoom In",
             KeyAction::ZoomOut => "Zoom Out",
             KeyAction::ZoomReset => "Reset Zoom",
+            KeyAction::CycleTheme => "Cycle Theme",
         }
     }
 
@@ -146,6 +158,7 @@ impl KeyAction {
             KeyAction::ZoomIn,
             KeyAction::ZoomOut,
             KeyAction::ZoomReset,
+            KeyAction::CycleTheme,
         ]
     }
 }
@@ -357,6 +370,7 @@ impl Default for KeyBindings {
         bindings.insert(KeyAction::ZoomIn, KeyBinding::new(egui::Key::Plus).with_ctrl().with_shift());
         bindings.insert(KeyAction::ZoomOut, KeyBinding::new(egui::Key::Minus).with_ctrl());
         bindings.insert(KeyAction::ZoomReset, KeyBinding::new(egui::Key::Num0).with_ctrl());
+        bindings.insert(KeyAction::CycleTheme, KeyBinding::new(egui::Key::T).with_ctrl());
         Self { bindings }
     }
 }
@@ -3088,6 +3102,13 @@ impl eframe::App for RequirementsApp {
         }
         if self.user_settings.keybindings.is_pressed(KeyAction::ZoomReset, ctx) {
             zoom_reset = true;
+        }
+
+        // Check for theme cycling keybinding
+        if self.user_settings.keybindings.is_pressed(KeyAction::CycleTheme, ctx) {
+            self.user_settings.theme = self.user_settings.theme.next();
+            self.user_settings.theme.apply(ctx);
+            let _ = self.user_settings.save();
         }
 
         // Also handle Ctrl+= as alternate zoom in (common on keyboards)

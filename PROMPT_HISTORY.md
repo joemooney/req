@@ -224,6 +224,16 @@ A chronological record of development sessions and changes made to the Requireme
   - Implemented migration confirmation dialog with affected count and warnings
   - Updated user guide documentation with migration feature details
 
+### Theme Cycling Shortcut
+- **Prompt**: Ctrl-T should cycle through the themes
+- **Actions**:
+  - Added `CycleTheme` action to `KeyAction` enum
+  - Added `next()` method to `Theme` enum for cycling through themes
+  - Added default keybinding Ctrl+T in `KeyBindings::default()`
+  - Added keybinding handler in update function to cycle and save theme
+  - Theme order: Dark → Light → High Contrast Dark → Solarized Dark → Nord → Dark
+  - Updated user guide documentation with new shortcut
+
 ---
 
 ## Git Operations Summary
