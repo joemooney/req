@@ -102,10 +102,16 @@ requirements:
   owner: ''
   feature: 3-Uncategorized
   created_at: 2025-11-25T21:06:58.790215612Z
-  modified_at: 2025-11-25T21:06:58.790215612Z
+  modified_at: 2025-11-26T06:01:59.059014949Z
   req_type: Functional
   dependencies: []
   tags: []
+  comments:
+  - id: 356349e8-c3a9-4238-b13a-4b475b0e3477
+    author: '@joe'
+    content: comment box should be full width
+    created_at: 2025-11-26T06:01:59.059006625Z
+    modified_at: 2025-11-26T06:01:59.059006625Z
 - id: eed922f2-03d7-49c6-9c13-31dda6880c27
   spec_id: FR-006
   title: maintain list of users
@@ -465,7 +471,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 16-Uncategorized
   created_at: 2025-11-26T05:59:43.548438869Z
   modified_at: 2025-11-26T05:59:43.548438869Z
   req_type: Functional
@@ -495,6 +501,6 @@ id_config:
     prefix: CR
     description: Change requests for modifications to existing functionality
 features: []
-next_feature_number: 16
+next_feature_number: 17
 next_spec_number: 25
 prefix_counters: {}

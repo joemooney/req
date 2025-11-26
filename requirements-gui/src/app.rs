@@ -2083,40 +2083,45 @@ impl RequirementsApp {
     }
 
     fn show_comment_tree(&mut self, ui: &mut egui::Ui, comment: &Comment, req_idx: usize, depth: usize) {
-        let indent = depth as f32 * 20.0;
-        ui.add_space(indent);
-
+        let indent = depth as f32 * 24.0;
         let is_collapsed = self.collapsed_comments.get(&comment.id).copied().unwrap_or(false);
 
-        ui.group(|ui| {
-            ui.horizontal(|ui| {
-                // Collapse/expand button if there are replies
-                if !comment.replies.is_empty() {
-                    let button_text = if is_collapsed { "▶" } else { "▼" };
-                    if ui.small_button(button_text).clicked() {
-                        self.collapsed_comments.insert(comment.id, !is_collapsed);
+        ui.horizontal(|ui| {
+            // Add horizontal indentation
+            if indent > 0.0 {
+                ui.add_space(indent);
+            }
+
+            ui.group(|ui| {
+                ui.horizontal(|ui| {
+                    // Collapse/expand button if there are replies
+                    if !comment.replies.is_empty() {
+                        let button_text = if is_collapsed { "+" } else { "-" };
+                        if ui.small_button(button_text).clicked() {
+                            self.collapsed_comments.insert(comment.id, !is_collapsed);
+                        }
+                    } else {
+                        ui.add_space(18.0); // Spacing when no collapse button
                     }
-                } else {
-                    ui.label("  "); // Spacing when no collapse button
-                }
 
-                ui.label(format!("👤 {}", comment.author));
-                ui.label(format!("🕒 {}", comment.created_at.format("%Y-%m-%d %H:%M")));
-            });
+                    ui.label(format!("👤 {}", comment.author));
+                    ui.label(format!("🕒 {}", comment.created_at.format("%Y-%m-%d %H:%M")));
+                });
 
-            ui.label(&comment.content);
+                ui.label(&comment.content);
 
-            ui.horizontal(|ui| {
-                if ui.small_button("💬 Reply").clicked() {
-                    self.show_add_comment = true;
-                    self.reply_to_comment = Some(comment.id);
-                    // Pre-fill author from user settings
-                    self.comment_author = self.user_settings.display_name();
-                    self.comment_content.clear();
-                }
-                if ui.small_button("🗑 Delete").clicked() {
-                    self.pending_comment_delete = Some(comment.id);
-                }
+                ui.horizontal(|ui| {
+                    if ui.small_button("💬 Reply").clicked() {
+                        self.show_add_comment = true;
+                        self.reply_to_comment = Some(comment.id);
+                        // Pre-fill author from user settings
+                        self.comment_author = self.user_settings.display_name();
+                        self.comment_content.clear();
+                    }
+                    if ui.small_button("🗑 Delete").clicked() {
+                        self.pending_comment_delete = Some(comment.id);
+                    }
+                });
             });
         });
 
