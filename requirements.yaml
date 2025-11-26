@@ -342,7 +342,7 @@ requirements:
       old_value: FR-015
       new_value: CR-015
 - id: 848840ae-7005-4fab-b478-163f9139359e
-  spec_id: FR-0016
+  spec_id: COMMENTS-0027
   prefix_override: COMMENTS
   title: Support comments
   description: ''
@@ -351,7 +351,7 @@ requirements:
   owner: ''
   feature: 6-Uncategorized
   created_at: 2025-11-25T23:51:23.542112733Z
-  modified_at: 2025-11-26T22:44:18.484361487Z
+  modified_at: 2025-11-26T22:55:17.378345136Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -370,6 +370,26 @@ requirements:
     - field_name: prefix_override
       old_value: ''
       new_value: COMMENTS
+  - id: 82a33d95-81db-45a3-b759-50c57f4c66a8
+    author: '@joe'
+    timestamp: 2025-11-26T22:55:10.371310536Z
+    changes:
+    - field_name: prefix_override
+      old_value: COMMENTS
+      new_value: OMMENTS
+    - field_name: spec_id
+      old_value: FR-0016
+      new_value: OMMENTS-0026
+  - id: ebf9a1bc-424d-4219-83bf-90944da619ec
+    author: '@joe'
+    timestamp: 2025-11-26T22:55:17.378344827Z
+    changes:
+    - field_name: prefix_override
+      old_value: OMMENTS
+      new_value: COMMENTS
+    - field_name: spec_id
+      old_value: OMMENTS-0026
+      new_value: COMMENTS-0027
 - id: 6da186f2-cae3-4b75-bc46-d487ced9e96b
   spec_id: FR-0017
   title: Double click on link to switch requirement
@@ -552,5 +572,5 @@ id_config:
     description: Change requests for modifications to existing functionality
 features: []
 next_feature_number: 18
-next_spec_number: 26
+next_spec_number: 28
 prefix_counters: {}

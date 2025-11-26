@@ -166,8 +166,16 @@ req-gui
 The GUI consists of three main areas:
 
 1. **Top Bar** - Contains action buttons, requirement count, and settings
-2. **Left Panel** - Requirements list with search filter
+2. **Left Panel** - Requirements list with search filter (collapsible in edit mode)
 3. **Main Area** - Detail view, forms, or welcome screen
+
+### Responsive Layout
+
+When editing or adding requirements, the left panel remains visible if the window is wide enough (900+ pixels). You can:
+- Click the **▶ Hide** button in the left panel header to collapse it
+- Click **◀ Show List** in the form area to restore the panel
+
+This allows you to reference other requirements while editing, or maximize form space on smaller screens.
 
 ### Navigation
 

@@ -641,6 +641,9 @@ pub struct RequirementsApp {
     // Markdown rendering
     markdown_cache: CommonMarkCache,
     show_description_preview: bool,              // Toggle preview mode in edit form
+
+    // Left panel state
+    left_panel_collapsed: bool,                  // Whether left panel is manually collapsed
 }
 
 impl RequirementsApp {
@@ -724,6 +727,7 @@ impl RequirementsApp {
             pending_relationship: None,
             markdown_cache: CommonMarkCache::default(),
             show_description_preview: false,
+            left_panel_collapsed: false,
         }
     }
 
@@ -2067,9 +2071,19 @@ impl RequirementsApp {
         }
     }
 
-    fn show_list_panel(&mut self, ctx: &egui::Context) {
+    fn show_list_panel(&mut self, ctx: &egui::Context, in_form_view: bool) {
         egui::SidePanel::left("list_panel").min_width(400.0).show(ctx, |ui| {
-            ui.heading("Requirements");
+            // Header with optional collapse button
+            ui.horizontal(|ui| {
+                ui.heading("Requirements");
+                if in_form_view {
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("▶ Hide").on_hover_text("Hide requirements list").clicked() {
+                            self.left_panel_collapsed = true;
+                        }
+                    });
+                }
+            });
             ui.separator();
 
             // Search bar
@@ -3366,12 +3380,34 @@ impl eframe::App for RequirementsApp {
 
         self.show_top_panel(ctx);
 
-        // Only show list panel when not in form view
-        if self.current_view == View::List || self.current_view == View::Detail {
-            self.show_list_panel(ctx);
+        // Determine if we should show the left panel
+        // In List/Detail view: always show
+        // In Add/Edit view: show if window is wide enough AND not manually collapsed
+        let screen_width = ctx.screen_rect().width();
+        let min_width_for_side_panel = 900.0; // Minimum width to show side panel in edit mode
+        let in_form_view = self.current_view == View::Add || self.current_view == View::Edit;
+
+        let show_left_panel = if in_form_view {
+            screen_width >= min_width_for_side_panel && !self.left_panel_collapsed
+        } else {
+            true // Always show in List/Detail view
+        };
+
+        if show_left_panel {
+            self.show_list_panel(ctx, in_form_view);
         }
 
         egui::CentralPanel::default().show(ctx, |ui| {
+            // Show panel toggle button in form view when panel is hidden
+            if in_form_view && !show_left_panel {
+                ui.horizontal(|ui| {
+                    if ui.button("◀ Show List").on_hover_text("Show requirements list").clicked() {
+                        self.left_panel_collapsed = false;
+                    }
+                });
+                ui.separator();
+            }
+
             match &self.current_view {
                 View::List | View::Detail => {
                     self.show_detail_view(ui);

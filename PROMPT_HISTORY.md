@@ -260,6 +260,25 @@ A chronological record of development sessions and changes made to the Requireme
   - Global Sequential numbering uses shared counter regardless of prefix
   - Updated user guide documentation with custom prefix usage
 
+### Prefix Update Bug Fix
+- **Prompt**: Updating prefix doesn't update the spec_id, need conflict checking
+- **Actions**:
+  - Added `regenerate_spec_id_for_prefix_change()` method to RequirementsStore
+  - Added `is_spec_id_available()` helper function
+  - Rewrote `update_requirement()` in GUI to handle prefix changes properly
+  - Checks for ID conflicts before allowing changes
+  - Shows error message if new ID would conflict with existing requirement
+
+### Collapsible Left Panel in Edit Mode
+- **Prompt**: Keep left panel open in edit mode when window is wide enough with expand/collapse option
+- **Actions**:
+  - Added `left_panel_collapsed: bool` field to RequirementsApp state
+  - Modified update() to conditionally show left panel based on screen width (900px minimum)
+  - Added "▶ Hide" button in left panel header when in form view
+  - Added "◀ Show List" button in central panel when panel is hidden
+  - Updated show_list_panel() function signature to accept `in_form_view: bool`
+  - Updated user guide with Responsive Layout section
+
 ---
 
 ## Git Operations Summary
