@@ -1,0 +1,186 @@
+# Requirements Manager - Prompt History
+
+A chronological record of development sessions and changes made to the Requirements Manager project.
+
+---
+
+## Session 1: Initial Setup and Core Features
+
+### Initial Commit
+- Created basic requirements management CLI in Rust
+- Implemented core data models (Requirement, RequirementStatus, RequirementPriority, RequirementType)
+- Added YAML-based storage layer
+- Implemented basic CRUD operations
+
+### Integration Planning
+- **Prompt**: Plan integration with ai-provenance system
+- **Actions**:
+  - Added INTEGRATION.md with detailed integration plan
+  - Created SIMPLIFIED_INTEGRATION.md with streamlined approach
+  - Added FINAL_RECOMMENDATION.md with implementation recommendations
+  - Created INTEGRATION_INDEX.md for documentation navigation
+
+### Export Feature
+- **Prompt**: Add export functionality for requirement mappings
+- **Actions**:
+  - Implemented `export` command in CLI
+  - Support for mapping format (UUID/SPEC-ID)
+  - Support for JSON export format
+  - Output to file or stdout
+
+---
+
+## Session 2: SPEC-ID System and Relationships
+
+### SPEC-ID Implementation
+- **Prompt**: Add human-friendly SPEC-ID as alternate key
+- **Actions**:
+  - Designed SPEC-ID format (SPEC-XXX)
+  - Added UUID_SPEC_ID_VERIFICATION.md with mapping verification
+  - Added SPEC_ID_AS_ALTERNATE_KEY.md with design document
+  - Implemented SPEC-ID in Requirement model
+  - Added SPEC_ID_IMPLEMENTATION_COMPLETE.md summary
+
+### Delete Command
+- **Prompt**: Add ability to delete requirements
+- **Actions**:
+  - Implemented `del` command in CLI
+  - Support for both UUID and SPEC-ID lookups
+  - Added confirmation prompt with --yes/-y skip option
+
+### Relationship System
+- **Prompt**: Add relationships between requirements
+- **Actions**:
+  - Implemented relationship types (Parent, Child, Verifies, VerifiedBy, References, Duplicate, Custom)
+  - Added `rel add` command with bidirectional support
+  - Added `rel remove` command
+  - Added `rel list` command
+  - Improved relationship display clarity
+
+---
+
+## Session 3: Workspace Restructure and GUI
+
+### Workspace Restructure
+- **Prompt**: Restructure project into workspace with CLI and GUI
+- **Actions**:
+  - Created Cargo workspace with three crates:
+    - requirements-core: Shared library
+    - requirements-cli: CLI tool (req binary)
+    - requirements-gui: GUI application (req-gui binary)
+  - Moved core logic to shared library
+  - Cleaned up old requirements-manager directory
+  - Updated .gitignore
+
+### GUI Implementation
+- **Prompt**: Implement full CRUD operations in GUI
+- **Actions**:
+  - Implemented egui-based GUI application
+  - Added requirements list with search/filter
+  - Added detail view for requirements
+  - Implemented Add, Edit, Delete operations
+  - Added Reload functionality
+
+---
+
+## Session 4: Comments and History
+
+### Comment System
+- **Prompt**: Implement threaded comment system
+- **Actions**:
+  - Added Comment model with threading support
+  - Implemented comment CRUD operations
+  - Added `comment add` CLI command with parent support
+  - Added `comment list`, `comment edit`, `comment delete` commands
+  - Integrated comments into GUI
+
+### Collapsible Comments
+- **Prompt**: Add collapsible comment trees to GUI
+- **Actions**:
+  - Implemented tree view for threaded comments
+  - Added expand/collapse functionality
+  - Added reply button for nested comments
+
+### Change History
+- **Prompt**: Add change history tracking to requirements
+- **Actions**:
+  - Added HistoryEntry and FieldChange models
+  - Track all field changes with old/new values
+  - Record timestamp and author for changes
+  - Added history display in requirement details
+
+### Tabbed Interface
+- **Prompt**: Implement tabbed interface with history in GUI
+- **Actions**:
+  - Added tab system (Description, Comments, Links, History)
+  - Implemented DetailTab enum for view state
+  - Added History tab showing change log
+  - Added Links tab for relationship display
+
+---
+
+## Session 5: Improvements and Documentation
+
+### Many Improvements (Latest Session)
+- **Prompt**: Various improvements and polish
+- **Actions**:
+  - Enhanced GUI with user settings (name, email, handle)
+  - Added configurable font size with zoom controls
+  - Added multiple view perspectives (Flat, Parent/Child, Verification, References)
+  - Implemented ID configuration commands
+  - Added requirement type management
+  - Created user-guide.md documentation
+  - Generated HTML documentation (light and dark modes)
+  - Added `user-guide` CLI command to open documentation
+  - Created helper scripts for documentation generation
+
+### Current Session - Documentation Cleanup
+- **Prompt**: Review updates and create documentation
+- **Actions**:
+  - Created OVERVIEW.md with project vision and structure
+  - Created REQUIREMENTS.md with system requirements
+  - Created PROMPT_HISTORY.md (this file)
+  - Registered port numbers in global registry
+
+---
+
+## Git Operations Summary
+
+### Key Commits
+| Hash | Description |
+|------|-------------|
+| 93429bd | Initial commit |
+| 8c240c3 | Export command |
+| 31353f1 | SPEC-ID implementation |
+| b5c4ae5 | Delete command |
+| ca97e05 | Relationship system |
+| 411edb4 | Workspace restructure |
+| 4b91e82 | GUI CRUD operations |
+| a16d853 | Threaded comments |
+| 41096d3 | Change history |
+| 3ec7ace | Tabbed interface |
+| 4e96abf | Many improvements |
+
+### Branches
+- **main**: Primary development branch
+
+---
+
+## Technical Decisions
+
+### Storage Format
+- Chose YAML for human-readability and Git-friendliness
+- All data in single requirements.yaml file per project
+
+### ID System
+- Dual ID system: UUID for internal use, SPEC-ID for human reference
+- Configurable ID formats and numbering strategies
+
+### GUI Framework
+- Selected egui for cross-platform Rust GUI
+- Immediate mode rendering for simplicity
+
+### Architecture
+- Workspace structure to share code between CLI and GUI
+- Core library contains all business logic
+- CLI and GUI are thin wrappers around core
