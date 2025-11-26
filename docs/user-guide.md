@@ -172,8 +172,12 @@ The GUI consists of three main areas:
 ### Navigation
 
 - Click a requirement in the left panel to view its details
+- Double-click a requirement to open it for editing
 - Use the search box to filter requirements by title or description
 - Click tabs (Description, Comments, Links, History) to switch views
+- Use arrow keys to navigate up/down through the requirements list
+- Press Enter to edit the selected requirement
+- Press Space to expand/collapse tree nodes (in hierarchical views)
 
 ### Actions
 
@@ -186,6 +190,19 @@ The GUI consists of three main areas:
 | **Settings** | Open settings dialog |
 | **Help** | Open this user guide |
 
+### View Perspectives
+
+The requirements list can be displayed in different organizational views. Select your preferred view from the dropdown in the top bar or set a default in Settings > Appearance.
+
+| View | Description |
+|------|-------------|
+| **Flat List** | Simple list of all requirements |
+| **Parent/Child** | Hierarchical tree showing parent-child relationships |
+| **Verification** | Groups requirements by verification relationships |
+| **References** | Groups requirements by reference relationships |
+
+In tree views, use the +/- buttons or press Space to expand/collapse nodes.
+
 ### Adding Comments
 
 1. Select a requirement
@@ -193,7 +210,7 @@ The GUI consists of three main areas:
 3. Click "+ Add Comment"
 4. Enter your comment and click Save
 
-Comments support threading - click "Reply" on any comment to add a nested reply.
+Comments support threading - click "Reply" on any comment to add a nested reply. Comments are displayed in a collapsible tree structure.
 
 ---
 
@@ -436,6 +453,14 @@ The migration dialog shows:
 5. **Regular status updates**: Keep status current to track project progress
 
 6. **Backup your data**: The YAML format is human-readable and version-control friendly
+
+7. **Use Markdown in descriptions**: Format requirements with headers, lists, and code blocks for clarity
+
+8. **Custom prefixes for cross-cutting concerns**: Use custom ID prefixes like `SEC-`, `PERF-`, `API-` for requirements that span multiple features
+
+9. **Keyboard shortcuts for efficiency**: Learn the shortcuts (Ctrl+T for themes, arrow keys for navigation) to speed up your workflow
+
+10. **Set your preferred view**: Configure your default perspective in Settings to match how you like to organize requirements
 
 ---
 

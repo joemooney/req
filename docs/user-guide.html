@@ -240,10 +240,16 @@ screen</li>
 <h3 id="navigation">Navigation</h3>
 <ul>
 <li>Click a requirement in the left panel to view its details</li>
+<li>Double-click a requirement to open it for editing</li>
 <li>Use the search box to filter requirements by title or
 description</li>
 <li>Click tabs (Description, Comments, Links, History) to switch
 views</li>
+<li>Use arrow keys to navigate up/down through the requirements
+list</li>
+<li>Press Enter to edit the selected requirement</li>
+<li>Press Space to expand/collapse tree nodes (in hierarchical
+views)</li>
 </ul>
 <h3 id="actions">Actions</h3>
 <table>
@@ -280,6 +286,42 @@ views</li>
 </tr>
 </tbody>
 </table>
+<h3 id="view-perspectives">View Perspectives</h3>
+<p>The requirements list can be displayed in different organizational
+views. Select your preferred view from the dropdown in the top bar or
+set a default in Settings &gt; Appearance.</p>
+<table>
+<colgroup>
+<col style="width: 31%" />
+<col style="width: 68%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>View</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Flat List</strong></td>
+<td>Simple list of all requirements</td>
+</tr>
+<tr class="even">
+<td><strong>Parent/Child</strong></td>
+<td>Hierarchical tree showing parent-child relationships</td>
+</tr>
+<tr class="odd">
+<td><strong>Verification</strong></td>
+<td>Groups requirements by verification relationships</td>
+</tr>
+<tr class="even">
+<td><strong>References</strong></td>
+<td>Groups requirements by reference relationships</td>
+</tr>
+</tbody>
+</table>
+<p>In tree views, use the +/- buttons or press Space to expand/collapse
+nodes.</p>
 <h3 id="adding-comments">Adding Comments</h3>
 <ol type="1">
 <li>Select a requirement</li>
@@ -288,7 +330,8 @@ views</li>
 <li>Enter your comment and click Save</li>
 </ol>
 <p>Comments support threading - click “Reply” on any comment to add a
-nested reply.</p>
+nested reply. Comments are displayed in a collapsible tree
+structure.</p>
 <hr />
 <h2 id="working-with-requirements">Working with Requirements</h2>
 <h3 id="requirement-fields">Requirement Fields</h3>
@@ -709,6 +752,17 @@ discussions in the comments, not the description</p></li>
 track project progress</p></li>
 <li><p><strong>Backup your data</strong>: The YAML format is
 human-readable and version-control friendly</p></li>
+<li><p><strong>Use Markdown in descriptions</strong>: Format
+requirements with headers, lists, and code blocks for clarity</p></li>
+<li><p><strong>Custom prefixes for cross-cutting concerns</strong>: Use
+custom ID prefixes like <code>SEC-</code>, <code>PERF-</code>,
+<code>API-</code> for requirements that span multiple features</p></li>
+<li><p><strong>Keyboard shortcuts for efficiency</strong>: Learn the
+shortcuts (Ctrl+T for themes, arrow keys for navigation) to speed up
+your workflow</p></li>
+<li><p><strong>Set your preferred view</strong>: Configure your default
+perspective in Settings to match how you like to organize
+requirements</p></li>
 </ol>
 <hr />
 <h2 id="troubleshooting">Troubleshooting</h2>
