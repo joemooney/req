@@ -18,6 +18,100 @@ const MAX_FONT_SIZE: f32 = 32.0;
 /// Font size step for zoom in/out
 const FONT_SIZE_STEP: f32 = 1.0;
 
+/// Available color themes
+#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
+pub enum Theme {
+    /// Dark theme (default egui dark)
+    #[default]
+    Dark,
+    /// Light theme
+    Light,
+    /// High contrast dark
+    HighContrastDark,
+    /// Solarized dark
+    SolarizedDark,
+    /// Nord theme
+    Nord,
+}
+
+impl Theme {
+    fn label(&self) -> &'static str {
+        match self {
+            Theme::Dark => "Dark",
+            Theme::Light => "Light",
+            Theme::HighContrastDark => "High Contrast Dark",
+            Theme::SolarizedDark => "Solarized Dark",
+            Theme::Nord => "Nord",
+        }
+    }
+
+    fn apply(&self, ctx: &egui::Context) {
+        match self {
+            Theme::Dark => {
+                ctx.set_visuals(egui::Visuals::dark());
+            }
+            Theme::Light => {
+                ctx.set_visuals(egui::Visuals::light());
+            }
+            Theme::HighContrastDark => {
+                let mut visuals = egui::Visuals::dark();
+                visuals.override_text_color = Some(egui::Color32::WHITE);
+                visuals.widgets.noninteractive.bg_fill = egui::Color32::from_gray(20);
+                visuals.widgets.inactive.bg_fill = egui::Color32::from_gray(30);
+                visuals.widgets.hovered.bg_fill = egui::Color32::from_gray(50);
+                visuals.widgets.active.bg_fill = egui::Color32::from_gray(60);
+                visuals.selection.bg_fill = egui::Color32::from_rgb(0, 100, 200);
+                visuals.extreme_bg_color = egui::Color32::BLACK;
+                ctx.set_visuals(visuals);
+            }
+            Theme::SolarizedDark => {
+                let mut visuals = egui::Visuals::dark();
+                // Solarized dark colors
+                let base03 = egui::Color32::from_rgb(0, 43, 54);
+                let base02 = egui::Color32::from_rgb(7, 54, 66);
+                let base01 = egui::Color32::from_rgb(88, 110, 117);
+                let base0 = egui::Color32::from_rgb(131, 148, 150);
+                let base1 = egui::Color32::from_rgb(147, 161, 161);
+                let cyan = egui::Color32::from_rgb(42, 161, 152);
+
+                visuals.override_text_color = Some(base0);
+                visuals.widgets.noninteractive.bg_fill = base03;
+                visuals.widgets.noninteractive.fg_stroke.color = base1;
+                visuals.widgets.inactive.bg_fill = base02;
+                visuals.widgets.hovered.bg_fill = base01;
+                visuals.widgets.active.bg_fill = cyan;
+                visuals.selection.bg_fill = cyan;
+                visuals.extreme_bg_color = base03;
+                visuals.faint_bg_color = base02;
+                ctx.set_visuals(visuals);
+            }
+            Theme::Nord => {
+                let mut visuals = egui::Visuals::dark();
+                // Nord colors
+                let nord0 = egui::Color32::from_rgb(46, 52, 64);    // Polar Night
+                let nord1 = egui::Color32::from_rgb(59, 66, 82);
+                let nord2 = egui::Color32::from_rgb(67, 76, 94);
+                let nord3 = egui::Color32::from_rgb(76, 86, 106);
+                let nord4 = egui::Color32::from_rgb(216, 222, 233); // Snow Storm
+                let nord8 = egui::Color32::from_rgb(136, 192, 208); // Frost
+                let nord10 = egui::Color32::from_rgb(94, 129, 172);
+
+                visuals.override_text_color = Some(nord4);
+                visuals.widgets.noninteractive.bg_fill = nord0;
+                visuals.widgets.noninteractive.fg_stroke.color = nord4;
+                visuals.widgets.inactive.bg_fill = nord1;
+                visuals.widgets.hovered.bg_fill = nord2;
+                visuals.widgets.active.bg_fill = nord3;
+                visuals.selection.bg_fill = nord10;
+                visuals.hyperlink_color = nord8;
+                visuals.extreme_bg_color = nord0;
+                visuals.faint_bg_color = nord1;
+                ctx.set_visuals(visuals);
+            }
+        }
+    }
+}
+
 /// User settings for the GUI application
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserSettings {
@@ -33,6 +127,9 @@ pub struct UserSettings {
     /// Preferred view perspective
     #[serde(default)]
     pub preferred_perspective: Perspective,
+    /// Color theme
+    #[serde(default)]
+    pub theme: Theme,
 }
 
 fn default_font_size() -> f32 {
@@ -47,6 +144,7 @@ impl Default for UserSettings {
             handle: String::new(),
             base_font_size: DEFAULT_FONT_SIZE,
             preferred_perspective: Perspective::default(),
+            theme: Theme::default(),
         }
     }
 }
@@ -221,6 +319,7 @@ pub struct RequirementsApp {
     settings_form_handle: String,
     settings_form_font_size: f32,
     settings_form_perspective: Perspective,
+    settings_form_theme: Theme,
 
     // User management
     show_user_form: bool,
@@ -297,6 +396,7 @@ impl RequirementsApp {
             settings_form_handle: String::new(),
             settings_form_font_size: DEFAULT_FONT_SIZE,
             settings_form_perspective: Perspective::default(),
+            settings_form_theme: Theme::default(),
             show_user_form: false,
             editing_user_id: None,
             user_form_name: String::new(),
@@ -655,6 +755,7 @@ impl RequirementsApp {
                         self.settings_form_handle = self.user_settings.handle.clone();
                         self.settings_form_font_size = self.user_settings.base_font_size;
                         self.settings_form_perspective = self.user_settings.preferred_perspective.clone();
+                        self.settings_form_theme = self.user_settings.theme.clone();
                         self.show_settings_dialog = true;
                     }
                     if ui.button("?").on_hover_text("Help - Open User Guide").clicked() {
@@ -713,12 +814,15 @@ impl RequirementsApp {
                         self.user_settings.handle = self.settings_form_handle.clone();
                         self.user_settings.base_font_size = self.settings_form_font_size;
                         self.user_settings.preferred_perspective = self.settings_form_perspective.clone();
+                        self.user_settings.theme = self.settings_form_theme.clone();
 
                         // Apply the new base font size as current
                         self.current_font_size = self.settings_form_font_size;
 
                         // Apply the new preferred perspective
                         self.perspective = self.settings_form_perspective.clone();
+
+                        // Theme will be applied on next frame via update()
 
                         // Save to file
                         match self.user_settings.save() {
@@ -772,6 +876,18 @@ impl RequirementsApp {
             .num_columns(2)
             .spacing([20.0, 10.0])
             .show(ui, |ui| {
+                ui.label("Theme:");
+                egui::ComboBox::from_id_salt("settings_theme_combo")
+                    .selected_text(self.settings_form_theme.label())
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(&mut self.settings_form_theme, Theme::Dark, Theme::Dark.label());
+                        ui.selectable_value(&mut self.settings_form_theme, Theme::Light, Theme::Light.label());
+                        ui.selectable_value(&mut self.settings_form_theme, Theme::HighContrastDark, Theme::HighContrastDark.label());
+                        ui.selectable_value(&mut self.settings_form_theme, Theme::SolarizedDark, Theme::SolarizedDark.label());
+                        ui.selectable_value(&mut self.settings_form_theme, Theme::Nord, Theme::Nord.label());
+                    });
+                ui.end_row();
+
                 ui.label("Base Font Size:");
                 ui.horizontal(|ui| {
                     ui.add(egui::Slider::new(&mut self.settings_form_font_size, MIN_FONT_SIZE..=MAX_FONT_SIZE)
@@ -2288,6 +2404,9 @@ impl RequirementsApp {
 
 impl eframe::App for RequirementsApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Apply the selected theme
+        self.user_settings.theme.apply(ctx);
+
         // Apply current font size to the context
         let mut style = (*ctx.style()).clone();
         for (_text_style, font_id) in style.text_styles.iter_mut() {
