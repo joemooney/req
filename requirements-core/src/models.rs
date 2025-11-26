@@ -1079,6 +1079,42 @@ impl RequirementsStore {
         self.id_config.get_type_by_name(type_name).map(|t| t.prefix.clone())
     }
 
+    /// Generate a new spec_id for a requirement with a new prefix override
+    /// Returns Ok(new_spec_id) if successful, Err if the new ID would conflict
+    pub fn regenerate_spec_id_for_prefix_change(
+        &mut self,
+        req_uuid: &Uuid,
+        new_prefix: Option<&str>,
+        feature_prefix: Option<&str>,
+        type_prefix: Option<&str>,
+    ) -> Result<String, String> {
+        // Generate the new ID
+        let new_spec_id = if let Some(prefix) = new_prefix {
+            self.generate_requirement_id_with_override(prefix)
+        } else {
+            self.generate_requirement_id(feature_prefix, type_prefix)
+        };
+
+        // Check if this ID is already taken by another requirement
+        let conflicts = self.requirements.iter().any(|r| {
+            r.id != *req_uuid && r.spec_id.as_deref() == Some(&new_spec_id)
+        });
+
+        if conflicts {
+            Err(format!("ID '{}' is already in use by another requirement", new_spec_id))
+        } else {
+            Ok(new_spec_id)
+        }
+    }
+
+    /// Check if a spec_id is available (not used by any requirement, or only by the given UUID)
+    pub fn is_spec_id_available(&self, spec_id: &str, exclude_uuid: Option<&Uuid>) -> bool {
+        !self.requirements.iter().any(|r| {
+            r.spec_id.as_deref() == Some(spec_id) &&
+            exclude_uuid.map_or(true, |uuid| r.id != *uuid)
+        })
+    }
+
     /// Update a requirement's spec_id when its type changes
     /// Replaces the type prefix portion while keeping the number
     pub fn update_spec_id_for_type_change(

@@ -918,20 +918,51 @@ impl RequirementsApp {
     }
 
     fn update_requirement(&mut self, idx: usize) {
-        // First, compute any spec_id changes needed before mutable borrow
-        let new_spec_id = if let Some(req) = self.store.requirements.get(idx) {
-            if self.form_type != req.req_type {
-                self.store.update_spec_id_for_type_change(
-                    req.spec_id.as_deref(),
-                    &self.form_type,
-                )
+        // Gather data we need before mutable borrows
+        let (req_uuid, old_prefix_override, old_feature, old_req_type) = {
+            if let Some(req) = self.store.requirements.get(idx) {
+                (req.id, req.prefix_override.clone(), req.feature.clone(), req.req_type.clone())
             } else {
-                None
+                return;
             }
+        };
+
+        // Determine new prefix
+        let new_prefix = if self.form_prefix.trim().is_empty() {
+            None
+        } else {
+            Requirement::validate_prefix(&self.form_prefix)
+        };
+
+        // Check if we need to regenerate the spec_id
+        let prefix_changed = new_prefix != old_prefix_override;
+        let feature_changed = self.form_feature != old_feature;
+        let type_changed = self.form_type != old_req_type;
+        let needs_new_spec_id = prefix_changed || (new_prefix.is_none() && (feature_changed || type_changed));
+
+        // Generate new spec_id if needed
+        let new_spec_id_result = if needs_new_spec_id {
+            let feature_prefix = self.store.get_feature_by_name(&self.form_feature)
+                .map(|f| f.prefix.clone());
+            let type_prefix = self.store.get_type_prefix(&self.form_type);
+
+            Some(self.store.regenerate_spec_id_for_prefix_change(
+                &req_uuid,
+                new_prefix.as_deref(),
+                feature_prefix.as_deref(),
+                type_prefix.as_deref(),
+            ))
         } else {
             None
         };
 
+        // Check for ID conflict
+        if let Some(Err(ref error_msg)) = new_spec_id_result {
+            self.message = Some((error_msg.clone(), true));
+            return;
+        }
+
+        // Now perform the actual updates
         if let Some(req) = self.store.requirements.get_mut(idx) {
             let mut changes: Vec<FieldChange> = Vec::new();
 
@@ -959,19 +990,9 @@ impl RequirementsApp {
                 req.priority = self.form_priority.clone();
             }
 
-            // Track type change and update spec_id prefix
+            // Track type change
             if self.form_type != req.req_type {
                 changes.push(Requirement::field_change("type", format!("{:?}", req.req_type), format!("{:?}", self.form_type)));
-
-                // Update the spec_id to reflect the new type prefix
-                if let Some(ref new_id) = new_spec_id {
-                    if req.spec_id.as_deref() != Some(new_id.as_str()) {
-                        let old_spec_id = req.spec_id.clone().unwrap_or_default();
-                        changes.push(Requirement::field_change("spec_id", old_spec_id, new_id.clone()));
-                        req.spec_id = Some(new_id.clone());
-                    }
-                }
-
                 req.req_type = self.form_type.clone();
             }
 
@@ -1001,18 +1022,21 @@ impl RequirementsApp {
                 req.tags = new_tags;
             }
 
-            // Track prefix override change
-            let new_prefix = if self.form_prefix.trim().is_empty() {
-                None
-            } else {
-                Requirement::validate_prefix(&self.form_prefix)
-            };
-
-            if new_prefix != req.prefix_override {
-                let old_prefix = req.prefix_override.clone().unwrap_or_default();
+            // Track prefix override change and update spec_id
+            if prefix_changed {
+                let old_prefix_str = req.prefix_override.clone().unwrap_or_default();
                 let new_prefix_str = new_prefix.clone().unwrap_or_default();
-                changes.push(Requirement::field_change("prefix_override", old_prefix, new_prefix_str));
+                changes.push(Requirement::field_change("prefix_override", old_prefix_str, new_prefix_str));
                 req.prefix_override = new_prefix;
+            }
+
+            // Update spec_id if it changed
+            if let Some(Ok(ref new_id)) = new_spec_id_result {
+                let old_id = req.spec_id.clone().unwrap_or_default();
+                if old_id != *new_id {
+                    changes.push(Requirement::field_change("spec_id", old_id, new_id.clone()));
+                    req.spec_id = Some(new_id.clone());
+                }
             }
 
             // Record changes with author from user settings
