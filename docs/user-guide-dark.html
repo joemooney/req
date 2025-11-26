@@ -597,8 +597,25 @@ FR-002, PAY-003) - <strong>Per Prefix</strong>: Each prefix has its own
 counter (AUTH-001, FR-001, PAY-001) - <strong>Per Feature+Type</strong>:
 Each feature+type combination has its own counter (only for Two Level
 format)</p>
-<p>Note: Changing these settings affects new requirements only. Existing
-requirement IDs are not modified.</p>
+<p><strong>Migrating Existing IDs:</strong></p>
+<p>When you change ID configuration settings, you can optionally migrate
+existing requirement IDs to the new format using the “Migrate Existing
+IDs” button. The migration has the following constraints:</p>
+<ul>
+<li><strong>Digit count validation</strong>: You cannot reduce the
+number of digits below the maximum currently in use. For example, if you
+have <code>SPEC-1234</code> (4 digits), you cannot change to 3
+digits.</li>
+<li><strong>Format change requirement</strong>: To change between Single
+Level and Two Level formats, you must have Global Sequential numbering
+selected.</li>
+<li><strong>Safe operation</strong>: Requirements that cannot be
+migrated (e.g., would exceed digit limit) are skipped with a
+warning.</li>
+</ul>
+<p>The migration dialog shows: - Number of requirements that will be
+affected - Any validation errors that prevent migration - Warnings about
+potential issues</p>
 <h3 id="environment-variables">Environment Variables</h3>
 <table>
 <thead>

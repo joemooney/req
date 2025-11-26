@@ -210,6 +210,20 @@ A chronological record of development sessions and changes made to the Requireme
   - Project settings stored in requirements.yaml file
   - Settings loaded on dialog open, saved with other settings
 
+### ID Migration Support
+- **Prompt**: Add validation and migration for ID settings changes
+- **Actions**:
+  - Added `IdConfigValidation` struct in requirements-core for validation results
+  - Implemented `validate_id_config_change()` method to check proposed settings
+  - Added `get_max_digits_in_use()` helper to find maximum digit count in existing IDs
+  - Implemented `migrate_ids_to_config()` method to update all requirement IDs
+  - Validation prevents digit reduction below existing maximum
+  - Format changes require Global Sequential numbering
+  - Added validation display in Project settings tab (errors in red, warnings in yellow)
+  - Added "Migrate Existing IDs" button when settings differ from current
+  - Implemented migration confirmation dialog with affected count and warnings
+  - Updated user guide documentation with migration feature details
+
 ---
 
 ## Git Operations Summary

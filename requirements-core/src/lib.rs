@@ -11,7 +11,7 @@ pub use models::{
     HistoryEntry, FieldChange, User,
     // New ID system types
     IdFormat, NumberingStrategy, IdConfiguration,
-    RequirementTypeDefinition, FeatureDefinition,
+    RequirementTypeDefinition, FeatureDefinition, IdConfigValidation,
 };
 pub use storage::Storage;
 pub use registry::{Registry, get_registry_path};

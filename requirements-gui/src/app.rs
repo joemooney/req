@@ -594,6 +594,8 @@ pub struct RequirementsApp {
     settings_form_id_format: IdFormat,
     settings_form_numbering: NumberingStrategy,
     settings_form_digits: u8,
+    show_migration_dialog: bool,
+    pending_migration: Option<(IdFormat, NumberingStrategy, u8)>,  // Format, Numbering, Digits
 
     // User management
     show_user_form: bool,
@@ -681,6 +683,8 @@ impl RequirementsApp {
             settings_form_id_format: initial_id_format,
             settings_form_numbering: initial_numbering,
             settings_form_digits: initial_digits,
+            show_migration_dialog: false,
+            pending_migration: None,
             show_user_form: false,
             editing_user_id: None,
             user_form_name: String::new(),
@@ -1335,6 +1339,13 @@ impl RequirementsApp {
         ui.heading("Requirement ID Configuration");
         ui.add_space(10.0);
 
+        // Validate current settings against proposed changes
+        let validation = self.store.validate_id_config_change(
+            &self.settings_form_id_format,
+            &self.settings_form_numbering,
+            self.settings_form_digits,
+        );
+
         egui::Grid::new("settings_project_grid")
             .num_columns(2)
             .spacing([20.0, 10.0])
@@ -1400,6 +1411,34 @@ impl RequirementsApp {
                 ui.end_row();
             });
 
+        ui.add_space(10.0);
+
+        // Show validation status
+        if let Some(error) = &validation.error {
+            ui.colored_label(egui::Color32::RED, format!("⚠ {}", error));
+            ui.add_space(5.0);
+        }
+
+        if let Some(warning) = &validation.warning {
+            ui.colored_label(egui::Color32::YELLOW, format!("ℹ {}", warning));
+            ui.add_space(5.0);
+        }
+
+        // Migration button (only show if changes are valid and migration is possible)
+        if validation.valid && validation.can_migrate && validation.affected_count > 0 {
+            ui.add_space(5.0);
+            if ui.button("🔄 Migrate Existing IDs").on_hover_text(
+                "Update all existing requirement IDs to match the new format"
+            ).clicked() {
+                self.pending_migration = Some((
+                    self.settings_form_id_format.clone(),
+                    self.settings_form_numbering.clone(),
+                    self.settings_form_digits,
+                ));
+                self.show_migration_dialog = true;
+            }
+        }
+
         ui.add_space(15.0);
         ui.separator();
         ui.add_space(10.0);
@@ -1431,10 +1470,12 @@ impl RequirementsApp {
         }
 
         ui.add_space(10.0);
-        ui.colored_label(
-            egui::Color32::from_rgb(180, 180, 100),
-            "Note: Changing these settings affects new requirements only.\nExisting requirement IDs are not modified."
-        );
+        if validation.affected_count == 0 {
+            ui.colored_label(
+                egui::Color32::from_rgb(180, 180, 100),
+                "Note: Changes will apply to new requirements only."
+            );
+        }
     }
 
     fn show_settings_admin_tab(&mut self, ui: &mut egui::Ui) {
@@ -2927,6 +2968,99 @@ impl RequirementsApp {
             self.message = Some(("Comment deleted successfully".to_string(), false));
         }
     }
+
+    fn show_migration_confirmation_dialog(&mut self, ctx: &egui::Context) {
+        if !self.show_migration_dialog {
+            return;
+        }
+
+        let Some((new_format, new_numbering, new_digits)) = self.pending_migration.clone() else {
+            self.show_migration_dialog = false;
+            return;
+        };
+
+        let validation = self.store.validate_id_config_change(
+            &new_format,
+            &new_numbering,
+            new_digits,
+        );
+
+        egui::Window::new("⚠ Confirm Migration")
+            .collapsible(false)
+            .resizable(false)
+            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+            .show(ctx, |ui| {
+                ui.heading("Migrate Requirement IDs?");
+                ui.add_space(10.0);
+
+                ui.label(format!(
+                    "This will update {} requirement ID(s) to the new format.",
+                    validation.affected_count
+                ));
+                ui.add_space(5.0);
+
+                ui.label("New format settings:");
+                ui.indent("migration_details", |ui| {
+                    ui.label(format!("• Format: {}", match new_format {
+                        IdFormat::SingleLevel => "Single Level (PREFIX-NNN)",
+                        IdFormat::TwoLevel => "Two Level (FEATURE-TYPE-NNN)",
+                    }));
+                    ui.label(format!("• Numbering: {}", match new_numbering {
+                        NumberingStrategy::Global => "Global Sequential",
+                        NumberingStrategy::PerPrefix => "Per Prefix",
+                        NumberingStrategy::PerFeatureType => "Per Feature+Type",
+                    }));
+                    ui.label(format!("• Digits: {}", new_digits));
+                });
+
+                ui.add_space(10.0);
+                ui.colored_label(
+                    egui::Color32::YELLOW,
+                    "This action cannot be undone. Make sure to backup your requirements file first."
+                );
+
+                ui.add_space(15.0);
+                ui.horizontal(|ui| {
+                    if ui.button("✅ Migrate").clicked() {
+                        // Perform the migration
+                        let migrated = self.store.migrate_ids_to_config(
+                            new_format,
+                            new_numbering,
+                            new_digits,
+                        );
+
+                        // Update form fields to reflect new state
+                        self.settings_form_id_format = self.store.id_config.format.clone();
+                        self.settings_form_numbering = self.store.id_config.numbering.clone();
+                        self.settings_form_digits = self.store.id_config.digits;
+
+                        // Save to file
+                        match self.storage.save(&self.store) {
+                            Ok(()) => {
+                                self.message = Some((
+                                    format!("Successfully migrated {} requirement ID(s)", migrated),
+                                    false
+                                ));
+                            }
+                            Err(e) => {
+                                self.message = Some((
+                                    format!("Migration completed but failed to save: {}", e),
+                                    true
+                                ));
+                            }
+                        }
+
+                        self.show_migration_dialog = false;
+                        self.pending_migration = None;
+                    }
+
+                    if ui.button("❌ Cancel").clicked() {
+                        self.show_migration_dialog = false;
+                        self.pending_migration = None;
+                    }
+                });
+            });
+    }
 }
 
 impl eframe::App for RequirementsApp {
@@ -3132,5 +3266,8 @@ impl eframe::App for RequirementsApp {
 
         // Show settings dialog (modal overlay)
         self.show_settings_dialog(ctx);
+
+        // Show migration confirmation dialog
+        self.show_migration_confirmation_dialog(ctx);
     }
 }

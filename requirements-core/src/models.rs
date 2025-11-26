@@ -286,6 +286,21 @@ impl IdConfiguration {
 // Original structures continue below
 // ============================================================================
 
+/// Result of validating ID configuration changes
+#[derive(Debug, Clone)]
+pub struct IdConfigValidation {
+    /// Whether the change is valid
+    pub valid: bool,
+    /// Error message if invalid
+    pub error: Option<String>,
+    /// Warning message (change is valid but has implications)
+    pub warning: Option<String>,
+    /// Whether migration is possible
+    pub can_migrate: bool,
+    /// Number of requirements that would be affected by migration
+    pub affected_count: usize,
+}
+
 /// Represents a relationship between two requirements
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Relationship {
@@ -1087,6 +1102,162 @@ impl RequirementsStore {
             );
             self.requirements[i].spec_id = Some(new_id);
         }
+    }
+
+    /// Validate proposed changes to ID configuration
+    /// Returns validation result with error/warning messages
+    pub fn validate_id_config_change(
+        &self,
+        new_format: &IdFormat,
+        new_numbering: &NumberingStrategy,
+        new_digits: u8,
+    ) -> IdConfigValidation {
+        let mut result = IdConfigValidation {
+            valid: true,
+            error: None,
+            warning: None,
+            can_migrate: true,
+            affected_count: 0,
+        };
+
+        // Check if anything actually changed
+        let format_changed = &self.id_config.format != new_format;
+        let numbering_changed = &self.id_config.numbering != new_numbering;
+        let digits_changed = self.id_config.digits != new_digits;
+
+        if !format_changed && !numbering_changed && !digits_changed {
+            result.can_migrate = false;
+            return result;
+        }
+
+        // Find the maximum number of digits currently in use
+        let max_digits_in_use = self.get_max_digits_in_use();
+
+        // Validate digit reduction
+        if new_digits < max_digits_in_use {
+            result.valid = false;
+            result.can_migrate = false;
+            result.error = Some(format!(
+                "Cannot reduce digits to {} - existing requirements use up to {} digits",
+                new_digits, max_digits_in_use
+            ));
+            return result;
+        }
+
+        // Check format change constraints
+        if format_changed {
+            // For format changes, we require Global numbering for safe migration
+            if self.id_config.numbering != NumberingStrategy::Global &&
+               *new_numbering != NumberingStrategy::Global {
+                result.valid = false;
+                result.can_migrate = false;
+                result.error = Some(
+                    "Format changes require Global numbering strategy. \
+                     Please switch to Global numbering first.".to_string()
+                );
+                return result;
+            }
+
+            // Count affected requirements
+            result.affected_count = self.requirements.iter()
+                .filter(|r| r.spec_id.is_some())
+                .count();
+
+            if result.affected_count > 0 {
+                result.warning = Some(format!(
+                    "{} requirement(s) will have their IDs updated to the new format.",
+                    result.affected_count
+                ));
+            }
+        } else if numbering_changed || digits_changed {
+            // For numbering/digit changes only, count affected
+            result.affected_count = self.requirements.iter()
+                .filter(|r| r.spec_id.is_some())
+                .count();
+
+            if digits_changed && result.affected_count > 0 {
+                result.warning = Some(format!(
+                    "{} requirement(s) will have their ID numbers reformatted.",
+                    result.affected_count
+                ));
+            }
+        }
+
+        result
+    }
+
+    /// Get the maximum number of digits currently used in requirement IDs
+    pub fn get_max_digits_in_use(&self) -> u8 {
+        let mut max_digits: u8 = 0;
+
+        for req in &self.requirements {
+            if let Some(spec_id) = &req.spec_id {
+                // Extract the numeric portion from the ID
+                // Formats: "PREFIX-NNN" or "FEATURE-TYPE-NNN"
+                let parts: Vec<&str> = spec_id.split('-').collect();
+                if let Some(last) = parts.last() {
+                    // Check if it's numeric
+                    if last.chars().all(|c| c.is_ascii_digit()) {
+                        let digits = last.len() as u8;
+                        if digits > max_digits {
+                            max_digits = digits;
+                        }
+                    }
+                }
+            }
+        }
+
+        max_digits
+    }
+
+    /// Migrate requirement IDs to new format/numbering/digits configuration
+    /// Returns the number of requirements migrated
+    pub fn migrate_ids_to_config(
+        &mut self,
+        new_format: IdFormat,
+        new_numbering: NumberingStrategy,
+        new_digits: u8,
+    ) -> usize {
+        // Update the configuration first
+        self.id_config.format = new_format;
+        self.id_config.numbering = new_numbering;
+        self.id_config.digits = new_digits;
+
+        // Reset counters for fresh numbering
+        self.next_spec_number = 1;
+        self.prefix_counters.clear();
+
+        // Collect requirement data for migration (to avoid borrow issues)
+        let req_data: Vec<(usize, Option<String>, Option<String>)> = self.requirements.iter()
+            .enumerate()
+            .map(|(i, req)| {
+                let feature_prefix = self.features.iter()
+                    .find(|f| req.feature.contains(&f.name))
+                    .map(|f| f.prefix.clone());
+                let type_prefix = match req.req_type {
+                    RequirementType::Functional => Some("FR".to_string()),
+                    RequirementType::NonFunctional => Some("NFR".to_string()),
+                    RequirementType::System => Some("SR".to_string()),
+                    RequirementType::User => Some("UR".to_string()),
+                    RequirementType::ChangeRequest => Some("CR".to_string()),
+                };
+                (i, feature_prefix, type_prefix)
+            })
+            .collect();
+
+        let mut migrated_count = 0;
+
+        // Generate new IDs for all requirements
+        for (i, feature_prefix, type_prefix) in req_data {
+            let new_id = self.generate_requirement_id(
+                feature_prefix.as_deref(),
+                type_prefix.as_deref(),
+            );
+            self.requirements[i].spec_id = Some(new_id);
+            migrated_count += 1;
+        }
+
+        migrated_count
     }
 
     /// Add a new requirement type definition
