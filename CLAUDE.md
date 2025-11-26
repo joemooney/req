@@ -88,6 +88,7 @@ Requirements have:
 
 - **Arrow Up/Down**: Navigate requirements list
 - **Enter**: Edit selected requirement
+- **Space**: Expand/collapse tree node (in tree views)
 - **Ctrl+MouseWheel**: Zoom in/out
 - **Ctrl+Shift++**: Zoom in
 - **Ctrl+-**: Zoom out

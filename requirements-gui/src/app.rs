@@ -2339,6 +2339,7 @@ impl eframe::App for RequirementsApp {
         {
             let mut nav_delta: i32 = 0;
             let mut enter_pressed = false;
+            let mut space_pressed = false;
             ctx.input(|i| {
                 if i.key_pressed(egui::Key::ArrowDown) {
                     nav_delta = 1;
@@ -2348,6 +2349,9 @@ impl eframe::App for RequirementsApp {
                 if i.key_pressed(egui::Key::Enter) {
                     enter_pressed = true;
                 }
+                if i.key_pressed(egui::Key::Space) {
+                    space_pressed = true;
+                }
             });
 
             // Enter key edits the selected requirement
@@ -2355,6 +2359,19 @@ impl eframe::App for RequirementsApp {
                 if let Some(idx) = self.selected_idx {
                     self.load_form_from_requirement(idx);
                     self.pending_view_change = Some(View::Edit);
+                }
+            }
+
+            // Space bar toggles expand/collapse in tree views
+            if space_pressed {
+                if self.perspective != Perspective::Flat {
+                    if let Some(idx) = self.selected_idx {
+                        if let Some(req) = self.store.requirements.get(idx) {
+                            let req_id = req.id;
+                            let is_collapsed = self.tree_collapsed.get(&req_id).copied().unwrap_or(false);
+                            self.tree_collapsed.insert(req_id, !is_collapsed);
+                        }
+                    }
                 }
             }
 
