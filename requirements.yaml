@@ -1981,7 +1981,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 29-Uncategorized
   created_at: 2025-11-27T20:55:50.580655527Z
   modified_at: 2025-11-27T20:55:50.580655527Z
   req_type: Functional
@@ -2001,7 +2001,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 29-Uncategorized
   created_at: 2025-11-27T21:11:24.651889295Z
   modified_at: 2025-11-27T21:11:24.651889295Z
   req_type: Functional
@@ -2017,7 +2017,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 29-Uncategorized
   created_at: 2025-11-27T21:12:46.994199510Z
   modified_at: 2025-11-27T21:12:46.994199510Z
   req_type: Functional
@@ -2033,7 +2033,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 29-Uncategorized
   created_at: 2025-11-27T21:19:17.305675907Z
   modified_at: 2025-11-27T21:19:17.305675907Z
   req_type: Functional
@@ -2049,7 +2049,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 29-Uncategorized
   created_at: 2025-11-27T21:52:57.577445007Z
   modified_at: 2025-11-27T21:52:57.577445007Z
   req_type: Functional
@@ -2059,7 +2059,8 @@ requirements:
   - rel_type: Parent
     target_id: 617353d0-7006-4a3c-92ba-49e5218386e2
 - id: cb0cb997-723e-4605-a306-1c1b2296e121
-  spec_id: FR-0065
+  spec_id: ADDREQ-0066
+  prefix_override: ADDREQ
   title: Add Requirement
   description: |2
      when you add a new requirement:
@@ -2070,19 +2071,42 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 29-Uncategorized
   created_at: 2025-11-27T21:54:16.298495675Z
-  modified_at: 2025-11-27T21:54:16.298495675Z
+  modified_at: 2025-11-27T21:55:18.829529030Z
   req_type: Functional
   dependencies: []
   tags: []
+  history:
+  - id: 26b8bd36-e257-426e-8686-bef6dc5933f7
+    author: '@joe'
+    timestamp: 2025-11-27T21:55:18.829526297Z
+    changes:
+    - field_name: prefix_override
+      old_value: ''
+      new_value: ADDREQ
+    - field_name: spec_id
+      old_value: FR-0065
+      new_value: ADDREQ-0066
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
   spec_id: $USER-001
   name: Joe Mooney
   email: joe.mooney@gmail.com
-  handle: '@joe'
+  handle: joe
   created_at: 2025-11-27T16:55:01.588012776Z
+- id: 509c33a3-2606-466c-9bf0-1ce84bd7a643
+  spec_id: $USER-002
+  name: Jane Doe
+  email: ''
+  handle: jane
+  created_at: 2025-11-27T21:56:47.579417975Z
+- id: 54f40238-9596-49b7-8369-69a801767177
+  spec_id: $USER-003
+  name: John Doe
+  email: ''
+  handle: john
+  created_at: 2025-11-27T21:57:16.184094744Z
 id_config:
   format: SingleLevel
   numbering: Global
@@ -2104,8 +2128,8 @@ id_config:
     prefix: CR
     description: Change requests for modifications to existing functionality
 features: []
-next_feature_number: 29
-next_spec_number: 66
+next_feature_number: 30
+next_spec_number: 67
 prefix_counters: {}
 relationship_definitions:
 - name: parent
@@ -2261,7 +2285,7 @@ reaction_definitions:
   description: Mark as important/attention needed
   built_in: true
 meta_counters:
-  $USER: 2
+  $USER: 4
 type_definitions:
 - name: Functional
   display_name: Functional
@@ -2330,6 +2354,7 @@ type_definitions:
   built_in: true
   color: '#9333ea'
 allowed_prefixes:
+- ADDREQ
 - DETAILVIEW
 - DOC
 - FILTER

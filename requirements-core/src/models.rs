@@ -628,10 +628,10 @@ impl RelationshipDefinition {
             // Requirement-to-requirement relationships
             RelationshipDefinition::built_in("parent", "Parent", "Hierarchical parent requirement")
                 .with_inverse("child")
-                .with_cardinality(Cardinality::ManyToOne),
+                .with_cardinality(Cardinality::OneToMany), // A parent can have many children
             RelationshipDefinition::built_in("child", "Child", "Hierarchical child requirement")
                 .with_inverse("parent")
-                .with_cardinality(Cardinality::OneToMany),
+                .with_cardinality(Cardinality::ManyToOne), // Many children can share one parent
             RelationshipDefinition::built_in(
                 "verifies",
                 "Verifies",
