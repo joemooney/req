@@ -5613,15 +5613,19 @@ impl eframe::App for RequirementsApp {
 
         // Determine current keybinding context based on view state
         // If a text field has focus, we don't want to trigger navigation keys
+        // Also consider if we're in Add/Edit mode - navigation shouldn't work there
         let text_input_focused = ctx.wants_keyboard_input();
-        self.current_key_context = if text_input_focused {
-            // When typing in a text field, only global shortcuts should work
-            KeyContext::Global
+        let in_form_view = matches!(self.current_view, View::Add | View::Edit);
+        let in_settings = self.show_settings_dialog;
+
+        self.current_key_context = if text_input_focused || in_form_view || in_settings {
+            // When typing in a text field, in form view, or in settings - only global shortcuts should work
+            KeyContext::Form  // Use Form context - this is NOT Global and NOT RequirementsList
         } else {
             match self.current_view {
                 View::List => KeyContext::RequirementsList,
                 View::Detail => KeyContext::DetailView,
-                View::Add | View::Edit => KeyContext::Form,
+                View::Add | View::Edit => KeyContext::Form, // This branch won't be reached due to in_form_view check
             }
         };
 
