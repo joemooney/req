@@ -1652,9 +1652,17 @@ impl Requirement {
 /// Collection of all requirements
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RequirementsStore {
-    /// Database name (displayed in window title)
+    /// Database name (displayed in window title prefix)
     #[serde(default)]
     pub name: String,
+
+    /// Database title (one-liner, displayed in window title)
+    #[serde(default)]
+    pub title: String,
+
+    /// Database description (multi-line)
+    #[serde(default)]
+    pub description: String,
 
     pub requirements: Vec<Requirement>,
 
@@ -1732,6 +1740,8 @@ impl RequirementsStore {
     pub fn new() -> Self {
         Self {
             name: String::new(),
+            title: String::new(),
+            description: String::new(),
             requirements: Vec::new(),
             users: Vec::new(),
             id_config: IdConfiguration::default(),

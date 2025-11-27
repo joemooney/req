@@ -1,3 +1,4 @@
+name: Aida
 requirements:
 - id: 37be9566-a051-430b-b47b-1890a395a524
   spec_id: FR-0001
@@ -2093,19 +2094,74 @@ requirements:
 - id: 4d2cce7c-d8e4-4c9b-a6a5-61637a423f12
   spec_id: FR-0067
   title: Database Name
-  description: The database should have a name store in the yaml file and it should be used in the Title bar of the Window. You may change the database name in the Settings/Db tab.
+  description: |
+    The database should have a name store in the yaml file and it should be used in the Title bar of the Window. You may change the database name in the Settings/Db tab. Likewise there should be a Database Title (oneliner), and a Database Description (multiline)
+
+      1. RequirementsStore model - Added a name field that is stored in the YAML file (with #[serde(default)] for backward compatibility)
+      2. Window title - Dynamically updates based on the database name:
+        - If name is set: "MyDatabase - Requirements Manager"
+        - If name is empty: "Requirements Manager"
+      3. Settings/Db tab - Added a "Database Name" section at the top with:
+        - A text input field to edit the name
+        - Automatically saves when the field loses focus
+        - Hint text: "Enter database name (shown in title bar)"
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 30-Uncategorized
   created_at: 2025-11-27T22:29:31.052887770Z
-  modified_at: 2025-11-27T22:29:31.052887770Z
+  modified_at: 2025-11-27T22:37:29.172655533Z
   req_type: Functional
   dependencies: []
   tags: []
   relationships:
   - rel_type: Parent
     target_id: bb81e51e-dd32-48ef-9806-cf26a09643f5
+  history:
+  - id: b7e00f88-aaa7-4d33-bac2-55b8551f534d
+    author: '@joe'
+    timestamp: 2025-11-27T22:32:16.165087091Z
+    changes:
+    - field_name: description
+      old_value: The database should have a name store in the yaml file and it should be used in the Title bar of the Window. You may change the database name in the Settings/Db tab.
+      new_value: |
+        The database should have a name store in the yaml file and it should be used in the Title bar of the Window. You may change the database name in the Settings/Db tab.
+
+          1. RequirementsStore model - Added a name field that is stored in the YAML file (with #[serde(default)] for backward compatibility)
+          2. Window title - Dynamically updates based on the database name:
+            - If name is set: "MyDatabase - Requirements Manager"
+            - If name is empty: "Requirements Manager"
+          3. Settings/Db tab - Added a "Database Name" section at the top with:
+            - A text input field to edit the name
+            - Automatically saves when the field loses focus
+            - Hint text: "Enter database name (shown in title bar)"
+  - id: 0f449c14-10c5-4a52-a8e1-e6e92fdab67b
+    author: '@joe'
+    timestamp: 2025-11-27T22:37:29.172653145Z
+    changes:
+    - field_name: description
+      old_value: |
+        The database should have a name store in the yaml file and it should be used in the Title bar of the Window. You may change the database name in the Settings/Db tab.
+
+          1. RequirementsStore model - Added a name field that is stored in the YAML file (with #[serde(default)] for backward compatibility)
+          2. Window title - Dynamically updates based on the database name:
+            - If name is set: "MyDatabase - Requirements Manager"
+            - If name is empty: "Requirements Manager"
+          3. Settings/Db tab - Added a "Database Name" section at the top with:
+            - A text input field to edit the name
+            - Automatically saves when the field loses focus
+            - Hint text: "Enter database name (shown in title bar)"
+      new_value: |
+        The database should have a name store in the yaml file and it should be used in the Title bar of the Window. You may change the database name in the Settings/Db tab. Likewise there should be a Database Title (oneliner), and a Database Description (multiline)
+
+          1. RequirementsStore model - Added a name field that is stored in the YAML file (with #[serde(default)] for backward compatibility)
+          2. Window title - Dynamically updates based on the database name:
+            - If name is set: "MyDatabase - Requirements Manager"
+            - If name is empty: "Requirements Manager"
+          3. Settings/Db tab - Added a "Database Name" section at the top with:
+            - A text input field to edit the name
+            - Automatically saves when the field loses focus
+            - Hint text: "Enter database name (shown in title bar)"
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
   spec_id: $USER-001
@@ -2146,7 +2202,7 @@ id_config:
     prefix: CR
     description: Change requests for modifications to existing functionality
 features: []
-next_feature_number: 30
+next_feature_number: 31
 next_spec_number: 68
 prefix_counters: {}
 relationship_definitions:

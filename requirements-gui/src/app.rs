@@ -4115,23 +4115,54 @@ impl RequirementsApp {
 
     fn show_settings_database_tab(&mut self, ui: &mut egui::Ui) {
         egui::ScrollArea::vertical().show(ui, |ui| {
-            // Database Name Section
-            ui.heading("Database Name");
+            // Database Identity Section
+            ui.heading("Database Identity");
             ui.add_space(5.0);
 
+            // Name field
             ui.horizontal(|ui| {
                 ui.label("Name:");
                 let response = ui.add(
                     egui::TextEdit::singleline(&mut self.store.name)
                         .desired_width(300.0)
-                        .hint_text("Enter database name (shown in title bar)"),
+                        .hint_text("Short identifier (e.g., PROJ-A)"),
                 );
                 if response.lost_focus() {
                     self.save();
                 }
             });
+
             ui.add_space(5.0);
-            ui.label("This name is displayed in the window title bar.");
+
+            // Title field
+            ui.horizontal(|ui| {
+                ui.label("Title:");
+                let response = ui.add(
+                    egui::TextEdit::singleline(&mut self.store.title)
+                        .desired_width(400.0)
+                        .hint_text("One-line title for this database"),
+                );
+                if response.lost_focus() {
+                    self.save();
+                }
+            });
+
+            ui.add_space(5.0);
+
+            // Description field (multiline)
+            ui.label("Description:");
+            let response = ui.add(
+                egui::TextEdit::multiline(&mut self.store.description)
+                    .desired_width(ui.available_width() - 20.0)
+                    .desired_rows(4)
+                    .hint_text("Detailed description of this requirements database..."),
+            );
+            if response.lost_focus() {
+                self.save();
+            }
+
+            ui.add_space(5.0);
+            ui.label("Window title: Name - Title (or whichever is set)");
 
             ui.add_space(15.0);
             ui.separator();
@@ -7515,11 +7546,13 @@ impl RequirementsApp {
 
 impl eframe::App for RequirementsApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // Update window title based on database name
-        let title = if self.store.name.is_empty() {
-            "Requirements Manager".to_string()
-        } else {
-            format!("{} - Requirements Manager", self.store.name)
+        // Update window title based on database name and title
+        // Format: "Name - Title" or just "Title" or just "Name" or "Requirements Manager"
+        let title = match (self.store.name.is_empty(), self.store.title.is_empty()) {
+            (true, true) => "Requirements Manager".to_string(),
+            (true, false) => self.store.title.clone(),
+            (false, true) => self.store.name.clone(),
+            (false, false) => format!("{} - {}", self.store.name, self.store.title),
         };
         ctx.send_viewport_cmd(egui::ViewportCommand::Title(title));
 
