@@ -1,4 +1,6 @@
 name: Aida
+title: ''
+description: ''
 requirements:
 - id: 37be9566-a051-430b-b47b-1890a395a524
   spec_id: FR-0001
@@ -59,7 +61,8 @@ requirements:
   - rel_type: Parent
     target_id: 4c3bb89e-2d41-4841-b2ff-881bb67fee99
 - id: 5a8cda55-badf-48c6-82c9-b9ea53f3f69f
-  spec_id: CR-0004
+  spec_id: REQLIST-0068
+  prefix_override: REQLIST
   title: relationship view shall how requirements in a tree structure
   description: relationship was created. But I don't see any way to expand the parent to show the child. I would expect to see a '+'or some indicator for expanding.
   status: Draft
@@ -67,7 +70,7 @@ requirements:
   owner: ''
   feature: 3-Uncategorized
   created_at: 2025-11-25T21:02:35.527467685Z
-  modified_at: 2025-11-26T06:25:11.332364679Z
+  modified_at: 2025-11-27T22:40:50.019335345Z
   req_type: ChangeRequest
   dependencies: []
   tags: []
@@ -123,6 +126,16 @@ requirements:
     - field_name: type
       old_value: Functional
       new_value: ChangeRequest
+  - id: a55b238c-f26f-43ee-8c69-00e1b98af65a
+    author: '@joe'
+    timestamp: 2025-11-27T22:40:50.019331150Z
+    changes:
+    - field_name: prefix_override
+      old_value: ''
+      new_value: REQLIST
+    - field_name: spec_id
+      old_value: CR-0004
+      new_value: REQLIST-0068
 - id: b8621169-8a34-4001-a2e8-936229497c62
   spec_id: FR-0005
   title: Ability to edit existing comment
@@ -668,8 +681,6 @@ requirements:
   relationships:
   - rel_type: Parent
     target_id: 5a8cda55-badf-48c6-82c9-b9ea53f3f69f
-  - rel_type: Child
-    target_id: 61d821b1-f9dd-45ee-addc-67071649e931
 - id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
   spec_id: LAYOUT-0028
   prefix_override: LAYOUT
@@ -2030,7 +2041,8 @@ requirements:
   - rel_type: Parent
     target_id: 5a8cda55-badf-48c6-82c9-b9ea53f3f69f
 - id: 61d821b1-f9dd-45ee-addc-67071649e931
-  spec_id: FR-0062
+  spec_id: INBOX-0069
+  prefix_override: INBOX
   title: Inbox capability
   description: An inbox are requirements that are assigned to you to where you were mentioned in a comment. You can mark such requirements as read in which case they are no longer in your inbox. An alter action would be akin to a comment mention except it is simply saying I want you to look at this requirement, so it brings a requirement to someone's attention.
   status: Draft
@@ -2038,13 +2050,21 @@ requirements:
   owner: ''
   feature: 29-Uncategorized
   created_at: 2025-11-27T21:19:17.305675907Z
-  modified_at: 2025-11-27T21:19:17.305675907Z
+  modified_at: 2025-11-27T22:41:31.241402248Z
   req_type: Functional
   dependencies: []
   tags: []
-  relationships:
-  - rel_type: Parent
-    target_id: 7897d5c8-0159-4920-8ce4-0bc29c6df517
+  history:
+  - id: 6cde17cc-8e96-4a47-ac2c-ccb7fbb18223
+    author: '@joe'
+    timestamp: 2025-11-27T22:41:31.241399027Z
+    changes:
+    - field_name: prefix_override
+      old_value: ''
+      new_value: INBOX
+    - field_name: spec_id
+      old_value: FR-0062
+      new_value: INBOX-0069
 - id: ce9fdd12-0860-4334-90b7-399952ca523a
   spec_id: FR-0064
   title: Users Settings tab
@@ -2105,12 +2125,25 @@ requirements:
         - A text input field to edit the name
         - Automatically saves when the field loses focus
         - Hint text: "Enter database name (shown in title bar)"
+
+
+    The database now has three identity fields:
+
+      1. Name - Short identifier (e.g., "PROJ-A")
+      2. Title - One-line title for the database
+      3. Description - Multi-line detailed description
+
+      Window title logic:
+      - If both Name and Title are set: "Name - Title"
+      - If only Title is set: "Title"
+      - If only Name is set: "Name"
+      - If neither is set: "Requirements Manager"
   status: Draft
   priority: Medium
   owner: ''
   feature: 30-Uncategorized
   created_at: 2025-11-27T22:29:31.052887770Z
-  modified_at: 2025-11-27T22:37:29.172655533Z
+  modified_at: 2025-11-27T22:39:44.745676492Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -2162,6 +2195,79 @@ requirements:
             - A text input field to edit the name
             - Automatically saves when the field loses focus
             - Hint text: "Enter database name (shown in title bar)"
+  - id: 442a3050-869c-4e64-83fd-5e860731127f
+    author: '@joe'
+    timestamp: 2025-11-27T22:39:44.745672489Z
+    changes:
+    - field_name: description
+      old_value: |
+        The database should have a name store in the yaml file and it should be used in the Title bar of the Window. You may change the database name in the Settings/Db tab. Likewise there should be a Database Title (oneliner), and a Database Description (multiline)
+
+          1. RequirementsStore model - Added a name field that is stored in the YAML file (with #[serde(default)] for backward compatibility)
+          2. Window title - Dynamically updates based on the database name:
+            - If name is set: "MyDatabase - Requirements Manager"
+            - If name is empty: "Requirements Manager"
+          3. Settings/Db tab - Added a "Database Name" section at the top with:
+            - A text input field to edit the name
+            - Automatically saves when the field loses focus
+            - Hint text: "Enter database name (shown in title bar)"
+      new_value: |
+        The database should have a name store in the yaml file and it should be used in the Title bar of the Window. You may change the database name in the Settings/Db tab. Likewise there should be a Database Title (oneliner), and a Database Description (multiline)
+
+          1. RequirementsStore model - Added a name field that is stored in the YAML file (with #[serde(default)] for backward compatibility)
+          2. Window title - Dynamically updates based on the database name:
+            - If name is set: "MyDatabase - Requirements Manager"
+            - If name is empty: "Requirements Manager"
+          3. Settings/Db tab - Added a "Database Name" section at the top with:
+            - A text input field to edit the name
+            - Automatically saves when the field loses focus
+            - Hint text: "Enter database name (shown in title bar)"
+
+
+        The database now has three identity fields:
+
+          1. Name - Short identifier (e.g., "PROJ-A")
+          2. Title - One-line title for the database
+          3. Description - Multi-line detailed description
+
+          Window title logic:
+          - If both Name and Title are set: "Name - Title"
+          - If only Title is set: "Title"
+          - If only Name is set: "Name"
+          - If neither is set: "Requirements Manager"
+- id: 0b904a04-4422-4767-a7b6-28b9a721a1b9
+  spec_id: MOUSE-0070
+  prefix_override: MOUSE
+  title: Mouse action related requirements
+  description: ''
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-27T22:43:13.013552057Z
+  modified_at: 2025-11-27T22:43:13.013552057Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Child
+    target_id: c4f0e8c6-c59f-4926-8d02-2bb569a5a2da
+- id: c4f0e8c6-c59f-4926-8d02-2bb569a5a2da
+  spec_id: FR-0071
+  title: Drag requirement in requirements list should scroll
+  description: As we drag a requirement in requirements list the window should scroll up or down as we reach the top or bottom of the currently displayed requirements.
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-27T22:45:01.777700151Z
+  modified_at: 2025-11-27T22:45:01.777700151Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 0b904a04-4422-4767-a7b6-28b9a721a1b9
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
   spec_id: $USER-001
@@ -2203,7 +2309,7 @@ id_config:
     description: Change requests for modifications to existing functionality
 features: []
 next_feature_number: 31
-next_spec_number: 68
+next_spec_number: 72
 prefix_counters: {}
 relationship_definitions:
 - name: parent
@@ -2432,5 +2538,8 @@ allowed_prefixes:
 - DETAILVIEW
 - DOC
 - FILTER
+- INBOX
 - KEYBOARD
+- MOUSE
+- REQLIST
 restrict_prefixes: false

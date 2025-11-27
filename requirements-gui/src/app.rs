@@ -1157,6 +1157,7 @@ pub struct RequirementsApp {
     drag_source: Option<usize>, // Index of requirement being dragged
     drop_target: Option<usize>, // Index of requirement being hovered over
     pending_relationship: Option<(usize, usize)>, // (source_idx, target_idx) to create relationship
+    drag_scroll_delta: f32, // Accumulated scroll delta during drag (for auto-scroll)
 
     // Markdown rendering
     markdown_cache: CommonMarkCache,
@@ -1350,6 +1351,7 @@ impl RequirementsApp {
             drag_source: None,
             drop_target: None,
             pending_relationship: None,
+            drag_scroll_delta: 0.0,
             markdown_cache: CommonMarkCache::default(),
             show_description_preview: false,
             left_panel_collapsed: false,
@@ -4980,15 +4982,58 @@ impl RequirementsApp {
 
                 ui.separator();
 
-                // Requirement list (flat or tree)
-                egui::ScrollArea::vertical().show(ui, |ui| match &self.perspective {
-                    Perspective::Flat => {
-                        self.show_flat_list(ui);
+                // Check for drag auto-scroll before showing ScrollArea
+                // Compute scroll delta based on pointer position during drag
+                let mut scroll_delta_to_apply = 0.0;
+                if self.drag_source.is_some() {
+                    if let Some(pointer_pos) = ui.input(|i| i.pointer.hover_pos()) {
+                        // We need to check against the available rect for the scroll area
+                        let available_rect = ui.available_rect_before_wrap();
+                        let edge_zone = 50.0; // Pixels from edge to start scrolling
+                        let scroll_speed = 10.0; // Pixels per frame
+
+                        if pointer_pos.y < available_rect.top() + edge_zone && pointer_pos.y >= available_rect.top() {
+                            // Near top - scroll up
+                            let intensity = 1.0 - (pointer_pos.y - available_rect.top()) / edge_zone;
+                            scroll_delta_to_apply = -scroll_speed * intensity;
+                        } else if pointer_pos.y > available_rect.bottom() - edge_zone && pointer_pos.y <= available_rect.bottom() {
+                            // Near bottom - scroll down
+                            let intensity = 1.0 - (available_rect.bottom() - pointer_pos.y) / edge_zone;
+                            scroll_delta_to_apply = scroll_speed * intensity;
+                        }
                     }
-                    _ => {
-                        self.show_tree_list(ui);
+                }
+
+                // Requirement list (flat or tree) with drag auto-scroll support
+                let mut scroll_area = egui::ScrollArea::vertical()
+                    .id_salt("requirements_list_scroll");
+
+                // If we need to scroll due to drag, set the scroll offset
+                if scroll_delta_to_apply != 0.0 {
+                    let new_offset = (self.drag_scroll_delta + scroll_delta_to_apply).max(0.0);
+                    self.drag_scroll_delta = new_offset;
+                    scroll_area = scroll_area.vertical_scroll_offset(new_offset);
+                    ui.ctx().request_repaint();
+                }
+
+                let scroll_output = scroll_area.show(ui, |ui| {
+                    match &self.perspective {
+                        Perspective::Flat => {
+                            self.show_flat_list(ui);
+                        }
+                        _ => {
+                            self.show_tree_list(ui);
+                        }
                     }
                 });
+
+                // Update stored offset from actual scroll state (for when user scrolls manually)
+                if self.drag_source.is_some() {
+                    self.drag_scroll_delta = scroll_output.state.offset.y;
+                } else {
+                    // Reset when not dragging
+                    self.drag_scroll_delta = scroll_output.state.offset.y;
+                }
             });
     }
 
