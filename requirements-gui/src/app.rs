@@ -18,74 +18,96 @@ fn get_sorted_range(range: &egui::text::CCursorRange) -> (usize, usize) {
     (start, end)
 }
 
-/// Helper to add context menu (right-click) with Copy/Cut/Paste to a TextEdit response
-fn add_text_edit_context_menu(
-    _ui: &mut egui::Ui,
+/// Capture current text selection from a TextEdit widget (call BEFORE showing context menu)
+fn capture_text_selection(ctx: &egui::Context, text: &str, id: egui::Id) -> Option<TextSelection> {
+    let state = egui::TextEdit::load_state(ctx, id)?;
+    let range = state.cursor.char_range()?;
+    let (start, end) = get_sorted_range(&range);
+    if start == end {
+        return None; // No selection (just cursor position)
+    }
+    let selected: String = text.chars().skip(start).take(end - start).collect();
+    Some(TextSelection {
+        text: selected,
+        start,
+        end,
+        widget_id: Some(id),
+    })
+}
+
+/// Show context menu for text edit - takes stored selection to avoid borrow issues
+fn show_text_context_menu(
+    ui: &mut egui::Ui,
     response: &egui::Response,
     text: &mut String,
     id: egui::Id,
+    stored_selection: &mut Option<TextSelection>,
 ) {
-    response.context_menu(|ui| {
-        // Get the current selection from TextEditState
-        let state = egui::TextEdit::load_state(ui.ctx(), id);
-        let selected_text = state.as_ref().and_then(|s| {
-            s.cursor.char_range().map(|range| {
-                let (start, end) = get_sorted_range(&range);
-                text.chars().skip(start).take(end - start).collect::<String>()
-            })
-        }).unwrap_or_default();
+    // Check for secondary click (right-click) to capture selection BEFORE menu opens
+    if response.hovered() && ui.input(|i| i.pointer.secondary_down()) {
+        // Capture the current selection before right-click clears it
+        if let Some(selection) = capture_text_selection(ui.ctx(), text, id) {
+            *stored_selection = Some(selection);
+        }
+    }
 
-        let has_selection = !selected_text.is_empty();
+    response.context_menu(|ui| {
+        // Use stored selection (captured before right-click cleared it)
+        let selection = stored_selection.clone().filter(|s| s.widget_id == Some(id));
+        let has_selection = selection.as_ref().map(|s| !s.text.is_empty()).unwrap_or(false);
 
         // Cut
         if ui.add_enabled(has_selection, egui::Button::new("✂ Cut")).clicked() {
-            if let Some(state) = &state {
-                if let Some(range) = state.cursor.char_range() {
-                    let (start, end) = get_sorted_range(&range);
-                    let cut_text: String = text.chars().skip(start).take(end - start).collect();
+            if let Some(ref sel) = selection {
+                // Copy to clipboard (both regular and primary on Linux)
+                ui.ctx().copy_text(sel.text.clone());
+                copy_to_primary_selection(&sel.text);
 
-                    // Copy to clipboard (both regular and primary on Linux)
-                    ui.ctx().copy_text(cut_text.clone());
-                    copy_to_primary_selection(&cut_text);
-
-                    // Remove the selected text
-                    let before: String = text.chars().take(start).collect();
-                    let after: String = text.chars().skip(end).collect();
-                    *text = before + &after;
-                }
+                // Remove the selected text
+                let before: String = text.chars().take(sel.start).collect();
+                let after: String = text.chars().skip(sel.end).collect();
+                *text = before + &after;
+                *stored_selection = None;
             }
             ui.close_menu();
         }
 
         // Copy
         if ui.add_enabled(has_selection, egui::Button::new("📋 Copy")).clicked() {
-            // Copy to clipboard (both regular and primary on Linux)
-            ui.ctx().copy_text(selected_text.clone());
-            copy_to_primary_selection(&selected_text);
+            if let Some(ref sel) = selection {
+                // Copy to clipboard (both regular and primary on Linux)
+                ui.ctx().copy_text(sel.text.clone());
+                copy_to_primary_selection(&sel.text);
+            }
             ui.close_menu();
         }
 
         // Paste
-        // Try to get clipboard content for paste
         let can_paste = get_clipboard_text().is_some();
 
         if ui.add_enabled(can_paste, egui::Button::new("📥 Paste")).clicked() {
             if let Some(paste_text) = get_clipboard_text() {
-                if let Some(state) = &state {
-                    if let Some(range) = state.cursor.char_range() {
-                        // Replace selection with pasted text
-                        let (start, end) = get_sorted_range(&range);
-                        let before: String = text.chars().take(start).collect();
-                        let after: String = text.chars().skip(end).collect();
-                        *text = before + &paste_text + &after;
+                if let Some(ref sel) = selection {
+                    // Replace selection with pasted text
+                    let before: String = text.chars().take(sel.start).collect();
+                    let after: String = text.chars().skip(sel.end).collect();
+                    *text = before + &paste_text + &after;
+                } else {
+                    // No selection - get cursor position from state
+                    if let Some(state) = egui::TextEdit::load_state(ui.ctx(), id) {
+                        if let Some(range) = state.cursor.char_range() {
+                            let pos = range.primary.index;
+                            let before: String = text.chars().take(pos).collect();
+                            let after: String = text.chars().skip(pos).collect();
+                            *text = before + &paste_text + &after;
+                        } else {
+                            text.push_str(&paste_text);
+                        }
                     } else {
-                        // No selection, append at end (or we'd need cursor position)
                         text.push_str(&paste_text);
                     }
-                } else {
-                    // No state, just append
-                    text.push_str(&paste_text);
                 }
+                *stored_selection = None;
             }
             ui.close_menu();
         }
@@ -94,7 +116,7 @@ fn add_text_edit_context_menu(
 
         // Select All
         if ui.button("Select All").clicked() {
-            if let Some(mut state) = state {
+            if let Some(mut state) = egui::TextEdit::load_state(ui.ctx(), id) {
                 let len = text.chars().count();
                 state.cursor.set_char_range(Some(egui::text::CCursorRange::two(
                     egui::text::CCursor::new(0),
@@ -1031,6 +1053,18 @@ pub struct RequirementsApp {
 
     // Markdown help modal
     show_markdown_help: bool,
+
+    // Context menu state - stores selection before right-click clears it
+    last_text_selection: Option<TextSelection>,
+}
+
+/// Stores text selection state for context menu operations
+#[derive(Clone, Default)]
+struct TextSelection {
+    text: String,
+    start: usize,
+    end: usize,
+    widget_id: Option<egui::Id>,
 }
 
 impl RequirementsApp {
@@ -1177,6 +1211,8 @@ impl RequirementsApp {
             url_verification_in_progress: false,
             // Markdown help
             show_markdown_help: false,
+            // Context menu
+            last_text_selection: None,
         }
     }
 
@@ -5330,7 +5366,7 @@ impl RequirementsApp {
         let title_output = egui::TextEdit::singleline(&mut self.form_title)
             .desired_width(available_width)
             .show(ui);
-        add_text_edit_context_menu(ui, &title_output.response, &mut self.form_title, title_output.response.id);
+        show_text_context_menu(ui, &title_output.response, &mut self.form_title, title_output.response.id, &mut self.last_text_selection);
         ui.add_space(8.0);
 
         // Metadata row - Type first (affects available statuses), then Status, Priority
@@ -5667,7 +5703,7 @@ impl RequirementsApp {
                         .desired_rows(8)
                         .hint_text("Enter requirement description (Markdown supported)...")
                         .show(ui);
-                    add_text_edit_context_menu(ui, &output.response, &mut self.form_description, output.response.id);
+                    show_text_context_menu(ui, &output.response, &mut self.form_description, output.response.id, &mut self.last_text_selection);
                 }
             });
 
@@ -5715,7 +5751,7 @@ impl RequirementsApp {
                 .desired_rows(4)
                 .hint_text("Enter comment...")
                 .show(ui);
-            add_text_edit_context_menu(ui, &comment_output.response, &mut self.comment_content, comment_output.response.id);
+            show_text_context_menu(ui, &comment_output.response, &mut self.comment_content, comment_output.response.id, &mut self.last_text_selection);
 
             ui.horizontal(|ui| {
                 if ui.button("💾 Save").clicked() {
