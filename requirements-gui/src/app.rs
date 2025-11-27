@@ -1109,8 +1109,6 @@ pub struct RequirementsApp {
     pending_reaction_toggle: Option<(Uuid, String)>, // (comment_id, reaction_name)
     show_reaction_picker: Option<Uuid>,              // Comment ID to show reaction picker for
     scroll_to_requirement: Option<Uuid>,             // Requirement ID to scroll into view
-    visible_requirement_indices: Vec<usize>,         // Indices of requirements currently visible in reqlist
-    last_scroll_offset: f32,                         // Track scroll position to detect scroll direction
 
     // Settings
     user_settings: UserSettings,
@@ -1322,8 +1320,6 @@ impl RequirementsApp {
             pending_reaction_toggle: None,
             show_reaction_picker: None,
             scroll_to_requirement: None,
-            visible_requirement_indices: Vec::new(),
-            last_scroll_offset: 0.0,
             current_font_size: initial_font_size,
             user_settings,
             show_settings_dialog: false,
@@ -5022,9 +5018,6 @@ impl RequirementsApp {
                     }
                 }
 
-                // Clear visible indices before rendering (will be populated during render)
-                self.visible_requirement_indices.clear();
-
                 // Requirement list (flat or tree) with drag auto-scroll support
                 let mut scroll_area = egui::ScrollArea::vertical()
                     .id_salt("requirements_list_scroll");
@@ -5049,29 +5042,13 @@ impl RequirementsApp {
                 });
 
                 // Update stored offset from actual scroll state (for when user scrolls manually)
-                let current_scroll_offset = scroll_output.state.offset.y;
                 if self.drag_source.is_some() {
-                    self.drag_scroll_delta = current_scroll_offset;
+                    self.drag_scroll_delta = scroll_output.state.offset.y;
                 } else {
-                    self.drag_scroll_delta = current_scroll_offset;
+                    self.drag_scroll_delta = scroll_output.state.offset.y;
                 }
 
-                // Check if selected item scrolled out of view - if so, jump selection to visible item
-                if let Some(selected_idx) = self.selected_idx {
-                    if !self.visible_requirement_indices.contains(&selected_idx) && !self.visible_requirement_indices.is_empty() {
-                        // Selection is not visible, jump to first or last visible based on scroll direction
-                        let scrolling_down = current_scroll_offset > self.last_scroll_offset;
-                        let new_selection = if scrolling_down {
-                            // Scrolling down: select the first visible item
-                            *self.visible_requirement_indices.first().unwrap()
-                        } else {
-                            // Scrolling up: select the last visible item
-                            *self.visible_requirement_indices.last().unwrap()
-                        };
-                        self.selected_idx = Some(new_selection);
-                    }
-                }
-                self.last_scroll_offset = current_scroll_offset;
+                // Selection remains fixed when scrolling - user must click to change selection
             });
     }
 
@@ -5469,12 +5446,6 @@ impl RequirementsApp {
                 self.scroll_to_requirement = None; // Clear after scrolling
             }
 
-            // Track if this item is visible in the scroll area
-            let clip_rect = ui.clip_rect();
-            if clip_rect.intersects(rect) {
-                self.visible_requirement_indices.push(idx);
-            }
-
             // Paint background
             if bg_color != egui::Color32::TRANSPARENT {
                 ui.painter().rect_filled(rect, 2.0, bg_color);
@@ -5676,12 +5647,6 @@ impl RequirementsApp {
         if should_scroll_to {
             response.scroll_to_me(Some(egui::Align::Center));
             self.scroll_to_requirement = None;
-        }
-
-        // Track if this item is visible in the scroll area
-        let clip_rect = ui.clip_rect();
-        if clip_rect.intersects(rect) {
-            self.visible_requirement_indices.push(idx);
         }
 
         // Paint background
