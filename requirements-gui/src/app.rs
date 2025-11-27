@@ -575,6 +575,13 @@ enum SettingsTab {
     Administration,
 }
 
+#[derive(Default, PartialEq, Clone, Copy)]
+enum FilterTab {
+    #[default]
+    Root,
+    Children,
+}
+
 #[derive(Default, PartialEq, Clone)]
 enum View {
     #[default]
@@ -647,14 +654,28 @@ pub struct ViewPreset {
     pub perspective: Perspective,
     /// Direction for tree views
     pub direction: PerspectiveDirection,
-    /// Filter by requirement types (empty = all)
+    /// Root filter by requirement types (empty = all)
     pub filter_types: Vec<String>,
-    /// Filter by features (empty = all)
+    /// Root filter by features (empty = all)
     pub filter_features: Vec<String>,
-    /// Filter by ID prefixes (empty = all)
+    /// Root filter by ID prefixes (empty = all)
     #[serde(default)]
     pub filter_prefixes: Vec<String>,
+    /// Child filter by requirement types (empty = all)
+    #[serde(default)]
+    pub child_filter_types: Vec<String>,
+    /// Child filter by features (empty = all)
+    #[serde(default)]
+    pub child_filter_features: Vec<String>,
+    /// Child filter by ID prefixes (empty = all)
+    #[serde(default)]
+    pub child_filter_prefixes: Vec<String>,
+    /// Whether children use same filters as root
+    #[serde(default = "default_true")]
+    pub children_same_as_root: bool,
 }
+
+fn default_true() -> bool { true }
 
 impl ViewPreset {
     /// Create a new preset with the given name and current settings
@@ -665,6 +686,10 @@ impl ViewPreset {
         filter_types: &HashSet<RequirementType>,
         filter_features: &HashSet<String>,
         filter_prefixes: &HashSet<String>,
+        child_filter_types: &HashSet<RequirementType>,
+        child_filter_features: &HashSet<String>,
+        child_filter_prefixes: &HashSet<String>,
+        children_same_as_root: bool,
     ) -> Self {
         Self {
             name,
@@ -673,12 +698,25 @@ impl ViewPreset {
             filter_types: filter_types.iter().map(|t| format!("{:?}", t)).collect(),
             filter_features: filter_features.iter().cloned().collect(),
             filter_prefixes: filter_prefixes.iter().cloned().collect(),
+            child_filter_types: child_filter_types.iter().map(|t| format!("{:?}", t)).collect(),
+            child_filter_features: child_filter_features.iter().cloned().collect(),
+            child_filter_prefixes: child_filter_prefixes.iter().cloned().collect(),
+            children_same_as_root,
         }
     }
 
     /// Get filter_types as HashSet<RequirementType>
     fn get_filter_types(&self) -> HashSet<RequirementType> {
-        self.filter_types.iter().filter_map(|s| {
+        Self::parse_types(&self.filter_types)
+    }
+
+    /// Get child_filter_types as HashSet<RequirementType>
+    fn get_child_filter_types(&self) -> HashSet<RequirementType> {
+        Self::parse_types(&self.child_filter_types)
+    }
+
+    fn parse_types(types: &[String]) -> HashSet<RequirementType> {
+        types.iter().filter_map(|s| {
             match s.as_str() {
                 "Functional" => Some(RequirementType::Functional),
                 "NonFunctional" => Some(RequirementType::NonFunctional),
@@ -695,9 +733,19 @@ impl ViewPreset {
         self.filter_features.iter().cloned().collect()
     }
 
+    /// Get child_filter_features as HashSet<String>
+    fn get_child_filter_features(&self) -> HashSet<String> {
+        self.child_filter_features.iter().cloned().collect()
+    }
+
     /// Get filter_prefixes as HashSet<String>
     fn get_filter_prefixes(&self) -> HashSet<String> {
         self.filter_prefixes.iter().cloned().collect()
+    }
+
+    /// Get child_filter_prefixes as HashSet<String>
+    fn get_child_filter_prefixes(&self) -> HashSet<String> {
+        self.child_filter_prefixes.iter().cloned().collect()
     }
 }
 
@@ -778,9 +826,15 @@ pub struct RequirementsApp {
     // Perspective and filtering
     perspective: Perspective,
     perspective_direction: PerspectiveDirection,
-    filter_types: HashSet<RequirementType>,      // Empty = show all
-    filter_features: HashSet<String>,            // Empty = show all
-    filter_prefixes: HashSet<String>,            // Empty = show all
+    filter_types: HashSet<RequirementType>,      // Root filter: Empty = show all
+    filter_features: HashSet<String>,            // Root filter: Empty = show all
+    filter_prefixes: HashSet<String>,            // Root filter: Empty = show all
+    // Child filters (when children_same_as_root is false)
+    child_filter_types: HashSet<RequirementType>,
+    child_filter_features: HashSet<String>,
+    child_filter_prefixes: HashSet<String>,
+    children_same_as_root: bool,                 // When true, children use same filters as root
+    filter_tab: FilterTab,                       // Which filter tab is active (Root or Children)
     tree_collapsed: HashMap<Uuid, bool>,         // Track collapsed tree nodes
     show_filter_panel: bool,                     // Toggle filter panel visibility
     show_archived: bool,                         // Whether to show archived requirements
@@ -910,6 +964,11 @@ impl RequirementsApp {
             filter_types: HashSet::new(),
             filter_features: HashSet::new(),
             filter_prefixes: HashSet::new(),
+            child_filter_types: HashSet::new(),
+            child_filter_features: HashSet::new(),
+            child_filter_prefixes: HashSet::new(),
+            children_same_as_root: true,
+            filter_tab: FilterTab::Root,
             tree_collapsed: HashMap::new(),
             show_filter_panel: false,
             show_archived: false,
@@ -968,7 +1027,11 @@ impl RequirementsApp {
                     && self.perspective_direction == preset.direction
                     && self.filter_types == preset.get_filter_types()
                     && self.filter_features == preset.get_filter_features()
-                    && self.filter_prefixes == preset.get_filter_prefixes();
+                    && self.filter_prefixes == preset.get_filter_prefixes()
+                    && self.child_filter_types == preset.get_child_filter_types()
+                    && self.child_filter_features == preset.get_child_filter_features()
+                    && self.child_filter_prefixes == preset.get_child_filter_prefixes()
+                    && self.children_same_as_root == preset.children_same_as_root;
             }
         }
         false
@@ -986,6 +1049,10 @@ impl RequirementsApp {
                 || !self.filter_types.is_empty()
                 || !self.filter_features.is_empty()
                 || !self.filter_prefixes.is_empty()
+                || !self.children_same_as_root
+                || !self.child_filter_types.is_empty()
+                || !self.child_filter_features.is_empty()
+                || !self.child_filter_prefixes.is_empty()
         }
     }
 
@@ -996,6 +1063,10 @@ impl RequirementsApp {
         self.filter_types = preset.get_filter_types();
         self.filter_features = preset.get_filter_features();
         self.filter_prefixes = preset.get_filter_prefixes();
+        self.child_filter_types = preset.get_child_filter_types();
+        self.child_filter_features = preset.get_child_filter_features();
+        self.child_filter_prefixes = preset.get_child_filter_prefixes();
+        self.children_same_as_root = preset.children_same_as_root;
         self.active_preset = Some(preset.name.clone());
     }
 
@@ -1008,6 +1079,10 @@ impl RequirementsApp {
             &self.filter_types,
             &self.filter_features,
             &self.filter_prefixes,
+            &self.child_filter_types,
+            &self.child_filter_features,
+            &self.child_filter_prefixes,
+            self.children_same_as_root,
         );
 
         // Check if preset with this name already exists
@@ -2934,11 +3009,11 @@ impl RequirementsApp {
     fn get_filtered_indices(&self) -> Vec<usize> {
         match &self.perspective {
             Perspective::Flat => {
-                // Flat view: simple filtered list in storage order
+                // Flat view: simple filtered list in storage order (all treated as root)
                 self.store.requirements
                     .iter()
                     .enumerate()
-                    .filter(|(_, req)| self.passes_filters(req))
+                    .filter(|(_, req)| self.passes_filters(req, true))
                     .map(|(idx, _)| idx)
                     .collect()
             }
@@ -3019,8 +3094,9 @@ impl RequirementsApp {
     }
 
     /// Check if a requirement passes the current filters
-    fn passes_filters(&self, req: &Requirement) -> bool {
-        // Text search filter
+    /// `is_root` indicates whether this is a root-level requirement (true) or a child (false)
+    fn passes_filters(&self, req: &Requirement, is_root: bool) -> bool {
+        // Text search filter (applies to all levels)
         if !self.filter_text.is_empty() {
             let search = self.filter_text.to_lowercase();
             if !req.title.to_lowercase().contains(&search)
@@ -3031,23 +3107,32 @@ impl RequirementsApp {
             }
         }
 
+        // Determine which filters to use based on root vs child
+        let (filter_types, filter_features, filter_prefixes) = if is_root || self.children_same_as_root {
+            // Root requirements or "same as root" mode: use root filters
+            (&self.filter_types, &self.filter_features, &self.filter_prefixes)
+        } else {
+            // Child requirements with separate filters
+            (&self.child_filter_types, &self.child_filter_features, &self.child_filter_prefixes)
+        };
+
         // Type filter (empty = show all)
-        if !self.filter_types.is_empty() && !self.filter_types.contains(&req.req_type) {
+        if !filter_types.is_empty() && !filter_types.contains(&req.req_type) {
             return false;
         }
 
         // Feature filter (empty = show all)
-        if !self.filter_features.is_empty() && !self.filter_features.contains(&req.feature) {
+        if !filter_features.is_empty() && !filter_features.contains(&req.feature) {
             return false;
         }
 
         // Prefix filter (empty = show all)
-        if !self.filter_prefixes.is_empty() {
+        if !filter_prefixes.is_empty() {
             // Extract prefix from spec_id (e.g., "SEC-001" -> "SEC")
             let req_prefix = req.spec_id.as_ref()
                 .and_then(|s| s.split('-').next())
                 .unwrap_or("");
-            if !self.filter_prefixes.contains(req_prefix) {
+            if !filter_prefixes.contains(req_prefix) {
                 return false;
             }
         }
@@ -3093,7 +3178,7 @@ impl RequirementsApp {
         self.store.requirements
             .iter()
             .enumerate()
-            .filter(|(_, req)| !is_child.contains(&req.id) && self.passes_filters(req))
+            .filter(|(_, req)| !is_child.contains(&req.id) && self.passes_filters(req, true))
             .map(|(idx, _)| idx)
             .collect()
     }
@@ -3109,11 +3194,11 @@ impl RequirementsApp {
                 .map(|r| r.target_id)
                 .collect();
 
-            // Convert to indices, filtering by current filters
+            // Convert to indices, filtering by current filters (these are children)
             self.store.requirements
                 .iter()
                 .enumerate()
-                .filter(|(_, req)| child_ids.contains(&req.id) && self.passes_filters(req))
+                .filter(|(_, req)| child_ids.contains(&req.id) && self.passes_filters(req, false))
                 .map(|(idx, _)| idx)
                 .collect()
         } else {
@@ -3126,11 +3211,12 @@ impl RequirementsApp {
     fn get_parents(&self, child_id: &Uuid, outgoing_rel_type: &RelationshipType) -> Vec<usize> {
         // Find all requirements that have an outgoing relationship to this child
         // e.g., find all requirements with a "Parent" relationship where target_id == child_id
+        // In bottom-up view, parents are shown nested under children, so they're "children" in display terms
         self.store.requirements
             .iter()
             .enumerate()
             .filter(|(_, req)| {
-                self.passes_filters(req) &&
+                self.passes_filters(req, false) &&
                 req.relationships.iter().any(|r|
                     &r.rel_type == outgoing_rel_type && &r.target_id == child_id
                 )
@@ -3140,12 +3226,13 @@ impl RequirementsApp {
     }
 
     /// Find leaf nodes for bottom-up tree view (requirements with no outgoing relationships of the type)
+    /// These are displayed at root level in bottom-up view
     fn find_tree_leaves(&self, outgoing_rel_type: &RelationshipType) -> Vec<usize> {
         self.store.requirements
             .iter()
             .enumerate()
             .filter(|(_, req)| {
-                self.passes_filters(req) &&
+                self.passes_filters(req, true) &&
                 !req.relationships.iter().any(|r| &r.rel_type == outgoing_rel_type)
             })
             .map(|(idx, _)| idx)
@@ -3397,6 +3484,32 @@ impl RequirementsApp {
     }
 
     fn show_filter_controls(&mut self, ui: &mut egui::Ui) {
+        // Filter tabs: Root and Children
+        ui.horizontal(|ui| {
+            if ui.selectable_label(self.filter_tab == FilterTab::Root, "Root").clicked() {
+                self.filter_tab = FilterTab::Root;
+            }
+            if ui.selectable_label(self.filter_tab == FilterTab::Children, "Children").clicked() {
+                self.filter_tab = FilterTab::Children;
+            }
+        });
+
+        ui.separator();
+
+        match self.filter_tab {
+            FilterTab::Root => {
+                self.show_root_filter_controls(ui);
+            }
+            FilterTab::Children => {
+                self.show_children_filter_controls(ui);
+            }
+        }
+
+        ui.add_space(5.0);
+        ui.checkbox(&mut self.show_archived, "Show Archived");
+    }
+
+    fn show_root_filter_controls(&mut self, ui: &mut egui::Ui) {
         ui.label("Type Filters:");
         ui.horizontal_wrapped(|ui| {
             let types = [
@@ -3473,17 +3586,102 @@ impl RequirementsApp {
                 }
             });
         }
+    }
 
+    fn show_children_filter_controls(&mut self, ui: &mut egui::Ui) {
+        // "Same as root" checkbox
+        ui.checkbox(&mut self.children_same_as_root, "Same as root");
         ui.add_space(5.0);
-        ui.checkbox(&mut self.show_archived, "Show Archived");
+
+        // Disable/grey out the controls when "Same as root" is checked
+        let enabled = !self.children_same_as_root;
+
+        ui.add_enabled_ui(enabled, |ui| {
+            ui.label("Type Filters:");
+            ui.horizontal_wrapped(|ui| {
+                let types = [
+                    (RequirementType::Functional, "FR"),
+                    (RequirementType::NonFunctional, "NFR"),
+                    (RequirementType::System, "SR"),
+                    (RequirementType::User, "UR"),
+                    (RequirementType::ChangeRequest, "CR"),
+                ];
+
+                for (req_type, label) in types {
+                    let mut checked = self.child_filter_types.contains(&req_type);
+                    if ui.checkbox(&mut checked, label).changed() {
+                        if checked {
+                            self.child_filter_types.insert(req_type);
+                        } else {
+                            self.child_filter_types.remove(&req_type);
+                        }
+                    }
+                }
+
+                if ui.small_button("Clear").clicked() {
+                    self.child_filter_types.clear();
+                }
+            });
+
+            ui.add_space(5.0);
+            ui.label("Feature Filters:");
+
+            let features = self.get_all_features();
+            ui.horizontal_wrapped(|ui| {
+                for feature in &features {
+                    let mut checked = self.child_filter_features.contains(feature);
+                    // Truncate long feature names for display
+                    let display_name = if feature.len() > 15 {
+                        format!("{}...", &feature[..12])
+                    } else {
+                        feature.clone()
+                    };
+
+                    if ui.checkbox(&mut checked, &display_name).on_hover_text(feature).changed() {
+                        if checked {
+                            self.child_filter_features.insert(feature.clone());
+                        } else {
+                            self.child_filter_features.remove(feature);
+                        }
+                    }
+                }
+
+                if ui.small_button("Clear").clicked() {
+                    self.child_filter_features.clear();
+                }
+            });
+
+            // Prefix filters
+            let prefixes = self.store.get_all_prefixes();
+            if !prefixes.is_empty() {
+                ui.add_space(5.0);
+                ui.label("ID Prefix Filters:");
+                ui.horizontal_wrapped(|ui| {
+                    for prefix in &prefixes {
+                        let mut checked = self.child_filter_prefixes.contains(prefix);
+                        if ui.checkbox(&mut checked, prefix).changed() {
+                            if checked {
+                                self.child_filter_prefixes.insert(prefix.clone());
+                            } else {
+                                self.child_filter_prefixes.remove(prefix);
+                            }
+                        }
+                    }
+
+                    if ui.small_button("Clear").clicked() {
+                        self.child_filter_prefixes.clear();
+                    }
+                });
+            }
+        });
     }
 
     fn show_flat_list(&mut self, ui: &mut egui::Ui) {
-        // Collect filtered indices first to avoid borrow issues
+        // Collect filtered indices first to avoid borrow issues (flat view uses root filters)
         let filtered_indices: Vec<usize> = self.store.requirements
             .iter()
             .enumerate()
-            .filter(|(_, req)| self.passes_filters(req))
+            .filter(|(_, req)| self.passes_filters(req, true))
             .map(|(idx, _)| idx)
             .collect();
 

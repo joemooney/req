@@ -68,6 +68,7 @@ Define connections between requirements:
 
 ### GUI-Specific Features
 - Multiple view perspectives (Flat, Parent/Child, Verification, References)
+- Two-level filtering (Root/Children) for hierarchical views
 - User settings (name, email, handle, font size)
 - Zoom controls (Ctrl+MouseWheel, keyboard shortcuts)
 - Collapsible comment trees

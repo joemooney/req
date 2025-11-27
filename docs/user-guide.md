@@ -256,7 +256,7 @@ You can save your current view configuration (perspective, direction, and filter
 
 **To use a preset:**
 - Select it from the View dropdown under "Saved Presets"
-- The preset will restore all saved settings (perspective, direction, type filters, feature filters)
+- The preset will restore all saved settings (perspective, direction, root filters, child filters)
 
 **To delete a preset:**
 - Click the ✕ button next to the preset name in the dropdown
@@ -268,6 +268,35 @@ You can save your current view configuration (perspective, direction, and filter
 
 **Reset button (↺):**
 - Click to return to the default Flat List view with no filters
+
+### Filtering Requirements
+
+The GUI provides powerful filtering capabilities to help you focus on specific subsets of requirements.
+
+**Accessing Filters:**
+- Click the "Filters" dropdown button in the top bar
+- The filter panel shows two tabs: **Root** and **Children**
+
+**Root vs Children Filters:**
+- **Root filters**: Apply to top-level requirements displayed in the list or tree view
+- **Children filters**: Apply to nested requirements in hierarchical views (Parent/Child, Verification, References)
+- By default, "Same as root" is checked, meaning children use the same filters as root requirements
+- Uncheck "Same as root" to set independent filters for child requirements
+
+This two-level filtering allows you to:
+- Show only specific root requirements (e.g., all Functional Requirements)
+- While displaying all their children regardless of type
+- Or filter children independently (e.g., show all root requirements but only their Change Request children)
+
+**Filter Types:**
+- **Type Filters**: Show only FR (Functional), NFR (Non-Functional), SR (System), UR (User), or CR (Change Request)
+- **Feature Filters**: Show only requirements from selected features
+- **ID Prefix Filters**: Show only requirements with specific ID prefixes (e.g., SEC, API, AUTH)
+- **Show Archived**: Toggle visibility of archived requirements
+
+**Quick Actions:**
+- Click "Clear" next to any filter category to remove all selections in that category
+- Empty filters (none selected) means "show all" for that category
 
 ### Adding Comments
 

@@ -193,51 +193,89 @@ class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="
 <span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="co"># List relationships</span></span>
 <span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> rel list SPEC-001</span></code></pre></div>
-<h3 id="feature-management">Feature Management</h3>
+<h3 id="relationship-definitions">Relationship Definitions</h3>
+<p>Manage custom relationship types with constraints:</p>
 <div class="sourceCode" id="cb10"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># List features</span></span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> feature list</span>
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># List all relationship definitions</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> rel-def list</span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Rename a feature</span></span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> feature rename <span class="st">&quot;Old Name&quot;</span> <span class="st">&quot;New Name&quot;</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Show details for a relationship definition</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> rel-def show parent</span>
 <span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Move requirements between features</span></span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> feature move SPEC-001 <span class="st">&quot;New Feature&quot;</span></span></code></pre></div>
-<h3 id="database-management">Database Management</h3>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Add a custom relationship type</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> rel-def add <span class="at">--name</span> <span class="st">&quot;blocks&quot;</span> <span class="dt">\</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">--display-name</span> <span class="st">&quot;Blocks&quot;</span> <span class="dt">\</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">--description</span> <span class="st">&quot;This requirement blocks another&quot;</span> <span class="dt">\</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">--inverse</span> <span class="st">&quot;blocked_by&quot;</span> <span class="dt">\</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">--cardinality</span> n:n <span class="dt">\</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">--color</span> <span class="st">&quot;#ff6b6b&quot;</span></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Edit a relationship definition</span></span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> rel-def edit parent <span class="at">--source-types</span> <span class="st">&quot;Functional,System&quot;</span></span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove a custom relationship definition</span></span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> rel-def remove blocks</span></code></pre></div>
+<p><strong>Built-in relationship types:</strong> - <code>parent</code> /
+<code>child</code> - Hierarchical decomposition (N:1 / 1:N) -
+<code>verifies</code> / <code>verified_by</code> - Test relationships
+(N:N) - <code>depends_on</code> / <code>dependency_of</code> -
+Dependencies (N:N) - <code>implements</code> /
+<code>implemented_by</code> - Implementation links (N:N) -
+<code>references</code> - General reference (N:N, no inverse) -
+<code>duplicate</code> - Marks duplicates (symmetric)</p>
+<h3 id="feature-management">Feature Management</h3>
 <div class="sourceCode" id="cb11"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># List registered projects</span></span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> db list</span>
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># List features</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> feature list</span>
 <span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Add a new project</span></span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> db add <span class="at">--name</span> <span class="st">&quot;my-project&quot;</span> <span class="at">--path</span> <span class="st">&quot;/path/to/requirements.yaml&quot;</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Rename a feature</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> feature rename <span class="st">&quot;Old Name&quot;</span> <span class="st">&quot;New Name&quot;</span></span>
 <span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Set default project</span></span>
-<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> db default <span class="st">&quot;my-project&quot;</span></span>
-<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove a project</span></span>
-<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> db remove <span class="st">&quot;my-project&quot;</span></span></code></pre></div>
-<h3 id="opening-the-user-guide">Opening the User Guide</h3>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Move requirements between features</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> feature move SPEC-001 <span class="st">&quot;New Feature&quot;</span></span></code></pre></div>
+<h3 id="database-management">Database Management</h3>
 <div class="sourceCode" id="cb12"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Open in default browser (light mode)</span></span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> user-guide</span>
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># List registered projects</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> db list</span>
 <span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Open in dark mode</span></span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> user-guide <span class="at">--dark</span></span></code></pre></div>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Add a new project</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> db add <span class="at">--name</span> <span class="st">&quot;my-project&quot;</span> <span class="at">--path</span> <span class="st">&quot;/path/to/requirements.yaml&quot;</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Set default project</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> db default <span class="st">&quot;my-project&quot;</span></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove a project</span></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> db remove <span class="st">&quot;my-project&quot;</span></span></code></pre></div>
+<h3 id="opening-the-user-guide">Opening the User Guide</h3>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Open in default browser (light mode)</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> user-guide</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Open in dark mode</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> user-guide <span class="at">--dark</span></span></code></pre></div>
 <hr />
 <h2 id="gui-usage">GUI Usage</h2>
 <p>Launch the GUI application:</p>
-<div class="sourceCode" id="cb13"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="ex">req-gui</span></span></code></pre></div>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="ex">req-gui</span></span></code></pre></div>
 <h3 id="main-interface">Main Interface</h3>
 <p>The GUI consists of three main areas:</p>
 <ol type="1">
 <li><strong>Top Bar</strong> - Contains action buttons, requirement
 count, and settings</li>
-<li><strong>Left Panel</strong> - Requirements list with search
-filter</li>
+<li><strong>Left Panel</strong> - Requirements list with search filter
+(collapsible in edit mode)</li>
 <li><strong>Main Area</strong> - Detail view, forms, or welcome
 screen</li>
 </ol>
+<h3 id="responsive-layout">Responsive Layout</h3>
+<p>When editing or adding requirements, the left panel remains visible
+if the window is wide enough (900+ pixels). You can: - Click the
+<strong>▶ Hide</strong> button in the left panel header to collapse it -
+Click <strong>◀ Show List</strong> in the form area to restore the
+panel</p>
+<p>This allows you to reference other requirements while editing, or
+maximize form space on smaller screens.</p>
 <h3 id="navigation">Navigation</h3>
 <ul>
 <li>Click a requirement in the left panel to view its details</li>
@@ -323,6 +361,51 @@ set a default in Settings &gt; Appearance.</p>
 </table>
 <p>In tree views, use the +/- buttons or press Space to expand/collapse
 nodes.</p>
+<h3 id="view-presets">View Presets</h3>
+<p>You can save your current view configuration (perspective, direction,
+and filters) as a named preset for quick access later.</p>
+<p><strong>To save a preset:</strong> 1. Configure your view using the
+View dropdown, direction selector, and filter options 2. When you have
+unsaved changes, a “💾 Save As…” button appears 3. Click it, enter a
+name, and click Save</p>
+<p><strong>To use a preset:</strong> - Select it from the View dropdown
+under “Saved Presets” - The preset will restore all saved settings
+(perspective, direction, root filters, child filters)</p>
+<p><strong>To delete a preset:</strong> - Click the ✕ button next to the
+preset name in the dropdown - Confirm deletion in the dialog</p>
+<p><strong>Modified indicator:</strong> - If you modify an active
+preset, its name shows with an asterisk (e.g., “My View*“) - Use”Save
+As…” to save changes to the same name or create a new preset</p>
+<p><strong>Reset button (↺):</strong> - Click to return to the default
+Flat List view with no filters</p>
+<h3 id="filtering-requirements">Filtering Requirements</h3>
+<p>The GUI provides powerful filtering capabilities to help you focus on
+specific subsets of requirements.</p>
+<p><strong>Accessing Filters:</strong> - Click the “Filters” dropdown
+button in the top bar - The filter panel shows two tabs:
+<strong>Root</strong> and <strong>Children</strong></p>
+<p><strong>Root vs Children Filters:</strong> - <strong>Root
+filters</strong>: Apply to top-level requirements displayed in the list
+or tree view - <strong>Children filters</strong>: Apply to nested
+requirements in hierarchical views (Parent/Child, Verification,
+References) - By default, “Same as root” is checked, meaning children
+use the same filters as root requirements - Uncheck “Same as root” to
+set independent filters for child requirements</p>
+<p>This two-level filtering allows you to: - Show only specific root
+requirements (e.g., all Functional Requirements) - While displaying all
+their children regardless of type - Or filter children independently
+(e.g., show all root requirements but only their Change Request
+children)</p>
+<p><strong>Filter Types:</strong> - <strong>Type Filters</strong>: Show
+only FR (Functional), NFR (Non-Functional), SR (System), UR (User), or
+CR (Change Request) - <strong>Feature Filters</strong>: Show only
+requirements from selected features - <strong>ID Prefix
+Filters</strong>: Show only requirements with specific ID prefixes
+(e.g., SEC, API, AUTH) - <strong>Show Archived</strong>: Toggle
+visibility of archived requirements</p>
+<p><strong>Quick Actions:</strong> - Click “Clear” next to any filter
+category to remove all selections in that category - Empty filters (none
+selected) means “show all” for that category</p>
 <h3 id="adding-comments">Adding Comments</h3>
 <ol type="1">
 <li>Select a requirement</li>
@@ -333,6 +416,22 @@ nodes.</p>
 <p>Comments support threading - click “Reply” on any comment to add a
 nested reply. Comments are displayed in a collapsible tree
 structure.</p>
+<h3 id="comment-reactions">Comment Reactions</h3>
+<p>You can add emoji reactions to comments to quickly indicate your
+response:</p>
+<p><strong>Adding a reaction:</strong> - Click the 😊 button on any
+comment to open the reaction picker - Select an emoji to add your
+reaction - Click the same emoji again to remove your reaction</p>
+<p><strong>Default reactions:</strong> | Emoji | Name | Use Case |
+|——-|——|———-| | ✅ | Resolved | Mark comment as addressed | | ❌ |
+Rejected | Mark comment as declined | | 👍 | Thumbs Up | Agree or
+approve | | 👎 | Thumbs Down | Disagree or disapprove | | ❓ | Question
+| Needs clarification | | ⚠️ | Important | Attention needed |</p>
+<p><strong>Customizing reactions:</strong> - Go to Settings &gt;
+Reactions tab - Add new custom reactions with your own emoji and labels
+- Edit existing reactions (emoji, label, description) - Delete custom
+reactions (built-in reactions cannot be deleted) - Reset to defaults to
+restore the standard reaction set</p>
 <hr />
 <h2 id="working-with-requirements">Working with Requirements</h2>
 <h3 id="requirement-fields">Requirement Fields</h3>
@@ -362,7 +461,7 @@ structure.</p>
 </tr>
 <tr class="even">
 <td><strong>Status</strong></td>
-<td>Draft, Approved, Completed, or Rejected</td>
+<td>Type-specific status (see Type Definitions below)</td>
 </tr>
 <tr class="odd">
 <td><strong>Priority</strong></td>
@@ -370,7 +469,7 @@ structure.</p>
 </tr>
 <tr class="even">
 <td><strong>Type</strong></td>
-<td>Functional, NonFunctional, System, or User</td>
+<td>Functional, NonFunctional, System, User, or ChangeRequest</td>
 </tr>
 <tr class="odd">
 <td><strong>Feature</strong></td>
@@ -387,6 +486,10 @@ structure.</p>
 <tr class="even">
 <td><strong>ID Prefix</strong></td>
 <td>Optional custom prefix override (uppercase letters only)</td>
+</tr>
+<tr class="odd">
+<td><strong>Custom Fields</strong></td>
+<td>Type-specific additional fields (e.g., Impact, Requested By)</td>
 </tr>
 </tbody>
 </table>
@@ -408,6 +511,22 @@ requirement - <code>PERF-001</code> - Performance requirement -
 <p>When using “Per Prefix” numbering strategy, each custom prefix gets
 its own counter. With “Global Sequential” numbering, all requirements
 share the same counter regardless of prefix.</p>
+<h3 id="prefix-management">Prefix Management</h3>
+<p>The system tracks all ID prefixes used in the project. You can manage
+prefixes in <strong>Settings</strong> &gt; <strong>Admin</strong> &gt;
+<strong>ID Prefix Management</strong>:</p>
+<p><strong>Features:</strong> - <strong>Prefix filtering</strong>:
+Filter the requirement list by ID prefix (e.g., show only SEC-xxx or
+API-xxx requirements) - <strong>Allowed prefixes list</strong>:
+Explicitly define which prefixes are permitted in the project -
+<strong>Restrict prefixes</strong>: When enabled, users must select from
+the allowed prefixes list instead of entering custom ones -
+<strong>Auto-collection</strong>: New prefixes used are automatically
+added to the allowed list (unless restriction is enabled)</p>
+<p><strong>Use Cases:</strong> - Enforce consistent naming conventions
+across the team - Quickly filter to see only security, performance, or
+API-related requirements - Save filter combinations as view presets for
+quick access</p>
 <h3 id="markdown-support">Markdown Support</h3>
 <p>Requirement descriptions support Markdown formatting. When viewing a
 requirement, the description is rendered with full Markdown support
@@ -426,6 +545,7 @@ etc.)</li>
 button to see how your Markdown will render. Click <strong>✏
 Edit</strong> to return to the text editor.</p>
 <h3 id="status-workflow">Status Workflow</h3>
+<p>Default statuses for standard requirement types:</p>
 <pre><code>Draft -&gt; Approved -&gt; Completed
               |
               v
@@ -436,33 +556,168 @@ Edit</strong> to return to the text editor.</p>
 <li><strong>Completed</strong>: Implementation finished</li>
 <li><strong>Rejected</strong>: Not accepted or deprecated</li>
 </ul>
+<p><strong>Note:</strong> Some types (like Change Request) have their
+own custom status workflows. See Type Definitions below.</p>
+<h3 id="type-definitions">Type Definitions</h3>
+<p>The system supports configurable requirement types with type-specific
+statuses and custom fields.</p>
+<p><strong>Built-in Types:</strong></p>
+<table>
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 20%" />
+<col style="width: 25%" />
+<col style="width: 38%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Type</th>
+<th>Prefix</th>
+<th>Statuses</th>
+<th>Custom Fields</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Functional</strong></td>
+<td>FUNC</td>
+<td>Draft, Approved, Completed, Rejected</td>
+<td>-</td>
+</tr>
+<tr class="even">
+<td><strong>NonFunctional</strong></td>
+<td>NFUNC</td>
+<td>Draft, Approved, Completed, Rejected</td>
+<td>-</td>
+</tr>
+<tr class="odd">
+<td><strong>System</strong></td>
+<td>SYS</td>
+<td>Draft, Approved, Completed, Rejected</td>
+<td>-</td>
+</tr>
+<tr class="even">
+<td><strong>User</strong></td>
+<td>USER</td>
+<td>Draft, Approved, Completed, Rejected</td>
+<td>-</td>
+</tr>
+<tr class="odd">
+<td><strong>ChangeRequest</strong></td>
+<td>CR</td>
+<td>Draft, Submitted, Under Review, Approved, Rejected, In Progress,
+Implemented, Verified, Closed</td>
+<td>Impact, Requested By, Target Release, Justification</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Change Request Workflow:</strong></p>
+<pre><code>Draft -&gt; Submitted -&gt; Under Review -&gt; Approved -&gt; In Progress -&gt; Implemented -&gt; Verified -&gt; Closed
+                            |
+                            v
+                        Rejected</code></pre>
+<p><strong>Custom Fields:</strong></p>
+<p>When creating or editing a requirement with custom fields, additional
+form fields appear below the standard fields. Field types include:</p>
+<ul>
+<li><strong>Text</strong>: Single-line text input</li>
+<li><strong>Text Area</strong>: Multi-line text input</li>
+<li><strong>Select</strong>: Dropdown with predefined options</li>
+<li><strong>Boolean</strong>: Checkbox</li>
+<li><strong>Date</strong>: Date input (YYYY-MM-DD format)</li>
+<li><strong>User Reference</strong>: Dropdown to select a user from the
+system</li>
+<li><strong>Requirement Reference</strong>: Dropdown to select another
+requirement</li>
+<li><strong>Number</strong>: Numeric input</li>
+</ul>
+<p><strong>Managing Type Definitions:</strong></p>
+<p>In the GUI, go to <strong>Settings</strong> &gt;
+<strong>Types</strong> tab to view all configured type definitions,
+their statuses, and custom fields. Built-in types can be viewed but not
+modified directly.</p>
 <h3 id="relationship-types">Relationship Types</h3>
+<p>The system includes built-in relationship types with configurable
+constraints:</p>
 <table>
 <thead>
 <tr class="header">
 <th>Type</th>
+<th>Inverse</th>
+<th>Cardinality</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
 <td><strong>Parent</strong></td>
-<td>Hierarchical parent-child</td>
+<td>Child</td>
+<td>N:1</td>
+<td>Hierarchical decomposition</td>
 </tr>
 <tr class="even">
+<td><strong>Child</strong></td>
+<td>Parent</td>
+<td>1:N</td>
+<td>Child of parent requirement</td>
+</tr>
+<tr class="odd">
 <td><strong>Verifies</strong></td>
+<td>Verified By</td>
+<td>N:N</td>
 <td>Test/verification relationship</td>
+</tr>
+<tr class="even">
+<td><strong>Verified By</strong></td>
+<td>Verifies</td>
+<td>N:N</td>
+<td>Verified by test requirement</td>
+</tr>
+<tr class="odd">
+<td><strong>Depends On</strong></td>
+<td>Dependency Of</td>
+<td>N:N</td>
+<td>Dependency relationship</td>
+</tr>
+<tr class="even">
+<td><strong>Dependency Of</strong></td>
+<td>Depends On</td>
+<td>N:N</td>
+<td>Inverse dependency</td>
+</tr>
+<tr class="odd">
+<td><strong>Implements</strong></td>
+<td>Implemented By</td>
+<td>N:N</td>
+<td>Implementation relationship</td>
+</tr>
+<tr class="even">
+<td><strong>Implemented By</strong></td>
+<td>Implements</td>
+<td>N:N</td>
+<td>Inverse implementation</td>
 </tr>
 <tr class="odd">
 <td><strong>References</strong></td>
+<td>-</td>
+<td>N:N</td>
 <td>General reference link</td>
 </tr>
 <tr class="even">
-<td><strong>Custom</strong></td>
-<td>User-defined relationship</td>
+<td><strong>Duplicate</strong></td>
+<td>(symmetric)</td>
+<td>N:N</td>
+<td>Marks as duplicate</td>
 </tr>
 </tbody>
 </table>
+<p><strong>Cardinality meanings:</strong> - <strong>1:1</strong> - One
+source to one target - <strong>1:N</strong> - One source to many targets
+- <strong>N:1</strong> - Many sources to one target -
+<strong>N:N</strong> - Many sources to many targets</p>
+<p>Custom relationship types can be created with: - Type constraints
+(limit which requirement types can participate) - Cardinality rules -
+Inverse relationship definitions - Visualization colors</p>
 <hr />
 <h2 id="features-and-organization">Features and Organization</h2>
 <p>Requirements are organized into numbered features for better
@@ -474,9 +729,9 @@ management.</p>
 <p>Requirements without a specified feature go to “Uncategorized”. Set a
 default feature using the <code>REQ_FEATURE</code> environment
 variable:</p>
-<div class="sourceCode" id="cb15"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">REQ_FEATURE</span><span class="op">=</span><span class="st">&quot;Authentication&quot;</span></span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> add <span class="at">--title</span> <span class="st">&quot;New auth requirement&quot;</span>  <span class="co"># Automatically uses Authentication</span></span></code></pre></div>
+<div class="sourceCode" id="cb17"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">REQ_FEATURE</span><span class="op">=</span><span class="st">&quot;Authentication&quot;</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> add <span class="at">--title</span> <span class="st">&quot;New auth requirement&quot;</span>  <span class="co"># Automatically uses Authentication</span></span></code></pre></div>
 <hr />
 <h2 id="multi-project-support">Multi-Project Support</h2>
 <p>Manage multiple requirement sets using the registry system.</p>
@@ -494,16 +749,16 @@ variable</p>
 <li>Interactive prompt</li>
 </ol>
 <h3 id="example-setup">Example Setup</h3>
-<div class="sourceCode" id="cb16"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Register projects</span></span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> db add <span class="at">--name</span> <span class="st">&quot;frontend&quot;</span> <span class="at">--path</span> ~/projects/frontend/requirements.yaml</span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> db add <span class="at">--name</span> <span class="st">&quot;backend&quot;</span> <span class="at">--path</span> ~/projects/backend/requirements.yaml</span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Set default</span></span>
-<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> db default frontend</span>
-<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Work with specific project</span></span>
-<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> list <span class="at">--project</span> backend</span></code></pre></div>
+<div class="sourceCode" id="cb18"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Register projects</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> db add <span class="at">--name</span> <span class="st">&quot;frontend&quot;</span> <span class="at">--path</span> ~/projects/frontend/requirements.yaml</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> db add <span class="at">--name</span> <span class="st">&quot;backend&quot;</span> <span class="at">--path</span> ~/projects/backend/requirements.yaml</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Set default</span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> db default frontend</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Work with specific project</span></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a><span class="ex">req</span> list <span class="at">--project</span> backend</span></code></pre></div>
 <hr />
 <h2 id="keyboard-shortcuts">Keyboard Shortcuts</h2>
 <h3 id="gui-shortcuts">GUI Shortcuts</h3>
@@ -532,22 +787,26 @@ class="sourceCode bash"><code class="sourceCode bash"><span id="cb16-1"><a href=
 <td>Expand/collapse tree node (in tree views)</td>
 </tr>
 <tr class="odd">
+<td><strong>Ctrl+S</strong></td>
+<td>Save (in Add/Edit forms)</td>
+</tr>
+<tr class="even">
 <td><strong>Ctrl+T</strong></td>
 <td>Cycle through themes</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><strong>Ctrl+MouseWheel</strong></td>
 <td>Zoom in/out</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><strong>Ctrl+Shift++</strong></td>
 <td>Zoom in</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><strong>Ctrl+-</strong></td>
 <td>Zoom out</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><strong>Ctrl+0</strong></td>
 <td>Reset zoom to base size</td>
 </tr>
@@ -617,43 +876,94 @@ to cancel. Click “Reset to Defaults” to restore default bindings.</p>
 <tr class="header">
 <th>Action</th>
 <th>Default Key</th>
+<th>Default Context</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
 <td>Navigate Up</td>
 <td>Up Arrow</td>
+<td>Requirements List</td>
 </tr>
 <tr class="even">
 <td>Navigate Down</td>
 <td>Down Arrow</td>
+<td>Requirements List</td>
 </tr>
 <tr class="odd">
 <td>Edit Requirement</td>
 <td>Enter</td>
+<td>Requirements List</td>
 </tr>
 <tr class="even">
 <td>Toggle Expand/Collapse</td>
 <td>Space</td>
+<td>Requirements List</td>
 </tr>
 <tr class="odd">
 <td>Zoom In</td>
 <td>Ctrl+Shift+Plus</td>
+<td>Global</td>
 </tr>
 <tr class="even">
 <td>Zoom Out</td>
 <td>Ctrl+Minus</td>
+<td>Global</td>
 </tr>
 <tr class="odd">
 <td>Reset Zoom</td>
 <td>Ctrl+0</td>
+<td>Global</td>
 </tr>
 <tr class="even">
 <td>Cycle Theme</td>
 <td>Ctrl+T</td>
+<td>Global</td>
+</tr>
+<tr class="odd">
+<td>Save</td>
+<td>Ctrl+S</td>
+<td>Form</td>
 </tr>
 </tbody>
 </table>
+<p><strong>Context/Scope:</strong></p>
+<p>Each keybinding has a context that determines where it is active:</p>
+<table>
+<colgroup>
+<col style="width: 40%" />
+<col style="width: 59%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Context</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Global</strong></td>
+<td>Works anywhere in the application</td>
+</tr>
+<tr class="even">
+<td><strong>Requirements List</strong></td>
+<td>Only when focused on the requirements list (not when typing in text
+fields)</td>
+</tr>
+<tr class="odd">
+<td><strong>Detail View</strong></td>
+<td>Only when viewing requirement details</td>
+</tr>
+<tr class="even">
+<td><strong>Form</strong></td>
+<td>Only when in add/edit form</td>
+</tr>
+</tbody>
+</table>
+<p>You can change the context for any keybinding using the dropdown in
+the Settings &gt; Keys tab. This allows you to, for example: - Make
+navigation keys work globally - Restrict certain shortcuts to specific
+views - Prevent shortcuts from interfering with text input</p>
 <p>User settings are stored in:
 <code>~/.requirements_gui_settings.yaml</code></p>
 <h3 id="project-settings">Project Settings</h3>
@@ -715,6 +1025,48 @@ warning.</li>
 <p>The migration dialog shows: - Number of requirements that will be
 affected - Any validation errors that prevent migration - Warnings about
 potential issues</p>
+<h3 id="user-management">User Management</h3>
+<p>Users are managed in Settings &gt; Admin. Each user gets a unique
+<code>$USER-XXX</code> identifier (e.g., <code>$USER-001</code>).</p>
+<p><strong>Adding Users:</strong> 1. Go to Settings &gt; Admin 2. Click
+“➕ Add User” 3. Enter name, email, and handle 4. The system
+automatically assigns a <code>$USER-XXX</code> ID</p>
+<p><strong>User Fields:</strong> | Field | Description | |——-|————-| |
+<strong>ID</strong> | Auto-generated <code>$USER-XXX</code> identifier |
+| <strong>Name</strong> | User’s full name | | <strong>Email</strong> |
+User’s email address | | <strong>Handle</strong> | Username for <span
+class="citation" data-cites="mentions">@mentions</span> (without @) | |
+<strong>Status</strong> | Active or Archived |</p>
+<p><strong>User-Requirement Relationships:</strong> Users can be linked
+to requirements through special relationship types:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Relationship</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Created By</strong></td>
+<td>User who created the requirement</td>
+</tr>
+<tr class="even">
+<td><strong>Assigned To</strong></td>
+<td>User responsible for implementing</td>
+</tr>
+<tr class="odd">
+<td><strong>Tested By</strong></td>
+<td>User(s) who tested/verified the requirement</td>
+</tr>
+<tr class="even">
+<td><strong>Closed By</strong></td>
+<td>User who closed/completed the requirement</td>
+</tr>
+</tbody>
+</table>
+<p>These relationships can be added through the Links tab when viewing a
+requirement.</p>
 <h3 id="environment-variables">Environment Variables</h3>
 <table>
 <thead>

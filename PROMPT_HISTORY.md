@@ -566,3 +566,33 @@ A chronological record of development sessions and changes made to the Requireme
   - Updated add/edit form to show dropdown when prefixes are restricted, text input otherwise
   - Auto-add new prefixes to allowed list when used (unless restricted)
   - Updated documentation with Prefix Management section
+
+### Two-Level Filter System (Root/Children)
+- **Prompt**: "I think in filtering it may be worth having two levels. So when you click Filters you get two tabs, one for root and one for children. The root option filters the first level of requirements that are selected, and the children applies to which children are shown recursively. In children there is a checkbox, <same as root> which greys out everything or hides them (that would be the same as what we currently have, one set of filters across all requirements). The purpose of this is to limit the scope of the top level requirements that we want to drill down into."
+- **Problem**: Users wanted to filter root-level requirements differently from children in hierarchical views. For example, show only Functional Requirements at root level, but display all their children regardless of type.
+- **Solution**: Implemented two-level filtering with separate filter sets for root and children, with "Same as root" option to use unified filters.
+- **Actions**:
+  - Added `FilterTab` enum (Root, Children) for tab selection
+  - Added child filter fields to RequirementsApp:
+    - `child_filter_types: HashSet<RequirementType>`
+    - `child_filter_features: HashSet<String>`
+    - `child_filter_prefixes: HashSet<String>`
+    - `children_same_as_root: bool` (defaults to true)
+    - `filter_tab: FilterTab` for active tab state
+  - Updated ViewPreset struct with child filter fields and `children_same_as_root`
+  - Updated `apply_preset()` to restore child filter state
+  - Updated `save_current_view_as_preset()` to save child filters
+  - Updated `current_view_matches_active_preset()` to compare child filters
+  - Updated `has_unsaved_view()` to detect child filter changes
+  - Refactored `show_filter_controls()` to display Root/Children tabs
+  - Added `show_root_filter_controls()` for root-level filters
+  - Added `show_children_filter_controls()` with "Same as root" checkbox that disables child filters when checked
+  - Updated `passes_filters()` to accept `is_root: bool` parameter:
+    - Root requirements use root filters
+    - Child requirements use child filters (or root filters if `children_same_as_root` is true)
+  - Updated all callers of `passes_filters()`:
+    - `find_tree_roots()` and `find_tree_leaves()` - is_root=true
+    - `get_children()` and `get_parents()` - is_root=false
+    - Flat list views - is_root=true (all at same level)
+  - Updated user-guide.md with "Filtering Requirements" section
+  - Updated OVERVIEW.md with two-level filtering in GUI features
