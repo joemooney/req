@@ -73,6 +73,10 @@ requirements:
   relationships:
   - rel_type: Child
     target_id: 7897d5c8-0159-4920-8ce4-0bc29c6df517
+  - rel_type: Child
+    target_id: 974e17ec-b270-49f2-8c50-5f54e0cf7e4e
+  - rel_type: Child
+    target_id: 1739a3b3-6508-46a6-8ed1-c256fb7bd3d1
   comments:
   - id: d4a26b03-f489-4f5f-b24c-223091388caf
     author: Unknown User
@@ -299,7 +303,7 @@ requirements:
   tags: []
   relationships:
   - rel_type: Parent
-    target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
+    target_id: fa1eaffc-7c05-4d09-95a0-d5e61e9b8529
   history:
   - id: 92a50b21-6053-4e7c-9919-0724aadbea36
     author: Unknown User
@@ -663,6 +667,8 @@ requirements:
   relationships:
   - rel_type: Parent
     target_id: 5a8cda55-badf-48c6-82c9-b9ea53f3f69f
+  - rel_type: Child
+    target_id: 61d821b1-f9dd-45ee-addc-67071649e931
 - id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
   spec_id: LAYOUT-0028
   prefix_override: LAYOUT
@@ -693,11 +699,7 @@ requirements:
   - rel_type: Child
     target_id: 07f7e655-742d-44c9-ba9d-c77762ae7090
   - rel_type: Child
-    target_id: 055530de-326d-4362-aab1-639239f363e5
-  - rel_type: Child
     target_id: d8fbfd6f-47a7-4f93-94d2-1dc3009e79b0
-  - rel_type: Child
-    target_id: fa1eaffc-7c05-4d09-95a0-d5e61e9b8529
   - rel_type: Child
     target_id: 05a9d563-dc72-4bcd-b69c-6095fd396c28
   - rel_type: Child
@@ -714,8 +716,6 @@ requirements:
     target_id: ae4d77e5-55a4-4a56-97d1-a030d922a04d
   - rel_type: Child
     target_id: d51487eb-36a5-4266-9c79-29a7c5399849
-  - rel_type: Child
-    target_id: 3fe85c39-0da4-477a-9ac5-04ecb9696ec9
   - rel_type: Child
     target_id: cc712910-5468-4c7c-a62d-75d7b8110b76
   history:
@@ -771,6 +771,8 @@ requirements:
   relationships:
   - rel_type: Child
     target_id: 2fd609e9-d194-47a3-adbd-417f6306190c
+  - rel_type: Child
+    target_id: ce9fdd12-0860-4334-90b7-399952ca523a
 - id: 2fd609e9-d194-47a3-adbd-417f6306190c
   spec_id: USERS-0033
   prefix_override: USERS
@@ -822,8 +824,9 @@ requirements:
   - rel_type: Parent
     target_id: 848840ae-7005-4fab-b478-163f9139359e
 - id: fa1eaffc-7c05-4d09-95a0-d5e61e9b8529
-  spec_id: FR-0035
-  title: support keybindings
+  spec_id: KEYBOARD-0063
+  prefix_override: KEYBOARD
+  title: support keyboard key bindings
   description: |2
      Keybinding Context System:
 
@@ -846,13 +849,27 @@ requirements:
   owner: ''
   feature: 21-Uncategorized
   created_at: 2025-11-27T01:23:00.651993728Z
-  modified_at: 2025-11-27T01:23:00.651993728Z
+  modified_at: 2025-11-27T21:20:59.098122052Z
   req_type: Functional
   dependencies: []
   tags: []
   relationships:
-  - rel_type: Parent
-    target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
+  - rel_type: Child
+    target_id: 055530de-326d-4362-aab1-639239f363e5
+  history:
+  - id: 7c9e1863-b8fe-4de3-aff1-f959da34fe07
+    author: '@joe'
+    timestamp: 2025-11-27T21:20:59.098119696Z
+    changes:
+    - field_name: title
+      old_value: support keybindings
+      new_value: support keyboard key bindings
+    - field_name: prefix_override
+      old_value: ''
+      new_value: KEYBOARD
+    - field_name: spec_id
+      old_value: FR-0035
+      new_value: KEYBOARD-0063
 - id: 5752a059-7bdc-4320-8b01-74b8cb11ad77
   spec_id: FR-0036
   title: User meta type
@@ -1876,12 +1893,12 @@ requirements:
   prefix_override: DETAILVIEW
   title: Requirement Detail View
   description: requirements related to the detail view panel of requirements (i.e. before we clict Edit)
-  status: Draft
+  status: Approved
   priority: Medium
   owner: ''
   feature: 27-Uncategorized
   created_at: 2025-11-27T17:07:50.165704716Z
-  modified_at: 2025-11-27T17:07:50.165704716Z
+  modified_at: 2025-11-27T21:25:49.821925065Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -1890,6 +1907,16 @@ requirements:
     target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
   - rel_type: Child
     target_id: f54c4d83-8073-49d1-9229-c712480a83e4
+  - rel_type: Child
+    target_id: 3fe85c39-0da4-477a-9ac5-04ecb9696ec9
+  history:
+  - id: a2587809-925c-4e2e-9333-f041b1d67116
+    author: '@joe'
+    timestamp: 2025-11-27T21:25:49.821921635Z
+    changes:
+    - field_name: status
+      old_value: Draft
+      new_value: Approved
 - id: d51487eb-36a5-4266-9c79-29a7c5399849
   spec_id: FR-0056
   title: Double cllick Description to enter Edit
@@ -1921,7 +1948,7 @@ requirements:
   tags: []
   relationships:
   - rel_type: Parent
-    target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
+    target_id: ae4d77e5-55a4-4a56-97d1-a030d922a04d
 - id: cc712910-5468-4c7c-a62d-75d7b8110b76
   spec_id: FR-0058
   title: Requirements List view Navigation keys
@@ -1967,6 +1994,88 @@ requirements:
     description: Source code for tool
     added_at: 2025-11-27T20:56:48.807093988Z
     added_by: Joe Mooney
+- id: 974e17ec-b270-49f2-8c50-5f54e0cf7e4e
+  spec_id: FR-0060
+  title: scheduling ability
+  description: requirements that get attached to a weekly, monthly etc schedule
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-27T21:11:24.651889295Z
+  modified_at: 2025-11-27T21:11:24.651889295Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 5a8cda55-badf-48c6-82c9-b9ea53f3f69f
+- id: 1739a3b3-6508-46a6-8ed1-c256fb7bd3d1
+  spec_id: FR-0061
+  title: view recent requirements
+  description: view requirements added/updated or some other state within a time period
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-27T21:12:46.994199510Z
+  modified_at: 2025-11-27T21:12:46.994199510Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 5a8cda55-badf-48c6-82c9-b9ea53f3f69f
+- id: 61d821b1-f9dd-45ee-addc-67071649e931
+  spec_id: FR-0062
+  title: Inbox capability
+  description: An inbox are requirements that are assigned to you to where you were mentioned in a comment. You can mark such requirements as read in which case they are no longer in your inbox. An alter action would be akin to a comment mention except it is simply saying I want you to look at this requirement, so it brings a requirement to someone's attention.
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-27T21:19:17.305675907Z
+  modified_at: 2025-11-27T21:19:17.305675907Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 7897d5c8-0159-4920-8ce4-0bc29c6df517
+- id: ce9fdd12-0860-4334-90b7-399952ca523a
+  spec_id: FR-0064
+  title: Users Settings tab
+  description: Users settings should be its own tab move it from under Settins/Admin to be its own tab in settings. Just call it "Users"
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-27T21:52:57.577445007Z
+  modified_at: 2025-11-27T21:52:57.577445007Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 617353d0-7006-4a3c-92ba-49e5218386e2
+- id: cb0cb997-723e-4605-a306-1c1b2296e121
+  spec_id: FR-0065
+  title: Add Requirement
+  description: |2
+     when you add a new requirement:
+
+      1. Selection: The new requirement is automatically selected in the requirements list
+      2. Scrolling: The list scrolls to center the new requirement in view
+      3. Detail View: Switches to Detail view to show the new requirement's details
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-27T21:54:16.298495675Z
+  modified_at: 2025-11-27T21:54:16.298495675Z
+  req_type: Functional
+  dependencies: []
+  tags: []
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
   spec_id: $USER-001
@@ -1996,7 +2105,7 @@ id_config:
     description: Change requests for modifications to existing functionality
 features: []
 next_feature_number: 29
-next_spec_number: 60
+next_spec_number: 66
 prefix_counters: {}
 relationship_definitions:
 - name: parent
@@ -2224,4 +2333,5 @@ allowed_prefixes:
 - DETAILVIEW
 - DOC
 - FILTER
+- KEYBOARD
 restrict_prefixes: false

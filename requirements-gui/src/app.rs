@@ -869,6 +869,7 @@ enum SettingsTab {
     Relationships,
     Reactions,
     TypeDefinitions,
+    Users,
     Administration,
 }
 
@@ -2066,6 +2067,7 @@ impl RequirementsApp {
                         SettingsTab::TypeDefinitions,
                         "📝 Types",
                     );
+                    ui.selectable_value(&mut self.settings_tab, SettingsTab::Users, "👥 Users");
                     ui.selectable_value(
                         &mut self.settings_tab,
                         SettingsTab::Administration,
@@ -2098,6 +2100,9 @@ impl RequirementsApp {
                     }
                     SettingsTab::TypeDefinitions => {
                         self.show_settings_type_definitions_tab(ui);
+                    }
+                    SettingsTab::Users => {
+                        self.show_settings_users_tab(ui);
                     }
                     SettingsTab::Administration => {
                         self.show_settings_admin_tab(ui);
@@ -3953,9 +3958,8 @@ impl RequirementsApp {
         self.show_type_def_form = false;
     }
 
-    fn show_settings_admin_tab(&mut self, ui: &mut egui::Ui) {
+    fn show_settings_users_tab(&mut self, ui: &mut egui::Ui) {
         egui::ScrollArea::vertical().show(ui, |ui| {
-            // User Management Section
             ui.heading("User Management");
             ui.add_space(5.0);
 
@@ -3975,7 +3979,11 @@ impl RequirementsApp {
             // User form (inline)
             if self.show_user_form {
                 ui.group(|ui| {
-                    let title = if self.editing_user_id.is_some() { "Edit User" } else { "Add User" };
+                    let title = if self.editing_user_id.is_some() {
+                        "Edit User"
+                    } else {
+                        "Add User"
+                    };
                     ui.label(title);
 
                     egui::Grid::new("user_form_grid")
@@ -4014,11 +4022,11 @@ impl RequirementsApp {
 
             // Users table
             self.show_users_table(ui);
+        });
+    }
 
-            ui.add_space(15.0);
-            ui.separator();
-            ui.add_space(10.0);
-
+    fn show_settings_admin_tab(&mut self, ui: &mut egui::Ui) {
+        egui::ScrollArea::vertical().show(ui, |ui| {
             // ID Prefix Management Section
             ui.heading("ID Prefix Management");
             ui.add_space(5.0);
