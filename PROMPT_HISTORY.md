@@ -403,6 +403,30 @@ A chronological record of development sessions and changes made to the Requireme
   - Updated `show_form()` to check `pending_save` flag and trigger save
   - Keybinding only activates when in Add or Edit form (Form context)
 
+### Comment Reactions
+- **Prompt**: Have several (configurable) emoji that we can attach to a comment. A checkmark for resolved would be a minimal need and one for rejected or maybe thumbs up or down.
+- **Actions**:
+  - Added `ReactionDefinition` struct with name, emoji, label, description, built_in flag
+  - Added `CommentReaction` struct with reaction name, author, timestamp
+  - Added `default_reaction_definitions()` function with 6 built-in reactions:
+    - ✅ Resolved, ❌ Rejected, 👍 Thumbs Up, 👎 Thumbs Down, ❓ Question, ⚠️ Important
+  - Added `reactions: Vec<CommentReaction>` field to `Comment` struct
+  - Added reaction methods to Comment: `add_reaction()`, `remove_reaction()`, `toggle_reaction()`, `reaction_counts()`, `has_reaction()`
+  - Added `reaction_definitions: Vec<ReactionDefinition>` to `RequirementsStore`
+  - Exported new types from requirements-core lib.rs
+  - Updated GUI `show_comment_tree()` to display:
+    - Existing reactions with count and ✓ indicator if user has reacted
+    - Reaction picker button (😊) that opens inline picker
+    - Clickable reactions to toggle user's reaction
+  - Added `pending_reaction_toggle` and `show_reaction_picker` state fields
+  - Implemented `toggle_comment_reaction()` method with recursive comment search
+  - Added `Reactions` tab to Settings dialog with:
+    - List of all reaction definitions with emoji, name, label, description
+    - Add/Edit form for custom reactions
+    - Delete button for non-built-in reactions
+    - Reset to Defaults button
+  - Updated user guide with Comment Reactions documentation
+
 ---
 
 ## Git Operations Summary

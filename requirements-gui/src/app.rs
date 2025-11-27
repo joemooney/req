@@ -569,6 +569,7 @@ enum SettingsTab {
     Keybindings,
     Project,
     Relationships,
+    Reactions,
     Administration,
 }
 
@@ -726,6 +727,8 @@ pub struct RequirementsApp {
     pending_save: bool,                  // Save triggered by keybinding
     pending_comment_add: Option<(String, String, Option<Uuid>)>, // (author, content, parent_id)
     pending_comment_delete: Option<Uuid>,
+    pending_reaction_toggle: Option<(Uuid, String)>, // (comment_id, reaction_name)
+    show_reaction_picker: Option<Uuid>,  // Comment ID to show reaction picker for
 
     // Settings
     user_settings: UserSettings,
@@ -800,6 +803,14 @@ pub struct RequirementsApp {
 
     // Keybinding context
     current_key_context: KeyContext,             // Current context for keybinding checks
+
+    // Reaction definition editing
+    editing_reaction_def: Option<String>,        // Name of reaction def being edited (None = adding new)
+    reaction_def_form_name: String,
+    reaction_def_form_emoji: String,
+    reaction_def_form_label: String,
+    reaction_def_form_description: String,
+    show_reaction_def_form: bool,
 }
 
 impl RequirementsApp {
@@ -849,6 +860,8 @@ impl RequirementsApp {
             pending_save: false,
             pending_comment_add: None,
             pending_comment_delete: None,
+            pending_reaction_toggle: None,
+            show_reaction_picker: None,
             current_font_size: initial_font_size,
             user_settings,
             show_settings_dialog: false,
@@ -901,6 +914,12 @@ impl RequirementsApp {
             preset_name_input: String::new(),
             show_delete_preset_confirm: None,
             current_key_context: KeyContext::RequirementsList,
+            editing_reaction_def: None,
+            reaction_def_form_name: String::new(),
+            reaction_def_form_emoji: String::new(),
+            reaction_def_form_label: String::new(),
+            reaction_def_form_description: String::new(),
+            show_reaction_def_form: false,
         }
     }
 
@@ -1422,6 +1441,7 @@ impl RequirementsApp {
                     ui.selectable_value(&mut self.settings_tab, SettingsTab::Keybindings, "⌨ Keys");
                     ui.selectable_value(&mut self.settings_tab, SettingsTab::Project, "📋 Project");
                     ui.selectable_value(&mut self.settings_tab, SettingsTab::Relationships, "🔗 Relations");
+                    ui.selectable_value(&mut self.settings_tab, SettingsTab::Reactions, "😊 Reactions");
                     ui.selectable_value(&mut self.settings_tab, SettingsTab::Administration, "🔧 Admin");
                 });
 
@@ -1444,6 +1464,9 @@ impl RequirementsApp {
                     }
                     SettingsTab::Relationships => {
                         self.show_settings_relationships_tab(ui);
+                    }
+                    SettingsTab::Reactions => {
+                        self.show_settings_reactions_tab(ui);
                     }
                     SettingsTab::Administration => {
                         self.show_settings_admin_tab(ui);
@@ -2221,6 +2244,185 @@ impl RequirementsApp {
                 }
             }
         }
+    }
+
+    fn show_settings_reactions_tab(&mut self, ui: &mut egui::Ui) {
+        use requirements_core::ReactionDefinition;
+
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            ui.heading("Comment Reactions");
+            ui.add_space(5.0);
+            ui.label("Configure emoji reactions that can be added to comments.");
+            ui.add_space(10.0);
+
+            // Add new reaction button
+            if ui.button("➕ Add Reaction").clicked() {
+                self.show_reaction_def_form = true;
+                self.editing_reaction_def = None;
+                self.reaction_def_form_name.clear();
+                self.reaction_def_form_emoji.clear();
+                self.reaction_def_form_label.clear();
+                self.reaction_def_form_description.clear();
+            }
+
+            ui.add_space(10.0);
+
+            // Reaction form (inline)
+            if self.show_reaction_def_form {
+                ui.group(|ui| {
+                    let title = if self.editing_reaction_def.is_some() {
+                        "Edit Reaction"
+                    } else {
+                        "Add Reaction"
+                    };
+                    ui.heading(title);
+
+                    egui::Grid::new("reaction_form_grid")
+                        .num_columns(2)
+                        .spacing([10.0, 5.0])
+                        .show(ui, |ui| {
+                            ui.label("Name (ID):");
+                            let name_editable = self.editing_reaction_def.is_none();
+                            ui.add_enabled(
+                                name_editable,
+                                egui::TextEdit::singleline(&mut self.reaction_def_form_name)
+                                    .hint_text("e.g., thumbs_up"),
+                            );
+                            ui.end_row();
+
+                            ui.label("Emoji:");
+                            ui.text_edit_singleline(&mut self.reaction_def_form_emoji);
+                            ui.end_row();
+
+                            ui.label("Label:");
+                            ui.text_edit_singleline(&mut self.reaction_def_form_label);
+                            ui.end_row();
+
+                            ui.label("Description:");
+                            ui.text_edit_singleline(&mut self.reaction_def_form_description);
+                            ui.end_row();
+                        });
+
+                    ui.add_space(5.0);
+
+                    ui.horizontal(|ui| {
+                        let can_save = !self.reaction_def_form_name.is_empty()
+                            && !self.reaction_def_form_emoji.is_empty()
+                            && !self.reaction_def_form_label.is_empty();
+
+                        if ui.add_enabled(can_save, egui::Button::new("💾 Save")).clicked() {
+                            if let Some(ref editing_name) = self.editing_reaction_def.clone() {
+                                // Update existing
+                                if let Some(def) = self.store.reaction_definitions.iter_mut()
+                                    .find(|d| &d.name == editing_name)
+                                {
+                                    def.emoji = self.reaction_def_form_emoji.clone();
+                                    def.label = self.reaction_def_form_label.clone();
+                                    def.description = if self.reaction_def_form_description.is_empty() {
+                                        None
+                                    } else {
+                                        Some(self.reaction_def_form_description.clone())
+                                    };
+                                }
+                            } else {
+                                // Add new
+                                let mut new_def = ReactionDefinition::new(
+                                    self.reaction_def_form_name.clone(),
+                                    self.reaction_def_form_emoji.clone(),
+                                    self.reaction_def_form_label.clone(),
+                                );
+                                if !self.reaction_def_form_description.is_empty() {
+                                    new_def.description = Some(self.reaction_def_form_description.clone());
+                                }
+                                self.store.reaction_definitions.push(new_def);
+                            }
+                            self.save();
+                            self.show_reaction_def_form = false;
+                            self.editing_reaction_def = None;
+                        }
+
+                        if ui.button("Cancel").clicked() {
+                            self.show_reaction_def_form = false;
+                            self.editing_reaction_def = None;
+                        }
+                    });
+                });
+
+                ui.add_space(10.0);
+            }
+
+            // List existing reactions
+            ui.heading("Defined Reactions");
+            ui.add_space(5.0);
+
+            // Clone to avoid borrow issues
+            let reactions: Vec<_> = self.store.reaction_definitions.clone();
+
+            if reactions.is_empty() {
+                ui.label("No reactions defined.");
+            } else {
+                egui::Grid::new("reactions_table")
+                    .num_columns(5)
+                    .striped(true)
+                    .spacing([10.0, 5.0])
+                    .show(ui, |ui| {
+                        // Header
+                        ui.strong("Emoji");
+                        ui.strong("Name");
+                        ui.strong("Label");
+                        ui.strong("Description");
+                        ui.strong("Actions");
+                        ui.end_row();
+
+                        let mut to_delete: Option<String> = None;
+
+                        for def in &reactions {
+                            ui.label(&def.emoji);
+                            ui.horizontal(|ui| {
+                                ui.label(&def.name);
+                                if def.built_in {
+                                    ui.small("[built-in]");
+                                }
+                            });
+                            ui.label(&def.label);
+                            ui.label(def.description.as_deref().unwrap_or("-"));
+
+                            ui.horizontal(|ui| {
+                                if ui.small_button("✏").on_hover_text("Edit").clicked() {
+                                    self.editing_reaction_def = Some(def.name.clone());
+                                    self.reaction_def_form_name = def.name.clone();
+                                    self.reaction_def_form_emoji = def.emoji.clone();
+                                    self.reaction_def_form_label = def.label.clone();
+                                    self.reaction_def_form_description =
+                                        def.description.clone().unwrap_or_default();
+                                    self.show_reaction_def_form = true;
+                                }
+                                // Only allow deletion of non-built-in reactions
+                                if !def.built_in {
+                                    if ui.small_button("🗑").on_hover_text("Delete").clicked() {
+                                        to_delete = Some(def.name.clone());
+                                    }
+                                }
+                            });
+                            ui.end_row();
+                        }
+
+                        // Handle deletion outside the iteration
+                        if let Some(name) = to_delete {
+                            self.store.reaction_definitions.retain(|d| d.name != name);
+                            self.save();
+                        }
+                    });
+            }
+
+            ui.add_space(15.0);
+
+            // Reset to defaults button
+            if ui.button("↺ Reset to Defaults").on_hover_text("Restore built-in reactions").clicked() {
+                self.store.reaction_definitions = requirements_core::default_reaction_definitions();
+                self.save();
+            }
+        });
     }
 
     fn show_settings_admin_tab(&mut self, ui: &mut egui::Ui) {
@@ -3812,9 +4014,24 @@ impl RequirementsApp {
     fn show_comment_tree(&mut self, ui: &mut egui::Ui, comment: &Comment, req_idx: usize, depth: usize) {
         let indent = depth as f32 * 24.0;
         let is_collapsed = self.collapsed_comments.get(&comment.id).copied().unwrap_or(false);
+        let comment_id = comment.id;
+        let show_picker = self.show_reaction_picker == Some(comment_id);
 
         // Calculate available width for the comment (account for indent)
         let available_width = ui.available_width() - indent - 20.0; // 20.0 for group padding
+
+        // Get reaction counts for display
+        let reaction_counts = comment.reaction_counts();
+        let current_user = self.user_settings.display_name();
+
+        // Build list of reactions the current user has
+        let user_reactions: Vec<String> = comment.reactions.iter()
+            .filter(|r| r.author == current_user)
+            .map(|r| r.reaction.clone())
+            .collect();
+
+        // Get reaction definitions for display
+        let reaction_defs: Vec<_> = self.store.reaction_definitions.clone();
 
         ui.horizontal(|ui| {
             // Add horizontal indentation
@@ -3847,6 +4064,29 @@ impl RequirementsApp {
                     // Comment content on its own line with text wrapping
                     ui.add(egui::Label::new(&comment.content).wrap());
 
+                    // Display existing reactions
+                    if !reaction_counts.is_empty() {
+                        ui.horizontal_wrapped(|ui| {
+                            for def in &reaction_defs {
+                                if let Some(&count) = reaction_counts.get(&def.name) {
+                                    let has_reacted = user_reactions.contains(&def.name);
+                                    let label = if has_reacted {
+                                        format!("{} {} ✓", def.emoji, count)
+                                    } else {
+                                        format!("{} {}", def.emoji, count)
+                                    };
+                                    let btn = egui::Button::new(&label)
+                                        .small();
+                                    let response = ui.add(btn)
+                                        .on_hover_text(&def.label);
+                                    if response.clicked() {
+                                        self.pending_reaction_toggle = Some((comment_id, def.name.clone()));
+                                    }
+                                }
+                            }
+                        });
+                    }
+
                     ui.horizontal(|ui| {
                         if ui.small_button("💬 Reply").clicked() {
                             self.show_add_comment = true;
@@ -3855,10 +4095,42 @@ impl RequirementsApp {
                             self.comment_author = self.user_settings.display_name();
                             self.comment_content.clear();
                         }
+
+                        // Reaction picker button
+                        let react_btn = if show_picker { "😊 ▼" } else { "😊" };
+                        if ui.small_button(react_btn).on_hover_text("Add reaction").clicked() {
+                            if show_picker {
+                                self.show_reaction_picker = None;
+                            } else {
+                                self.show_reaction_picker = Some(comment_id);
+                            }
+                        }
+
                         if ui.small_button("🗑 Delete").clicked() {
                             self.pending_comment_delete = Some(comment.id);
                         }
                     });
+
+                    // Show reaction picker if open
+                    if show_picker {
+                        ui.horizontal_wrapped(|ui| {
+                            ui.label("React:");
+                            for def in &reaction_defs {
+                                let has_reacted = user_reactions.contains(&def.name);
+                                let btn_text = if has_reacted {
+                                    format!("{} ✓", def.emoji)
+                                } else {
+                                    def.emoji.clone()
+                                };
+                                let response = ui.button(&btn_text)
+                                    .on_hover_text(&def.label);
+                                if response.clicked() {
+                                    self.pending_reaction_toggle = Some((comment_id, def.name.clone()));
+                                    self.show_reaction_picker = None;
+                                }
+                            }
+                        });
+                    }
                 });
             });
         });
@@ -3902,6 +4174,29 @@ impl RequirementsApp {
             }
             self.save();
             self.message = Some(("Comment deleted successfully".to_string(), false));
+        }
+    }
+
+    fn toggle_comment_reaction(&mut self, req_idx: usize, comment_id: Uuid, reaction: &str) {
+        let author = self.user_settings.display_name();
+        if let Some(req) = self.store.requirements.get_mut(req_idx) {
+            // Helper function to toggle reaction on a comment or its nested replies
+            fn toggle_in_comments(comments: &mut [Comment], comment_id: Uuid, reaction: &str, author: &str) -> bool {
+                for comment in comments.iter_mut() {
+                    if comment.id == comment_id {
+                        comment.toggle_reaction(reaction, author);
+                        return true;
+                    }
+                    if toggle_in_comments(&mut comment.replies, comment_id, reaction, author) {
+                        return true;
+                    }
+                }
+                false
+            }
+
+            if toggle_in_comments(&mut req.comments, comment_id, reaction, &author) {
+                self.save();
+            }
         }
     }
 
@@ -4287,6 +4582,11 @@ impl eframe::App for RequirementsApp {
         if let Some(comment_id) = self.pending_comment_delete.take() {
             if let Some(idx) = self.selected_idx {
                 self.delete_comment_from_requirement(idx, comment_id);
+            }
+        }
+        if let Some((comment_id, reaction_name)) = self.pending_reaction_toggle.take() {
+            if let Some(idx) = self.selected_idx {
+                self.toggle_comment_reaction(idx, comment_id, &reaction_name);
             }
         }
         if let Some((source_idx, target_idx)) = self.pending_relationship.take() {

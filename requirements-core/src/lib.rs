@@ -14,6 +14,8 @@ pub use models::{
     RequirementTypeDefinition, FeatureDefinition, IdConfigValidation,
     // Relationship definition types
     RelationshipDefinition, Cardinality, RelationshipValidation,
+    // Comment reaction types
+    CommentReaction, ReactionDefinition, default_reaction_definitions,
 };
 pub use storage::Storage;
 pub use registry::{Registry, get_registry_path};

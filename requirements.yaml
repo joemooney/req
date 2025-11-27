@@ -194,20 +194,31 @@ requirements:
       new_value: COMMENTS
 - id: d0f16bc7-788b-4d6c-ac49-3a48fc678e50
   spec_id: FR-0009
-  title: comment emojiis
-  description: Have several (configuable) emojii that we can attach to a comment. A checkmark for resolved would be a minimal need.
+  title: comment emoji reactions
+  description: Have several (configuable) emoji that we can attach to a comment. A checkmark for resolved would be a minimal need or one for rejected.
   status: Draft
   priority: Medium
   owner: ''
   feature: 3-Uncategorized
   created_at: 2025-11-25T21:19:10.021746590Z
-  modified_at: 2025-11-25T21:19:10.021746590Z
+  modified_at: 2025-11-27T01:10:59.284303932Z
   req_type: Functional
   dependencies: []
   tags: []
   relationships:
   - rel_type: Parent
     target_id: 848840ae-7005-4fab-b478-163f9139359e
+  history:
+  - id: c9f9b9aa-d4fd-468b-b91f-b0004096c0f8
+    author: '@joe'
+    timestamp: 2025-11-27T01:10:59.284302806Z
+    changes:
+    - field_name: title
+      old_value: comment emojiis
+      new_value: comment emoji reactions
+    - field_name: description
+      old_value: Have several (configuable) emojii that we can attach to a comment. A checkmark for resolved would be a minimal need.
+      new_value: Have several (configuable) emoji that we can attach to a comment. A checkmark for resolved would be a minimal need or one for rejected.
 - id: 04cff76c-978d-4e3a-845a-1d6f6b885cea
   spec_id: CHANGEREQUESTS-0029
   prefix_override: CHANGEREQUESTS
@@ -724,7 +735,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 20-Uncategorized
   created_at: 2025-11-27T00:54:01.866964924Z
   modified_at: 2025-11-27T00:54:01.866964924Z
   req_type: Functional
@@ -754,7 +765,7 @@ id_config:
     prefix: CR
     description: Change requests for modifications to existing functionality
 features: []
-next_feature_number: 20
+next_feature_number: 21
 next_spec_number: 35
 prefix_counters: {}
 relationship_definitions:

@@ -615,6 +615,87 @@ impl HistoryEntry {
     }
 }
 
+/// Represents a reaction emoji definition
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ReactionDefinition {
+    /// Unique identifier/key for the reaction (e.g., "resolved", "rejected")
+    pub name: String,
+
+    /// The emoji character to display
+    pub emoji: String,
+
+    /// Human-readable label for the reaction
+    pub label: String,
+
+    /// Optional description of when to use this reaction
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+
+    /// Whether this is a built-in reaction (cannot be deleted)
+    #[serde(default)]
+    pub built_in: bool,
+}
+
+impl ReactionDefinition {
+    /// Creates a new reaction definition
+    pub fn new(name: impl Into<String>, emoji: impl Into<String>, label: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            emoji: emoji.into(),
+            label: label.into(),
+            description: None,
+            built_in: false,
+        }
+    }
+
+    /// Creates a built-in reaction definition
+    pub fn builtin(name: impl Into<String>, emoji: impl Into<String>, label: impl Into<String>, description: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            emoji: emoji.into(),
+            label: label.into(),
+            description: Some(description.into()),
+            built_in: true,
+        }
+    }
+}
+
+/// Returns the default set of reaction definitions
+pub fn default_reaction_definitions() -> Vec<ReactionDefinition> {
+    vec![
+        ReactionDefinition::builtin("resolved", "✅", "Resolved", "Mark comment as resolved/addressed"),
+        ReactionDefinition::builtin("rejected", "❌", "Rejected", "Mark comment as rejected/declined"),
+        ReactionDefinition::builtin("thumbs_up", "👍", "Thumbs Up", "Agree or approve"),
+        ReactionDefinition::builtin("thumbs_down", "👎", "Thumbs Down", "Disagree or disapprove"),
+        ReactionDefinition::builtin("question", "❓", "Question", "Needs clarification"),
+        ReactionDefinition::builtin("important", "⚠️", "Important", "Mark as important/attention needed"),
+    ]
+}
+
+/// Represents a reaction on a comment
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct CommentReaction {
+    /// The reaction type (references ReactionDefinition.name)
+    pub reaction: String,
+
+    /// Who added this reaction
+    pub author: String,
+
+    /// When the reaction was added
+    pub added_at: DateTime<Utc>,
+}
+
+impl CommentReaction {
+    /// Creates a new reaction
+    pub fn new(reaction: impl Into<String>, author: impl Into<String>) -> Self {
+        Self {
+            reaction: reaction.into(),
+            author: author.into(),
+            added_at: Utc::now(),
+        }
+    }
+}
+
 /// Represents a comment on a requirement with threading support
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Comment {
@@ -640,6 +721,10 @@ pub struct Comment {
     /// Nested replies to this comment
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub replies: Vec<Comment>,
+
+    /// Reactions on this comment
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reactions: Vec<CommentReaction>,
 }
 
 impl Comment {
@@ -654,6 +739,7 @@ impl Comment {
             modified_at: now,
             parent_id: None,
             replies: Vec::new(),
+            reactions: Vec::new(),
         }
     }
 
@@ -668,7 +754,52 @@ impl Comment {
             modified_at: now,
             parent_id: Some(parent_id),
             replies: Vec::new(),
+            reactions: Vec::new(),
         }
+    }
+
+    /// Adds a reaction to this comment
+    /// Returns true if reaction was added, false if user already has this reaction
+    pub fn add_reaction(&mut self, reaction: &str, author: &str) -> bool {
+        // Check if user already has this reaction
+        if self.reactions.iter().any(|r| r.reaction == reaction && r.author == author) {
+            return false;
+        }
+        self.reactions.push(CommentReaction::new(reaction, author));
+        true
+    }
+
+    /// Removes a reaction from this comment
+    /// Returns true if reaction was removed, false if not found
+    pub fn remove_reaction(&mut self, reaction: &str, author: &str) -> bool {
+        let initial_len = self.reactions.len();
+        self.reactions.retain(|r| !(r.reaction == reaction && r.author == author));
+        self.reactions.len() < initial_len
+    }
+
+    /// Toggles a reaction (adds if not present, removes if present)
+    /// Returns true if reaction is now present, false if removed
+    pub fn toggle_reaction(&mut self, reaction: &str, author: &str) -> bool {
+        if self.remove_reaction(reaction, author) {
+            false
+        } else {
+            self.add_reaction(reaction, author);
+            true
+        }
+    }
+
+    /// Gets counts of each reaction type
+    pub fn reaction_counts(&self) -> std::collections::HashMap<String, usize> {
+        let mut counts = std::collections::HashMap::new();
+        for r in &self.reactions {
+            *counts.entry(r.reaction.clone()).or_insert(0) += 1;
+        }
+        counts
+    }
+
+    /// Checks if a user has a specific reaction
+    pub fn has_reaction(&self, reaction: &str, author: &str) -> bool {
+        self.reactions.iter().any(|r| r.reaction == reaction && r.author == author)
     }
 
     /// Adds a reply to this comment
@@ -983,6 +1114,10 @@ pub struct RequirementsStore {
     /// Relationship type definitions with constraints
     #[serde(default = "RelationshipDefinition::defaults")]
     pub relationship_definitions: Vec<RelationshipDefinition>,
+
+    /// Reaction definitions for comments
+    #[serde(default = "default_reaction_definitions")]
+    pub reaction_definitions: Vec<ReactionDefinition>,
 }
 
 /// Default value for next_feature_number
@@ -1007,6 +1142,7 @@ impl RequirementsStore {
             next_spec_number: 1,
             prefix_counters: std::collections::HashMap::new(),
             relationship_definitions: RelationshipDefinition::defaults(),
+            reaction_definitions: default_reaction_definitions(),
         }
     }
 

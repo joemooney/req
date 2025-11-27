@@ -278,6 +278,32 @@ You can save your current view configuration (perspective, direction, and filter
 
 Comments support threading - click "Reply" on any comment to add a nested reply. Comments are displayed in a collapsible tree structure.
 
+### Comment Reactions
+
+You can add emoji reactions to comments to quickly indicate your response:
+
+**Adding a reaction:**
+- Click the 😊 button on any comment to open the reaction picker
+- Select an emoji to add your reaction
+- Click the same emoji again to remove your reaction
+
+**Default reactions:**
+| Emoji | Name | Use Case |
+|-------|------|----------|
+| ✅ | Resolved | Mark comment as addressed |
+| ❌ | Rejected | Mark comment as declined |
+| 👍 | Thumbs Up | Agree or approve |
+| 👎 | Thumbs Down | Disagree or disapprove |
+| ❓ | Question | Needs clarification |
+| ⚠️ | Important | Attention needed |
+
+**Customizing reactions:**
+- Go to Settings > Reactions tab
+- Add new custom reactions with your own emoji and labels
+- Edit existing reactions (emoji, label, description)
+- Delete custom reactions (built-in reactions cannot be deleted)
+- Reset to defaults to restore the standard reaction set
+
 ---
 
 ## Working with Requirements
