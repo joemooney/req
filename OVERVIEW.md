@@ -30,7 +30,7 @@ req/
 - **GUI (`req-gui`)**: Modern egui-based graphical interface with tabbed views
 
 ### SPEC-ID System
-Human-friendly identifiers (SPEC-001, SPEC-002) alongside internal UUIDs. Configurable ID formats with feature-based prefixes.
+Human-friendly identifiers (SPEC-001, SPEC-002) alongside internal UUIDs. Configurable ID formats with feature-based prefixes. ID prefix filtering and management with optional admin-controlled restriction.
 
 ### Requirement Management
 - Full CRUD operations (Create, Read, Update, Delete)

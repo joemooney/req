@@ -340,6 +340,21 @@ Custom prefixes must contain only uppercase letters (A-Z). Leave blank to use th
 
 When using "Per Prefix" numbering strategy, each custom prefix gets its own counter. With "Global Sequential" numbering, all requirements share the same counter regardless of prefix.
 
+### Prefix Management
+
+The system tracks all ID prefixes used in the project. You can manage prefixes in **Settings** > **Admin** > **ID Prefix Management**:
+
+**Features:**
+- **Prefix filtering**: Filter the requirement list by ID prefix (e.g., show only SEC-xxx or API-xxx requirements)
+- **Allowed prefixes list**: Explicitly define which prefixes are permitted in the project
+- **Restrict prefixes**: When enabled, users must select from the allowed prefixes list instead of entering custom ones
+- **Auto-collection**: New prefixes used are automatically added to the allowed list (unless restriction is enabled)
+
+**Use Cases:**
+- Enforce consistent naming conventions across the team
+- Quickly filter to see only security, performance, or API-related requirements
+- Save filter combinations as view presets for quick access
+
 ### Markdown Support
 
 Requirement descriptions support Markdown formatting. When viewing a requirement, the description is rendered with full Markdown support including:

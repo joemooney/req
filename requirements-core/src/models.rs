@@ -1543,6 +1543,17 @@ pub struct RequirementsStore {
     /// Custom type definitions with their statuses and fields
     #[serde(default = "default_type_definitions")]
     pub type_definitions: Vec<CustomTypeDefinition>,
+
+    /// List of allowed/known ID prefixes for the project
+    /// These are collected from usage and can be managed by admins
+    #[serde(default)]
+    pub allowed_prefixes: Vec<String>,
+
+    /// Whether to restrict prefix selection to only allowed_prefixes
+    /// When false, users can enter any valid prefix (which gets added to allowed_prefixes)
+    /// When true, users must select from the allowed_prefixes list
+    #[serde(default)]
+    pub restrict_prefixes: bool,
 }
 
 /// Default value for next_feature_number
@@ -1575,6 +1586,8 @@ impl RequirementsStore {
             reaction_definitions: default_reaction_definitions(),
             meta_counters: std::collections::HashMap::new(),
             type_definitions: default_type_definitions(),
+            allowed_prefixes: Vec::new(),
+            restrict_prefixes: false,
         }
     }
 
@@ -1611,6 +1624,68 @@ impl RequirementsStore {
                 fields
             })
             .unwrap_or_default()
+    }
+
+    /// Gets all unique prefixes currently in use from requirements
+    pub fn get_used_prefixes(&self) -> Vec<String> {
+        let mut prefixes: std::collections::HashSet<String> = std::collections::HashSet::new();
+
+        for req in &self.requirements {
+            if let Some(ref spec_id) = req.spec_id {
+                // Extract prefix from spec_id (e.g., "SEC-001" -> "SEC")
+                if let Some(prefix) = spec_id.split('-').next() {
+                    // Skip meta-type prefixes like $USER, $VIEW
+                    if !prefix.starts_with('$') {
+                        prefixes.insert(prefix.to_string());
+                    }
+                }
+            }
+        }
+
+        let mut result: Vec<String> = prefixes.into_iter().collect();
+        result.sort();
+        result
+    }
+
+    /// Gets all allowed prefixes (combines allowed_prefixes with used prefixes)
+    pub fn get_all_prefixes(&self) -> Vec<String> {
+        let mut prefixes: std::collections::HashSet<String> = std::collections::HashSet::new();
+
+        // Add explicitly allowed prefixes
+        for p in &self.allowed_prefixes {
+            prefixes.insert(p.clone());
+        }
+
+        // Add prefixes currently in use
+        for p in self.get_used_prefixes() {
+            prefixes.insert(p);
+        }
+
+        let mut result: Vec<String> = prefixes.into_iter().collect();
+        result.sort();
+        result
+    }
+
+    /// Adds a prefix to the allowed list if not already present
+    pub fn add_allowed_prefix(&mut self, prefix: &str) {
+        let prefix = prefix.to_uppercase();
+        if !self.allowed_prefixes.contains(&prefix) {
+            self.allowed_prefixes.push(prefix);
+            self.allowed_prefixes.sort();
+        }
+    }
+
+    /// Removes a prefix from the allowed list
+    pub fn remove_allowed_prefix(&mut self, prefix: &str) {
+        self.allowed_prefixes.retain(|p| p != prefix);
+    }
+
+    /// Checks if a prefix is allowed (always true if restrict_prefixes is false)
+    pub fn is_prefix_allowed(&self, prefix: &str) -> bool {
+        if !self.restrict_prefixes {
+            return true;
+        }
+        self.allowed_prefixes.iter().any(|p| p.eq_ignore_ascii_case(prefix))
     }
 
     /// Generates the next meta-type ID for a given prefix (e.g., "$USER" -> "$USER-001")

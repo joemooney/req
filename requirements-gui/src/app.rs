@@ -651,6 +651,9 @@ pub struct ViewPreset {
     pub filter_types: Vec<String>,
     /// Filter by features (empty = all)
     pub filter_features: Vec<String>,
+    /// Filter by ID prefixes (empty = all)
+    #[serde(default)]
+    pub filter_prefixes: Vec<String>,
 }
 
 impl ViewPreset {
@@ -661,6 +664,7 @@ impl ViewPreset {
         direction: PerspectiveDirection,
         filter_types: &HashSet<RequirementType>,
         filter_features: &HashSet<String>,
+        filter_prefixes: &HashSet<String>,
     ) -> Self {
         Self {
             name,
@@ -668,6 +672,7 @@ impl ViewPreset {
             direction,
             filter_types: filter_types.iter().map(|t| format!("{:?}", t)).collect(),
             filter_features: filter_features.iter().cloned().collect(),
+            filter_prefixes: filter_prefixes.iter().cloned().collect(),
         }
     }
 
@@ -688,6 +693,11 @@ impl ViewPreset {
     /// Get filter_features as HashSet<String>
     fn get_filter_features(&self) -> HashSet<String> {
         self.filter_features.iter().cloned().collect()
+    }
+
+    /// Get filter_prefixes as HashSet<String>
+    fn get_filter_prefixes(&self) -> HashSet<String> {
+        self.filter_prefixes.iter().cloned().collect()
     }
 }
 
@@ -770,6 +780,7 @@ pub struct RequirementsApp {
     perspective_direction: PerspectiveDirection,
     filter_types: HashSet<RequirementType>,      // Empty = show all
     filter_features: HashSet<String>,            // Empty = show all
+    filter_prefixes: HashSet<String>,            // Empty = show all
     tree_collapsed: HashMap<Uuid, bool>,         // Track collapsed tree nodes
     show_filter_panel: bool,                     // Toggle filter panel visibility
     show_archived: bool,                         // Whether to show archived requirements
@@ -815,6 +826,9 @@ pub struct RequirementsApp {
     reaction_def_form_label: String,
     reaction_def_form_description: String,
     show_reaction_def_form: bool,
+
+    // Prefix management
+    new_prefix_input: String,                    // Input for adding new allowed prefix
 }
 
 impl RequirementsApp {
@@ -895,6 +909,7 @@ impl RequirementsApp {
             perspective_direction: PerspectiveDirection::default(),
             filter_types: HashSet::new(),
             filter_features: HashSet::new(),
+            filter_prefixes: HashSet::new(),
             tree_collapsed: HashMap::new(),
             show_filter_panel: false,
             show_archived: false,
@@ -926,6 +941,7 @@ impl RequirementsApp {
             reaction_def_form_label: String::new(),
             reaction_def_form_description: String::new(),
             show_reaction_def_form: false,
+            new_prefix_input: String::new(),
         }
     }
 
@@ -951,7 +967,8 @@ impl RequirementsApp {
                 return self.perspective == preset.perspective
                     && self.perspective_direction == preset.direction
                     && self.filter_types == preset.get_filter_types()
-                    && self.filter_features == preset.get_filter_features();
+                    && self.filter_features == preset.get_filter_features()
+                    && self.filter_prefixes == preset.get_filter_prefixes();
             }
         }
         false
@@ -968,6 +985,7 @@ impl RequirementsApp {
                 || self.perspective_direction != PerspectiveDirection::TopDown
                 || !self.filter_types.is_empty()
                 || !self.filter_features.is_empty()
+                || !self.filter_prefixes.is_empty()
         }
     }
 
@@ -977,6 +995,7 @@ impl RequirementsApp {
         self.perspective_direction = preset.direction;
         self.filter_types = preset.get_filter_types();
         self.filter_features = preset.get_filter_features();
+        self.filter_prefixes = preset.get_filter_prefixes();
         self.active_preset = Some(preset.name.clone());
     }
 
@@ -988,6 +1007,7 @@ impl RequirementsApp {
             self.perspective_direction,
             &self.filter_types,
             &self.filter_features,
+            &self.filter_prefixes,
         );
 
         // Check if preset with this name already exists
@@ -1179,6 +1199,10 @@ impl RequirementsApp {
                 self.message = Some((e, true));
                 return;
             }
+            // Auto-add new prefix to allowed list (if not restricted)
+            if !self.store.restrict_prefixes {
+                self.store.add_allowed_prefix(prefix_trimmed);
+            }
         }
 
         // Store parent ID before clearing form
@@ -1231,6 +1255,10 @@ impl RequirementsApp {
         let new_prefix = if self.form_prefix.trim().is_empty() {
             None
         } else {
+            // Auto-add new prefix to allowed list (if not restricted)
+            if !self.store.restrict_prefixes {
+                self.store.add_allowed_prefix(self.form_prefix.trim());
+            }
             Requirement::validate_prefix(&self.form_prefix)
         };
 
@@ -2635,6 +2663,82 @@ impl RequirementsApp {
             ui.separator();
             ui.add_space(10.0);
 
+            // ID Prefix Management Section
+            ui.heading("ID Prefix Management");
+            ui.add_space(5.0);
+
+            // Toggle for restricting prefixes
+            let mut restrict = self.store.restrict_prefixes;
+            if ui.checkbox(&mut restrict, "Restrict prefixes to allowed list")
+                .on_hover_text("When enabled, users must select from the allowed prefixes list. When disabled, users can enter any valid prefix.")
+                .changed()
+            {
+                self.store.restrict_prefixes = restrict;
+                self.save();
+            }
+
+            ui.add_space(5.0);
+
+            // Show used prefixes
+            let used_prefixes = self.store.get_used_prefixes();
+
+            ui.label(format!("Prefixes in use: {}", if used_prefixes.is_empty() { "none".to_string() } else { used_prefixes.join(", ") }));
+
+            ui.add_space(5.0);
+            ui.label("Allowed Prefixes:");
+
+            // Add new prefix input
+            ui.horizontal(|ui| {
+                ui.label("Add prefix:");
+                ui.add(egui::TextEdit::singleline(&mut self.new_prefix_input)
+                    .desired_width(80.0)
+                    .hint_text("e.g., SEC"));
+
+                if ui.button("Add").clicked() && !self.new_prefix_input.is_empty() {
+                    let prefix = self.new_prefix_input.to_uppercase();
+                    // Validate: must be uppercase letters only
+                    if prefix.chars().all(|c| c.is_ascii_uppercase()) {
+                        self.store.add_allowed_prefix(&prefix);
+                        self.save();
+                        self.new_prefix_input.clear();
+                    }
+                }
+            });
+
+            ui.add_space(5.0);
+
+            // List allowed prefixes with delete buttons
+            if self.store.allowed_prefixes.is_empty() {
+                ui.label("No prefixes explicitly allowed (all valid prefixes permitted).");
+            } else {
+                let prefixes_to_show: Vec<String> = self.store.allowed_prefixes.clone();
+                let mut to_remove: Option<String> = None;
+
+                ui.horizontal_wrapped(|ui| {
+                    for prefix in &prefixes_to_show {
+                        let in_use = used_prefixes.contains(prefix);
+                        ui.horizontal(|ui| {
+                            ui.label(prefix);
+                            if in_use {
+                                ui.small("[in use]");
+                            }
+                            if ui.small_button("×").on_hover_text("Remove from allowed list").clicked() {
+                                to_remove = Some(prefix.clone());
+                            }
+                        });
+                    }
+                });
+
+                if let Some(prefix) = to_remove {
+                    self.store.remove_allowed_prefix(&prefix);
+                    self.save();
+                }
+            }
+
+            ui.add_space(15.0);
+            ui.separator();
+            ui.add_space(10.0);
+
             // Database Management Section
             ui.heading("Database Management");
             ui.add_space(5.0);
@@ -2935,6 +3039,17 @@ impl RequirementsApp {
         // Feature filter (empty = show all)
         if !self.filter_features.is_empty() && !self.filter_features.contains(&req.feature) {
             return false;
+        }
+
+        // Prefix filter (empty = show all)
+        if !self.filter_prefixes.is_empty() {
+            // Extract prefix from spec_id (e.g., "SEC-001" -> "SEC")
+            let req_prefix = req.spec_id.as_ref()
+                .and_then(|s| s.split('-').next())
+                .unwrap_or("");
+            if !self.filter_prefixes.contains(req_prefix) {
+                return false;
+            }
         }
 
         // Archive filter (hide archived unless show_archived is true)
@@ -3335,6 +3450,29 @@ impl RequirementsApp {
                 self.filter_features.clear();
             }
         });
+
+        // Prefix filters
+        let prefixes = self.store.get_all_prefixes();
+        if !prefixes.is_empty() {
+            ui.add_space(5.0);
+            ui.label("ID Prefix Filters:");
+            ui.horizontal_wrapped(|ui| {
+                for prefix in &prefixes {
+                    let mut checked = self.filter_prefixes.contains(prefix);
+                    if ui.checkbox(&mut checked, prefix).changed() {
+                        if checked {
+                            self.filter_prefixes.insert(prefix.clone());
+                        } else {
+                            self.filter_prefixes.remove(prefix);
+                        }
+                    }
+                }
+
+                if ui.small_button("Clear").clicked() {
+                    self.filter_prefixes.clear();
+                }
+            });
+        }
 
         ui.add_space(5.0);
         ui.checkbox(&mut self.show_archived, "Show Archived");
@@ -4039,19 +4177,61 @@ impl RequirementsApp {
 
         ui.horizontal_wrapped(|ui| {
             ui.label("ID Prefix:");
-            ui.add(egui::TextEdit::singleline(&mut self.form_prefix)
-                .desired_width(80.0)
-                .hint_text("e.g., SEC"))
-                .on_hover_text("Optional custom prefix (A-Z only). Leave blank to use default from feature/type.");
 
-            // Show validation status
-            let prefix_trimmed = self.form_prefix.trim();
-            if !prefix_trimmed.is_empty() {
-                if Requirement::validate_prefix(prefix_trimmed).is_some() {
-                    ui.label("✓").on_hover_text("Valid prefix");
+            if self.store.restrict_prefixes && !self.store.allowed_prefixes.is_empty() {
+                // Restricted mode: show dropdown
+                let current_display = if self.form_prefix.is_empty() {
+                    "(default)".to_string()
                 } else {
-                    ui.colored_label(egui::Color32::RED, "✗")
-                        .on_hover_text("Prefix must contain only uppercase letters (A-Z)");
+                    self.form_prefix.clone()
+                };
+                egui::ComboBox::new("prefix_combo", "")
+                    .selected_text(&current_display)
+                    .show_ui(ui, |ui| {
+                        if ui.selectable_label(self.form_prefix.is_empty(), "(default)").clicked() {
+                            self.form_prefix.clear();
+                        }
+                        for prefix in &self.store.allowed_prefixes.clone() {
+                            if ui.selectable_label(self.form_prefix == *prefix, prefix).clicked() {
+                                self.form_prefix = prefix.clone();
+                            }
+                        }
+                    });
+                ui.label("ⓘ").on_hover_text("Prefix selection restricted by project administrator");
+            } else {
+                // Unrestricted mode: show text input with optional dropdown
+                let all_prefixes = self.store.get_all_prefixes();
+                if !all_prefixes.is_empty() {
+                    // Show combo box with existing prefixes + ability to type new ones
+                    egui::ComboBox::new("prefix_combo", "")
+                        .selected_text(if self.form_prefix.is_empty() { "(default)" } else { &self.form_prefix })
+                        .show_ui(ui, |ui| {
+                            if ui.selectable_label(self.form_prefix.is_empty(), "(default)").clicked() {
+                                self.form_prefix.clear();
+                            }
+                            for prefix in &all_prefixes {
+                                if ui.selectable_label(self.form_prefix == *prefix, prefix).clicked() {
+                                    self.form_prefix = prefix.clone();
+                                }
+                            }
+                        });
+                    ui.label("or");
+                }
+
+                ui.add(egui::TextEdit::singleline(&mut self.form_prefix)
+                    .desired_width(80.0)
+                    .hint_text("e.g., SEC"))
+                    .on_hover_text("Optional custom prefix (A-Z only). Leave blank to use default from feature/type.");
+
+                // Show validation status
+                let prefix_trimmed = self.form_prefix.trim();
+                if !prefix_trimmed.is_empty() {
+                    if Requirement::validate_prefix(prefix_trimmed).is_some() {
+                        ui.label("✓").on_hover_text("Valid prefix");
+                    } else {
+                        ui.colored_label(egui::Color32::RED, "✗")
+                            .on_hover_text("Prefix must contain only uppercase letters (A-Z)");
+                    }
                 }
             }
         });

@@ -543,3 +543,26 @@ A chronological record of development sessions and changes made to the Requireme
   - Documented Change Request workflow
   - Documented custom field types
   - Added instructions for managing type definitions in GUI
+
+### ID Prefix Filtering and Management (continued)
+- **Prompt**: Add prefix filtering to the GUI and prefix management in admin settings
+- **Problem**: Users wanted to filter requirements by their ID prefix (e.g., show only SEC-xxx or API-xxx requirements). Also wanted admin control over which prefixes are allowed.
+- **Solution**: Added prefix registry to RequirementsStore with filter support and admin management
+- **Actions**:
+  - Added `allowed_prefixes: Vec<String>` to RequirementsStore - list of allowed/known prefixes
+  - Added `restrict_prefixes: bool` - when true, users must select from allowed list
+  - Added `get_used_prefixes()` - gets all unique prefixes currently in use
+  - Added `get_all_prefixes()` - combines allowed + used prefixes
+  - Added `add_allowed_prefix()`, `remove_allowed_prefix()`, `is_prefix_allowed()` helper methods
+  - Added `filter_prefixes: HashSet<String>` to GUI app for prefix filtering
+  - Updated ViewPreset to include prefix filters
+  - Updated `passes_filters()` to check prefix filter
+  - Added "ID Prefix Filters" section to filter panel (shows checkboxes for each unique prefix)
+  - Added "ID Prefix Management" section to Admin settings tab:
+    - Toggle to restrict prefixes to allowed list
+    - Shows prefixes currently in use
+    - Add new allowed prefixes
+    - Remove prefixes from allowed list
+  - Updated add/edit form to show dropdown when prefixes are restricted, text input otherwise
+  - Auto-add new prefixes to allowed list when used (unless restricted)
+  - Updated documentation with Prefix Management section

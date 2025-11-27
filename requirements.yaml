@@ -818,7 +818,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 21-Uncategorized
   created_at: 2025-11-27T01:23:00.651993728Z
   modified_at: 2025-11-27T01:23:00.651993728Z
   req_type: Functional
@@ -859,7 +859,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 21-Uncategorized
   created_at: 2025-11-27T01:40:55.651758804Z
   modified_at: 2025-11-27T01:40:55.651758804Z
   req_type: Functional
@@ -868,6 +868,104 @@ requirements:
   relationships:
   - rel_type: Parent
     target_id: 2fd609e9-d194-47a3-adbd-417f6306190c
+- id: 67a6162d-a44c-4cf5-8756-6b6cb8808928
+  spec_id: FR-0041
+  title: Custom type definitions
+  description: |
+    Custom Type Definitions System Implemented:
+
+      1. Core Models (requirements-core/src/models.rs):
+        - Added CustomFieldType enum with 8 field types (Text, TextArea, Select, Boolean, Date, User, Requirement, Number)
+        - Added CustomFieldDefinition struct for defining custom fields
+        - Added CustomTypeDefinition struct for defining requirement types
+        - Added type_definitions to RequirementsStore with default built-in types
+        - Added custom_status and custom_fields to Requirement struct
+        - Added helper methods: effective_status(), set_status_from_str(), get_type_definition(), get_statuses_for_type(),
+      get_custom_fields_for_type()
+      2. Built-in Types:
+        - Standard types (Functional, NonFunctional, System, User) with default statuses
+        - ChangeRequest type with custom workflow: Draft → Submitted → Under Review → Approved/Rejected → In Progress → Implemented → Verified →
+      Closed
+        - ChangeRequest has custom fields: Impact (select), Requested By (user reference), Target Release (text), Justification (textarea,
+      required)
+      3. GUI Updates (requirements-gui/src/app.rs):
+        - Form now uses type-specific status dropdown
+        - When type changes, available statuses update dynamically
+        - Custom fields section appears when a type has custom fields
+        - Supports all field types with appropriate UI controls
+        - Added "📝 Types" settings tab to view configured type definitions
+      4. Documentation Updated:
+        - Updated user-guide.md with Type Definitions section
+        - Updated OVERVIEW.md with custom type definitions feature
+        - Updated PROMPT_HISTORY.md with Session 7 details
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 21-Uncategorized
+  created_at: 2025-11-27T03:25:22.148185263Z
+  modified_at: 2025-11-27T03:36:59.734206504Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: bb81e51e-dd32-48ef-9806-cf26a09643f5
+  history:
+  - id: 7a54b68f-3f94-491b-a820-c0631dfd2bcd
+    author: '@joe'
+    timestamp: 2025-11-27T03:33:28.036039841Z
+    changes:
+    - field_name: prefix_override
+      old_value: ''
+      new_value: SCHEMA
+    - field_name: spec_id
+      old_value: FR-0037
+      new_value: SCHEMA-0038
+  - id: a5b8d2aa-7c88-40cf-8476-1fa1c6fead43
+    author: '@joe'
+    timestamp: 2025-11-27T03:36:59.734205634Z
+    changes:
+    - field_name: prefix_override
+      old_value: SCHEMA
+      new_value: ''
+    - field_name: spec_id
+      old_value: SCHEMA-0038
+      new_value: FR-0041
+- id: 5a9b7e50-4678-4c85-bb69-6ac380ac985e
+  spec_id: FR-0039
+  title: filtering custom prefixes
+  description: "Filters should also include custom PREFIXes. All of the unique ID Prefix that are entered can be stored in a list. These can also be used to\n filter which requirements are shown. This should be listed in the project administration as well. Possibly, this could be a project admin \nrestricted capability (boolean) whereby the ID Prefix would only from a set of prefixes that the project admin controls and it would be a \ndropdown in the edit/add requirement. But by default a regular user should be able to enter a new one. "
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-27T03:34:26.856630403Z
+  modified_at: 2025-11-27T03:34:26.856630403Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: bb81e51e-dd32-48ef-9806-cf26a09643f5
+- id: bb81e51e-dd32-48ef-9806-cf26a09643f5
+  spec_id: SCHEMA-0040
+  prefix_override: SCHEMA
+  title: Database definition
+  description: Object types, relationships, etc.
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-27T03:36:41.058576375Z
+  modified_at: 2025-11-27T03:36:41.058576375Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Child
+    target_id: 67a6162d-a44c-4cf5-8756-6b6cb8808928
+  - rel_type: Child
+    target_id: 5a9b7e50-4678-4c85-bb69-6ac380ac985e
 id_config:
   format: SingleLevel
   numbering: Global
@@ -889,8 +987,8 @@ id_config:
     prefix: CR
     description: Change requests for modifications to existing functionality
 features: []
-next_feature_number: 21
-next_spec_number: 37
+next_feature_number: 22
+next_spec_number: 42
 prefix_counters: {}
 relationship_definitions:
 - name: parent
@@ -1045,3 +1143,71 @@ reaction_definitions:
   label: Important
   description: Mark as important/attention needed
   built_in: true
+meta_counters: {}
+type_definitions:
+- name: Functional
+  display_name: Functional
+  description: Functional requirements describing system behavior
+  prefix: FR
+  built_in: true
+- name: NonFunctional
+  display_name: Non-Functional
+  description: Non-functional requirements (performance, security, etc.)
+  prefix: NFR
+  built_in: true
+- name: System
+  display_name: System
+  description: System-level requirements
+  prefix: SYS
+  built_in: true
+- name: User
+  display_name: User Story
+  description: User stories and user requirements
+  prefix: US
+  built_in: true
+- name: ChangeRequest
+  display_name: Change Request
+  description: Change requests for existing functionality
+  prefix: CR
+  statuses:
+  - Draft
+  - Submitted
+  - Under Review
+  - Approved
+  - Rejected
+  - In Progress
+  - Implemented
+  - Verified
+  - Closed
+  custom_fields:
+  - name: impact
+    label: Impact Level
+    field_type: select
+    required: false
+    options:
+    - Low
+    - Medium
+    - High
+    - Critical
+    description: Impact of this change on the system
+    order: 1
+  - name: requested_by
+    label: Requested By
+    field_type: user
+    required: false
+    description: User who requested this change
+    order: 2
+  - name: target_release
+    label: Target Release
+    field_type: text
+    required: false
+    description: Target release version for this change
+    order: 3
+  - name: justification
+    label: Justification
+    field_type: text
+    required: true
+    description: Business justification for the change
+    order: 4
+  built_in: true
+  color: '#9333ea'
