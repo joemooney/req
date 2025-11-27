@@ -7561,6 +7561,15 @@ impl eframe::App for RequirementsApp {
         // Context checking is now handled by the keybinding system
         {
             let mut nav_delta: i32 = 0;
+            let mut jump_to_start = false;
+            let mut jump_to_end = false;
+            let page_size: i32 = 10; // Number of items to move for Page Up/Down
+
+            // Check if we're in a context where list navigation should work
+            let nav_context_active = matches!(
+                self.current_key_context,
+                KeyContext::RequirementsList | KeyContext::DetailView
+            );
 
             // Check navigation keybindings (context-aware)
             if self.user_settings.keybindings.is_pressed(
@@ -7575,6 +7584,40 @@ impl eframe::App for RequirementsApp {
                 self.current_key_context,
             ) {
                 nav_delta = -1;
+            }
+
+            // Page Up/Down, Home/End, and Mouse Wheel (only when not in text input)
+            if nav_context_active {
+                ctx.input(|i| {
+                    // Page Up/Down
+                    if i.key_pressed(egui::Key::PageDown) {
+                        nav_delta = page_size;
+                    } else if i.key_pressed(egui::Key::PageUp) {
+                        nav_delta = -page_size;
+                    }
+
+                    // Home/End
+                    if i.key_pressed(egui::Key::Home) {
+                        jump_to_start = true;
+                    } else if i.key_pressed(egui::Key::End) {
+                        jump_to_end = true;
+                    }
+
+                    // Mouse wheel navigation (without Ctrl - Ctrl+wheel is zoom)
+                    if !i.modifiers.ctrl {
+                        // Check for scroll events in the requirements list area
+                        // Only trigger if we have focus on the list (not scrolling detail panel)
+                        let scroll = i.raw_scroll_delta.y;
+                        if scroll.abs() > 10.0 {
+                            // Threshold to avoid accidental triggers
+                            if scroll > 0.0 {
+                                nav_delta = -1; // Scroll up = previous item
+                            } else {
+                                nav_delta = 1; // Scroll down = next item
+                            }
+                        }
+                    }
+                });
             }
 
             // Edit keybinding (context-aware)
@@ -7616,10 +7659,17 @@ impl eframe::App for RequirementsApp {
                 self.pending_save = true;
             }
 
-            if nav_delta != 0 {
-                let filtered_indices = self.get_filtered_indices();
-                if !filtered_indices.is_empty() {
-                    let new_selection = if let Some(current_idx) = self.selected_idx {
+            // Handle navigation (delta-based or jump-based)
+            let filtered_indices = self.get_filtered_indices();
+            if !filtered_indices.is_empty() {
+                let new_selection = if jump_to_start {
+                    // Jump to first item
+                    Some(filtered_indices[0])
+                } else if jump_to_end {
+                    // Jump to last item
+                    Some(filtered_indices[filtered_indices.len() - 1])
+                } else if nav_delta != 0 {
+                    if let Some(current_idx) = self.selected_idx {
                         // Find current position in filtered list
                         if let Some(pos) =
                             filtered_indices.iter().position(|&idx| idx == current_idx)
@@ -7645,10 +7695,14 @@ impl eframe::App for RequirementsApp {
                         } else {
                             Some(filtered_indices[filtered_indices.len() - 1])
                         }
-                    };
+                    }
+                } else {
+                    None // No navigation action
+                };
 
-                    if new_selection != self.selected_idx {
-                        self.selected_idx = new_selection;
+                if let Some(new_sel) = new_selection {
+                    if Some(new_sel) != self.selected_idx {
+                        self.selected_idx = Some(new_sel);
                         self.pending_view_change = Some(View::Detail);
                     }
                 }
