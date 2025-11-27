@@ -38,7 +38,10 @@ pub fn determine_requirements_path(project_option: Option<&str>) -> Result<PathB
         if let Some(project) = registry.get_project(&env_project) {
             return Ok(PathBuf::from(&project.path));
         } else {
-            anyhow::bail!("Project '{}' from REQ_DB_NAME not found in registry", env_project);
+            anyhow::bail!(
+                "Project '{}' from REQ_DB_NAME not found in registry",
+                env_project
+            );
         }
     }
 

@@ -4,11 +4,13 @@ use std::env;
 use std::path::PathBuf;
 use uuid::Uuid;
 
-use requirements_core::{Requirement, RequirementPriority, RequirementStatus, RequirementType};
 use requirements_core::project::list_available_projects;
+use requirements_core::{Requirement, RequirementPriority, RequirementStatus, RequirementType};
 
 /// Prompts the user for a new requirement
-pub fn prompt_new_requirement(store: &mut requirements_core::RequirementsStore) -> Result<Requirement> {
+pub fn prompt_new_requirement(
+    store: &mut requirements_core::RequirementsStore,
+) -> Result<Requirement> {
     // Get basic information
     let title = Text::new("Title:").prompt()?;
 
@@ -113,7 +115,8 @@ pub fn prompt_select_project() -> Result<String> {
         anyhow::bail!("No projects found in registry");
     }
 
-    let options: Vec<String> = projects.iter()
+    let options: Vec<String> = projects
+        .iter()
         .map(|(name, desc)| format!("{} ({})", name, desc))
         .collect();
 

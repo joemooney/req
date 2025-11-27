@@ -43,10 +43,7 @@ impl Registry {
 
     /// Registers a new project or updates an existing one
     pub fn register_project(&mut self, name: String, path: String, description: String) {
-        let project = Project {
-            path,
-            description,
-        };
+        let project = Project { path, description };
 
         self.projects.insert(name, project);
     }
@@ -108,7 +105,10 @@ impl Registry {
             },
         );
 
-        let registry = Registry { projects, default_project: None };
+        let registry = Registry {
+            projects,
+            default_project: None,
+        };
         let content = serde_yaml::to_string(&registry)?;
 
         // Ensure parent directories exist
@@ -131,8 +131,7 @@ pub fn get_registry_path() -> Result<PathBuf> {
     }
 
     // Default to ~/.requirements.config
-    let home_dir = dirs::home_dir()
-        .context("Failed to determine home directory")?;
+    let home_dir = dirs::home_dir().context("Failed to determine home directory")?;
 
     Ok(home_dir.join(".requirements.config"))
 }

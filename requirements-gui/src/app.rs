@@ -1,15 +1,15 @@
 use eframe::egui;
 use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
 use requirements_core::{
-    Requirement, RequirementPriority, RequirementStatus, RequirementType,
-    RequirementsStore, Storage, determine_requirements_path, Comment, FieldChange,
-    RelationshipType, IdFormat, NumberingStrategy, RelationshipDefinition, Cardinality,
-    CustomFieldType, CustomFieldDefinition, UrlLink,
+    determine_requirements_path, Cardinality, Comment, CustomFieldDefinition, CustomFieldType,
+    FieldChange, IdFormat, NumberingStrategy, RelationshipDefinition, RelationshipType,
+    Requirement, RequirementPriority, RequirementStatus, RequirementType, RequirementsStore,
+    Storage, UrlLink,
 };
-use std::collections::{HashSet, HashMap};
+use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use uuid::Uuid;
-use serde::{Deserialize, Serialize};
 
 // =============================================================================
 // TEXT EDIT CONTEXT MENU IMPLEMENTATION
@@ -105,7 +105,8 @@ fn show_text_context_menu(
     if response.has_focus() {
         if let Some(selection) = capture_text_selection(ui.ctx(), text, id) {
             // Only update if this is for the same widget and selection changed
-            let should_update = stored_selection.as_ref()
+            let should_update = stored_selection
+                .as_ref()
                 .map(|s| s.widget_id != Some(id) || s.text != selection.text)
                 .unwrap_or(true);
             if should_update {
@@ -117,7 +118,10 @@ fn show_text_context_menu(
     response.context_menu(|ui| {
         // Use stored selection (captured continuously while focused, before right-click cleared it)
         let selection = stored_selection.clone().filter(|s| s.widget_id == Some(id));
-        let has_selection = selection.as_ref().map(|s| !s.text.is_empty()).unwrap_or(false);
+        let has_selection = selection
+            .as_ref()
+            .map(|s| !s.text.is_empty())
+            .unwrap_or(false);
 
         // WORKAROUND: Show selected text in menu since visual selection is cleared
         // This lets users see what they're about to copy/cut
@@ -134,7 +138,10 @@ fn show_text_context_menu(
         }
 
         // Cut
-        if ui.add_enabled(has_selection, egui::Button::new("✂ Cut")).clicked() {
+        if ui
+            .add_enabled(has_selection, egui::Button::new("✂ Cut"))
+            .clicked()
+        {
             if let Some(ref sel) = selection {
                 // Copy to clipboard (both regular and primary on Linux)
                 ui.ctx().copy_text(sel.text.clone());
@@ -150,7 +157,10 @@ fn show_text_context_menu(
         }
 
         // Copy
-        if ui.add_enabled(has_selection, egui::Button::new("📋 Copy")).clicked() {
+        if ui
+            .add_enabled(has_selection, egui::Button::new("📋 Copy"))
+            .clicked()
+        {
             if let Some(ref sel) = selection {
                 // Copy to clipboard (both regular and primary on Linux)
                 ui.ctx().copy_text(sel.text.clone());
@@ -162,7 +172,10 @@ fn show_text_context_menu(
         // Paste
         let can_paste = get_clipboard_text().is_some();
 
-        if ui.add_enabled(can_paste, egui::Button::new("📥 Paste")).clicked() {
+        if ui
+            .add_enabled(can_paste, egui::Button::new("📥 Paste"))
+            .clicked()
+        {
             if let Some(paste_text) = get_clipboard_text() {
                 if let Some(ref sel) = selection {
                     // Replace selection with pasted text
@@ -195,10 +208,12 @@ fn show_text_context_menu(
         if ui.button("Select All").clicked() {
             if let Some(mut state) = egui::TextEdit::load_state(ui.ctx(), id) {
                 let len = text.chars().count();
-                state.cursor.set_char_range(Some(egui::text::CCursorRange::two(
-                    egui::text::CCursor::new(0),
-                    egui::text::CCursor::new(len),
-                )));
+                state
+                    .cursor
+                    .set_char_range(Some(egui::text::CCursorRange::two(
+                        egui::text::CCursor::new(0),
+                        egui::text::CCursor::new(len),
+                    )));
                 state.store(ui.ctx(), id);
             }
             ui.close_menu();
@@ -222,7 +237,10 @@ fn copy_to_primary_selection(text: &str) {
     use arboard::SetExtLinux;
     if let Ok(mut clipboard) = arboard::Clipboard::new() {
         // Set to primary selection for middle-click paste
-        let _ = clipboard.set().clipboard(arboard::LinuxClipboardKind::Primary).text(text.to_string());
+        let _ = clipboard
+            .set()
+            .clipboard(arboard::LinuxClipboardKind::Primary)
+            .text(text.to_string());
     }
 }
 
@@ -232,7 +250,9 @@ fn copy_to_primary_selection(_text: &str) {}
 
 /// Get text from the system clipboard (CLIPBOARD, not PRIMARY)
 fn get_clipboard_text() -> Option<String> {
-    arboard::Clipboard::new().ok().and_then(|mut c| c.get_text().ok())
+    arboard::Clipboard::new()
+        .ok()
+        .and_then(|mut c| c.get_text().ok())
 }
 
 /// Default base font size in points
@@ -324,7 +344,7 @@ impl Theme {
             Theme::Nord => {
                 let mut visuals = egui::Visuals::dark();
                 // Nord colors
-                let nord0 = egui::Color32::from_rgb(46, 52, 64);    // Polar Night
+                let nord0 = egui::Color32::from_rgb(46, 52, 64); // Polar Night
                 let nord1 = egui::Color32::from_rgb(59, 66, 82);
                 let nord2 = egui::Color32::from_rgb(67, 76, 94);
                 let nord3 = egui::Color32::from_rgb(76, 86, 106);
@@ -444,7 +464,7 @@ impl KeyAction {
 /// A key binding with optional modifiers and context
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct KeyBinding {
-    pub key_name: String,  // Store as string for serialization
+    pub key_name: String, // Store as string for serialization
     pub ctrl: bool,
     pub shift: bool,
     pub alt: bool,
@@ -454,7 +474,13 @@ pub struct KeyBinding {
 
 impl KeyBinding {
     fn new(key: egui::Key, context: KeyContext) -> Self {
-        Self { key_name: key_to_string(key).to_string(), ctrl: false, shift: false, alt: false, context }
+        Self {
+            key_name: key_to_string(key).to_string(),
+            ctrl: false,
+            shift: false,
+            alt: false,
+            context,
+        }
     }
 
     fn with_ctrl(mut self) -> Self {
@@ -473,9 +499,15 @@ impl KeyBinding {
 
     fn display(&self) -> String {
         let mut parts = Vec::new();
-        if self.ctrl { parts.push("Ctrl"); }
-        if self.shift { parts.push("Shift"); }
-        if self.alt { parts.push("Alt"); }
+        if self.ctrl {
+            parts.push("Ctrl");
+        }
+        if self.shift {
+            parts.push("Shift");
+        }
+        if self.alt {
+            parts.push("Alt");
+        }
         parts.push(&self.key_name);
         parts.join("+")
     }
@@ -484,10 +516,9 @@ impl KeyBinding {
     fn key_matches(&self, ctx: &egui::Context) -> bool {
         let Some(key) = self.key() else { return false };
         ctx.input(|i| {
-            let modifiers_match =
-                i.modifiers.ctrl == self.ctrl &&
-                i.modifiers.shift == self.shift &&
-                i.modifiers.alt == self.alt;
+            let modifiers_match = i.modifiers.ctrl == self.ctrl
+                && i.modifiers.shift == self.shift
+                && i.modifiers.alt == self.alt;
             modifiers_match && i.key_pressed(key)
         })
     }
@@ -653,15 +684,47 @@ impl Default for KeyBindings {
     fn default() -> Self {
         let mut bindings = HashMap::new();
         // Use default_context() for each action
-        bindings.insert(KeyAction::NavigateUp, KeyBinding::new(egui::Key::ArrowUp, KeyAction::NavigateUp.default_context()));
-        bindings.insert(KeyAction::NavigateDown, KeyBinding::new(egui::Key::ArrowDown, KeyAction::NavigateDown.default_context()));
-        bindings.insert(KeyAction::Edit, KeyBinding::new(egui::Key::Enter, KeyAction::Edit.default_context()));
-        bindings.insert(KeyAction::ToggleExpand, KeyBinding::new(egui::Key::Space, KeyAction::ToggleExpand.default_context()));
-        bindings.insert(KeyAction::Save, KeyBinding::new(egui::Key::S, KeyAction::Save.default_context()).with_ctrl());
-        bindings.insert(KeyAction::ZoomIn, KeyBinding::new(egui::Key::Plus, KeyAction::ZoomIn.default_context()).with_ctrl().with_shift());
-        bindings.insert(KeyAction::ZoomOut, KeyBinding::new(egui::Key::Minus, KeyAction::ZoomOut.default_context()).with_ctrl());
-        bindings.insert(KeyAction::ZoomReset, KeyBinding::new(egui::Key::Num0, KeyAction::ZoomReset.default_context()).with_ctrl());
-        bindings.insert(KeyAction::CycleTheme, KeyBinding::new(egui::Key::T, KeyAction::CycleTheme.default_context()).with_ctrl());
+        bindings.insert(
+            KeyAction::NavigateUp,
+            KeyBinding::new(egui::Key::ArrowUp, KeyAction::NavigateUp.default_context()),
+        );
+        bindings.insert(
+            KeyAction::NavigateDown,
+            KeyBinding::new(
+                egui::Key::ArrowDown,
+                KeyAction::NavigateDown.default_context(),
+            ),
+        );
+        bindings.insert(
+            KeyAction::Edit,
+            KeyBinding::new(egui::Key::Enter, KeyAction::Edit.default_context()),
+        );
+        bindings.insert(
+            KeyAction::ToggleExpand,
+            KeyBinding::new(egui::Key::Space, KeyAction::ToggleExpand.default_context()),
+        );
+        bindings.insert(
+            KeyAction::Save,
+            KeyBinding::new(egui::Key::S, KeyAction::Save.default_context()).with_ctrl(),
+        );
+        bindings.insert(
+            KeyAction::ZoomIn,
+            KeyBinding::new(egui::Key::Plus, KeyAction::ZoomIn.default_context())
+                .with_ctrl()
+                .with_shift(),
+        );
+        bindings.insert(
+            KeyAction::ZoomOut,
+            KeyBinding::new(egui::Key::Minus, KeyAction::ZoomOut.default_context()).with_ctrl(),
+        );
+        bindings.insert(
+            KeyAction::ZoomReset,
+            KeyBinding::new(egui::Key::Num0, KeyAction::ZoomReset.default_context()).with_ctrl(),
+        );
+        bindings.insert(
+            KeyAction::CycleTheme,
+            KeyBinding::new(egui::Key::T, KeyAction::CycleTheme.default_context()).with_ctrl(),
+        );
         Self { bindings }
     }
 }
@@ -673,8 +736,14 @@ impl KeyBindings {
     }
 
     /// Check if an action's keybinding is pressed in the given context
-    fn is_pressed(&self, action: KeyAction, egui_ctx: &egui::Context, current_context: KeyContext) -> bool {
-        self.bindings.get(&action)
+    fn is_pressed(
+        &self,
+        action: KeyAction,
+        egui_ctx: &egui::Context,
+        current_context: KeyContext,
+    ) -> bool {
+        self.bindings
+            .get(&action)
             .map(|binding| binding.matches(egui_ctx, current_context))
             .unwrap_or(false)
     }
@@ -682,7 +751,8 @@ impl KeyBindings {
     /// Check if an action's keybinding is pressed (ignores context - for key capture)
     #[allow(dead_code)]
     fn is_key_pressed(&self, action: KeyAction, egui_ctx: &egui::Context) -> bool {
-        self.bindings.get(&action)
+        self.bindings
+            .get(&action)
             .map(|binding| binding.key_matches(egui_ctx))
             .unwrap_or(false)
     }
@@ -759,8 +829,7 @@ impl UserSettings {
         let path = Self::settings_path();
         let yaml = serde_yaml::to_string(self)
             .map_err(|e| format!("Failed to serialize settings: {}", e))?;
-        std::fs::write(&path, yaml)
-            .map_err(|e| format!("Failed to write settings file: {}", e))?;
+        std::fs::write(&path, yaml).map_err(|e| format!("Failed to write settings file: {}", e))?;
         Ok(())
     }
 
@@ -844,8 +913,12 @@ impl Perspective {
         match self {
             Perspective::Flat => None,
             Perspective::ParentChild => Some((RelationshipType::Parent, RelationshipType::Child)),
-            Perspective::Verification => Some((RelationshipType::Verifies, RelationshipType::VerifiedBy)),
-            Perspective::References => Some((RelationshipType::References, RelationshipType::References)),
+            Perspective::Verification => {
+                Some((RelationshipType::Verifies, RelationshipType::VerifiedBy))
+            }
+            Perspective::References => {
+                Some((RelationshipType::References, RelationshipType::References))
+            }
         }
     }
 }
@@ -899,7 +972,9 @@ pub struct ViewPreset {
     pub children_same_as_root: bool,
 }
 
-fn default_true() -> bool { true }
+fn default_true() -> bool {
+    true
+}
 
 impl ViewPreset {
     /// Create a new preset with the given name and current settings
@@ -922,7 +997,10 @@ impl ViewPreset {
             filter_types: filter_types.iter().map(|t| format!("{:?}", t)).collect(),
             filter_features: filter_features.iter().cloned().collect(),
             filter_prefixes: filter_prefixes.iter().cloned().collect(),
-            child_filter_types: child_filter_types.iter().map(|t| format!("{:?}", t)).collect(),
+            child_filter_types: child_filter_types
+                .iter()
+                .map(|t| format!("{:?}", t))
+                .collect(),
             child_filter_features: child_filter_features.iter().cloned().collect(),
             child_filter_prefixes: child_filter_prefixes.iter().cloned().collect(),
             children_same_as_root,
@@ -940,16 +1018,17 @@ impl ViewPreset {
     }
 
     fn parse_types(types: &[String]) -> HashSet<RequirementType> {
-        types.iter().filter_map(|s| {
-            match s.as_str() {
+        types
+            .iter()
+            .filter_map(|s| match s.as_str() {
                 "Functional" => Some(RequirementType::Functional),
                 "NonFunctional" => Some(RequirementType::NonFunctional),
                 "System" => Some(RequirementType::System),
                 "User" => Some(RequirementType::User),
                 "ChangeRequest" => Some(RequirementType::ChangeRequest),
                 _ => None,
-            }
-        }).collect()
+            })
+            .collect()
     }
 
     /// Get filter_features as HashSet<String>
@@ -985,15 +1064,15 @@ pub struct RequirementsApp {
     form_title: String,
     form_description: String,
     form_status: RequirementStatus,
-    form_status_string: String,    // Status as string (for custom type statuses)
+    form_status_string: String, // Status as string (for custom type statuses)
     form_custom_fields: HashMap<String, String>, // Custom field values
     form_priority: RequirementPriority,
     form_type: RequirementType,
     form_owner: String,
     form_feature: String,
     form_tags: String,
-    form_prefix: String,           // Optional prefix override (uppercase letters only)
-    form_parent_id: Option<Uuid>,  // Parent to link new requirement to
+    form_prefix: String, // Optional prefix override (uppercase letters only)
+    form_parent_id: Option<Uuid>, // Parent to link new requirement to
 
     // Messages
     message: Option<(String, bool)>, // (message, is_error)
@@ -1010,11 +1089,11 @@ pub struct RequirementsApp {
     // Pending operations (to avoid borrow checker issues)
     pending_delete: Option<usize>,
     pending_view_change: Option<View>,
-    pending_save: bool,                  // Save triggered by keybinding
+    pending_save: bool, // Save triggered by keybinding
     pending_comment_add: Option<(String, String, Option<Uuid>)>, // (author, content, parent_id)
     pending_comment_delete: Option<Uuid>,
     pending_reaction_toggle: Option<(Uuid, String)>, // (comment_id, reaction_name)
-    show_reaction_picker: Option<Uuid>,  // Comment ID to show reaction picker for
+    show_reaction_picker: Option<Uuid>,              // Comment ID to show reaction picker for
 
     // Settings
     user_settings: UserSettings,
@@ -1027,14 +1106,14 @@ pub struct RequirementsApp {
     settings_form_perspective: Perspective,
     settings_form_theme: Theme,
     settings_form_keybindings: KeyBindings,
-    capturing_key_for: Option<KeyAction>,  // Which action we're capturing a key for
+    capturing_key_for: Option<KeyAction>, // Which action we're capturing a key for
 
     // Project settings form fields
     settings_form_id_format: IdFormat,
     settings_form_numbering: NumberingStrategy,
     settings_form_digits: u8,
     show_migration_dialog: bool,
-    pending_migration: Option<(IdFormat, NumberingStrategy, u8)>,  // Format, Numbering, Digits
+    pending_migration: Option<(IdFormat, NumberingStrategy, u8)>, // Format, Numbering, Digits
 
     // User management
     show_user_form: bool,
@@ -1050,55 +1129,55 @@ pub struct RequirementsApp {
     // Perspective and filtering
     perspective: Perspective,
     perspective_direction: PerspectiveDirection,
-    filter_types: HashSet<RequirementType>,      // Root filter: Empty = show all
-    filter_features: HashSet<String>,            // Root filter: Empty = show all
-    filter_prefixes: HashSet<String>,            // Root filter: Empty = show all
+    filter_types: HashSet<RequirementType>, // Root filter: Empty = show all
+    filter_features: HashSet<String>,       // Root filter: Empty = show all
+    filter_prefixes: HashSet<String>,       // Root filter: Empty = show all
     // Child filters (when children_same_as_root is false)
     child_filter_types: HashSet<RequirementType>,
     child_filter_features: HashSet<String>,
     child_filter_prefixes: HashSet<String>,
-    children_same_as_root: bool,                 // When true, children use same filters as root
-    filter_tab: FilterTab,                       // Which filter tab is active (Root or Children)
-    tree_collapsed: HashMap<Uuid, bool>,         // Track collapsed tree nodes
-    show_filter_panel: bool,                     // Toggle filter panel visibility
-    show_archived: bool,                         // Whether to show archived requirements
+    children_same_as_root: bool, // When true, children use same filters as root
+    filter_tab: FilterTab,       // Which filter tab is active (Root or Children)
+    tree_collapsed: HashMap<Uuid, bool>, // Track collapsed tree nodes
+    show_filter_panel: bool,     // Toggle filter panel visibility
+    show_archived: bool,         // Whether to show archived requirements
 
     // Drag and drop for relationships
-    drag_source: Option<usize>,                  // Index of requirement being dragged
-    drop_target: Option<usize>,                  // Index of requirement being hovered over
+    drag_source: Option<usize>, // Index of requirement being dragged
+    drop_target: Option<usize>, // Index of requirement being hovered over
     pending_relationship: Option<(usize, usize)>, // (source_idx, target_idx) to create relationship
 
     // Markdown rendering
     markdown_cache: CommonMarkCache,
-    show_description_preview: bool,              // Toggle preview mode in edit form
+    show_description_preview: bool, // Toggle preview mode in edit form
 
     // Left panel state
-    left_panel_collapsed: bool,                  // Whether left panel is manually collapsed
+    left_panel_collapsed: bool, // Whether left panel is manually collapsed
 
     // Relationship definition editing
-    editing_rel_def: Option<String>,             // Name of relationship def being edited (None = adding new)
+    editing_rel_def: Option<String>, // Name of relationship def being edited (None = adding new)
     rel_def_form_name: String,
     rel_def_form_display_name: String,
     rel_def_form_description: String,
     rel_def_form_inverse: String,
     rel_def_form_symmetric: bool,
     rel_def_form_cardinality: Cardinality,
-    rel_def_form_source_types: String,           // Comma-separated
-    rel_def_form_target_types: String,           // Comma-separated
+    rel_def_form_source_types: String, // Comma-separated
+    rel_def_form_target_types: String, // Comma-separated
     rel_def_form_color: String,
     show_rel_def_form: bool,
 
     // View presets
-    active_preset: Option<String>,               // Name of currently active preset (None = custom/unsaved)
-    show_save_preset_dialog: bool,               // Show the save preset dialog
-    preset_name_input: String,                   // Name input for new preset
-    show_delete_preset_confirm: Option<String>,  // Name of preset to confirm deletion
+    active_preset: Option<String>, // Name of currently active preset (None = custom/unsaved)
+    show_save_preset_dialog: bool, // Show the save preset dialog
+    preset_name_input: String,     // Name input for new preset
+    show_delete_preset_confirm: Option<String>, // Name of preset to confirm deletion
 
     // Keybinding context
-    current_key_context: KeyContext,             // Current context for keybinding checks
+    current_key_context: KeyContext, // Current context for keybinding checks
 
     // Reaction definition editing
-    editing_reaction_def: Option<String>,        // Name of reaction def being edited (None = adding new)
+    editing_reaction_def: Option<String>, // Name of reaction def being edited (None = adding new)
     reaction_def_form_name: String,
     reaction_def_form_emoji: String,
     reaction_def_form_label: String,
@@ -1106,31 +1185,31 @@ pub struct RequirementsApp {
     show_reaction_def_form: bool,
 
     // Prefix management
-    new_prefix_input: String,                    // Input for adding new allowed prefix
+    new_prefix_input: String, // Input for adding new allowed prefix
 
     // Type definition editing
-    editing_type_def: Option<String>,            // Name of type def being edited (None = adding new)
+    editing_type_def: Option<String>, // Name of type def being edited (None = adding new)
     type_def_form_name: String,
     type_def_form_display_name: String,
     type_def_form_description: String,
     type_def_form_prefix: String,
-    type_def_form_statuses: Vec<String>,         // Editable list of statuses
+    type_def_form_statuses: Vec<String>, // Editable list of statuses
     type_def_form_fields: Vec<CustomFieldDefinition>, // Editable list of custom fields
     show_type_def_form: bool,
-    new_status_input: String,                    // Input for adding new status
+    new_status_input: String, // Input for adding new status
     // Custom field form (for adding/editing fields within type)
-    editing_field_idx: Option<usize>,            // Index of field being edited (None = adding new)
+    editing_field_idx: Option<usize>, // Index of field being edited (None = adding new)
     field_form_name: String,
     field_form_label: String,
     field_form_type: CustomFieldType,
     field_form_required: bool,
-    field_form_options: String,                  // Comma-separated for Select type
+    field_form_options: String, // Comma-separated for Select type
     field_form_default: String,
     show_field_form: bool,
 
     // URL link editing
     show_url_form: bool,
-    editing_url_id: Option<Uuid>,                // None = adding new, Some = editing existing
+    editing_url_id: Option<Uuid>, // None = adding new, Some = editing existing
     url_form_url: String,
     url_form_title: String,
     url_form_description: String,
@@ -1331,7 +1410,12 @@ impl RequirementsApp {
     /// Check if the current view settings match the active preset
     fn current_view_matches_active_preset(&self) -> bool {
         if let Some(ref preset_name) = self.active_preset {
-            if let Some(preset) = self.user_settings.view_presets.iter().find(|p| &p.name == preset_name) {
+            if let Some(preset) = self
+                .user_settings
+                .view_presets
+                .iter()
+                .find(|p| &p.name == preset_name)
+            {
                 return self.perspective == preset.perspective
                     && self.perspective_direction == preset.direction
                     && self.filter_types == preset.get_filter_types()
@@ -1395,7 +1479,12 @@ impl RequirementsApp {
         );
 
         // Check if preset with this name already exists
-        if let Some(existing) = self.user_settings.view_presets.iter_mut().find(|p| p.name == name) {
+        if let Some(existing) = self
+            .user_settings
+            .view_presets
+            .iter_mut()
+            .find(|p| p.name == name)
+        {
             // Update existing preset
             *existing = preset;
         } else {
@@ -1467,7 +1556,8 @@ impl RequirementsApp {
         let filename = "user-guide.html";
 
         // Find the first path that exists
-        let doc_path = possible_paths.iter()
+        let doc_path = possible_paths
+            .iter()
             .map(|p| p.join(filename))
             .find(|p| p.exists());
 
@@ -1478,16 +1568,12 @@ impl RequirementsApp {
                 // Try to open in browser using platform-specific commands
                 #[cfg(target_os = "linux")]
                 {
-                    let _ = std::process::Command::new("xdg-open")
-                        .arg(&url)
-                        .spawn();
+                    let _ = std::process::Command::new("xdg-open").arg(&url).spawn();
                 }
 
                 #[cfg(target_os = "macos")]
                 {
-                    let _ = std::process::Command::new("open")
-                        .arg(&url)
-                        .spawn();
+                    let _ = std::process::Command::new("open").arg(&url).spawn();
                 }
 
                 #[cfg(target_os = "windows")]
@@ -1532,7 +1618,8 @@ impl RequirementsApp {
         self.show_description_preview = false;
 
         // If a requirement is selected, pre-populate parent relationship
-        self.form_parent_id = self.selected_idx
+        self.form_parent_id = self
+            .selected_idx
             .and_then(|idx| self.store.requirements.get(idx))
             .map(|req| req.id);
     }
@@ -1556,16 +1643,14 @@ impl RequirementsApp {
     }
 
     fn add_requirement(&mut self) {
-        let tags: HashSet<String> = self.form_tags
+        let tags: HashSet<String> = self
+            .form_tags
             .split(',')
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty())
             .collect();
 
-        let mut req = Requirement::new(
-            self.form_title.clone(),
-            self.form_description.clone(),
-        );
+        let mut req = Requirement::new(self.form_title.clone(), self.form_description.clone());
         // Set status from string (handles both standard and custom statuses)
         req.set_status_from_str(&self.form_status_string);
         req.priority = self.form_priority.clone();
@@ -1593,7 +1678,9 @@ impl RequirementsApp {
         let parent_id = self.form_parent_id;
 
         // Get prefixes for ID generation
-        let feature_prefix = self.store.get_feature_by_name(&req.feature)
+        let feature_prefix = self
+            .store
+            .get_feature_by_name(&req.feature)
             .map(|f| f.prefix.clone());
         let type_prefix = self.store.get_type_prefix(&req.req_type);
 
@@ -1601,11 +1688,8 @@ impl RequirementsApp {
         let new_req_id = req.id;
 
         // Add requirement with auto-assigned ID based on configuration
-        self.store.add_requirement_with_id(
-            req,
-            feature_prefix.as_deref(),
-            type_prefix.as_deref(),
-        );
+        self.store
+            .add_requirement_with_id(req, feature_prefix.as_deref(), type_prefix.as_deref());
 
         // Create parent relationship if specified
         if let Some(parent_id) = parent_id {
@@ -1629,7 +1713,12 @@ impl RequirementsApp {
         // Gather data we need before mutable borrows
         let (req_uuid, old_prefix_override, old_feature, old_req_type) = {
             if let Some(req) = self.store.requirements.get(idx) {
-                (req.id, req.prefix_override.clone(), req.feature.clone(), req.req_type.clone())
+                (
+                    req.id,
+                    req.prefix_override.clone(),
+                    req.feature.clone(),
+                    req.req_type.clone(),
+                )
             } else {
                 return;
             }
@@ -1650,11 +1739,14 @@ impl RequirementsApp {
         let prefix_changed = new_prefix != old_prefix_override;
         let feature_changed = self.form_feature != old_feature;
         let type_changed = self.form_type != old_req_type;
-        let needs_new_spec_id = prefix_changed || (new_prefix.is_none() && (feature_changed || type_changed));
+        let needs_new_spec_id =
+            prefix_changed || (new_prefix.is_none() && (feature_changed || type_changed));
 
         // Generate new spec_id if needed
         let new_spec_id_result = if needs_new_spec_id {
-            let feature_prefix = self.store.get_feature_by_name(&self.form_feature)
+            let feature_prefix = self
+                .store
+                .get_feature_by_name(&self.form_feature)
                 .map(|f| f.prefix.clone());
             let type_prefix = self.store.get_type_prefix(&self.form_type);
 
@@ -1680,20 +1772,32 @@ impl RequirementsApp {
 
             // Track title change
             if self.form_title != req.title {
-                changes.push(Requirement::field_change("title", req.title.clone(), self.form_title.clone()));
+                changes.push(Requirement::field_change(
+                    "title",
+                    req.title.clone(),
+                    self.form_title.clone(),
+                ));
                 req.title = self.form_title.clone();
             }
 
             // Track description change
             if self.form_description != req.description {
-                changes.push(Requirement::field_change("description", req.description.clone(), self.form_description.clone()));
+                changes.push(Requirement::field_change(
+                    "description",
+                    req.description.clone(),
+                    self.form_description.clone(),
+                ));
                 req.description = self.form_description.clone();
             }
 
             // Track status change (use effective_status for comparison)
             let old_status = req.effective_status();
             if self.form_status_string != old_status {
-                changes.push(Requirement::field_change("status", old_status, self.form_status_string.clone()));
+                changes.push(Requirement::field_change(
+                    "status",
+                    old_status,
+                    self.form_status_string.clone(),
+                ));
                 req.set_status_from_str(&self.form_status_string);
             }
 
@@ -1708,30 +1812,47 @@ impl RequirementsApp {
 
             // Track priority change
             if self.form_priority != req.priority {
-                changes.push(Requirement::field_change("priority", format!("{:?}", req.priority), format!("{:?}", self.form_priority)));
+                changes.push(Requirement::field_change(
+                    "priority",
+                    format!("{:?}", req.priority),
+                    format!("{:?}", self.form_priority),
+                ));
                 req.priority = self.form_priority.clone();
             }
 
             // Track type change
             if self.form_type != req.req_type {
-                changes.push(Requirement::field_change("type", format!("{:?}", req.req_type), format!("{:?}", self.form_type)));
+                changes.push(Requirement::field_change(
+                    "type",
+                    format!("{:?}", req.req_type),
+                    format!("{:?}", self.form_type),
+                ));
                 req.req_type = self.form_type.clone();
             }
 
             // Track owner change
             if self.form_owner != req.owner {
-                changes.push(Requirement::field_change("owner", req.owner.clone(), self.form_owner.clone()));
+                changes.push(Requirement::field_change(
+                    "owner",
+                    req.owner.clone(),
+                    self.form_owner.clone(),
+                ));
                 req.owner = self.form_owner.clone();
             }
 
             // Track feature change
             if self.form_feature != req.feature {
-                changes.push(Requirement::field_change("feature", req.feature.clone(), self.form_feature.clone()));
+                changes.push(Requirement::field_change(
+                    "feature",
+                    req.feature.clone(),
+                    self.form_feature.clone(),
+                ));
                 req.feature = self.form_feature.clone();
             }
 
             // Track tags change
-            let new_tags: HashSet<String> = self.form_tags
+            let new_tags: HashSet<String> = self
+                .form_tags
                 .split(',')
                 .map(|s| s.trim().to_string())
                 .filter(|s| !s.is_empty())
@@ -1740,7 +1861,11 @@ impl RequirementsApp {
             if new_tags != req.tags {
                 let old_tags_vec: Vec<String> = req.tags.iter().cloned().collect();
                 let new_tags_vec: Vec<String> = new_tags.iter().cloned().collect();
-                changes.push(Requirement::field_change("tags", old_tags_vec.join(", "), new_tags_vec.join(", ")));
+                changes.push(Requirement::field_change(
+                    "tags",
+                    old_tags_vec.join(", "),
+                    new_tags_vec.join(", "),
+                ));
                 req.tags = new_tags;
             }
 
@@ -1748,7 +1873,11 @@ impl RequirementsApp {
             if prefix_changed {
                 let old_prefix_str = req.prefix_override.clone().unwrap_or_default();
                 let new_prefix_str = new_prefix.clone().unwrap_or_default();
-                changes.push(Requirement::field_change("prefix_override", old_prefix_str, new_prefix_str));
+                changes.push(Requirement::field_change(
+                    "prefix_override",
+                    old_prefix_str,
+                    new_prefix_str,
+                ));
                 req.prefix_override = new_prefix;
             }
 
@@ -1804,7 +1933,11 @@ impl RequirementsApp {
         }
 
         self.save();
-        let action = if new_archived { "archived" } else { "unarchived" };
+        let action = if new_archived {
+            "archived"
+        } else {
+            "unarchived"
+        };
         self.message = Some((format!("Requirement {}", action), false));
     }
 
@@ -1826,7 +1959,11 @@ impl RequirementsApp {
                 // Show message
                 if let Some((msg, is_error)) = &self.message {
                     ui.separator();
-                    let color = if *is_error { egui::Color32::RED } else { egui::Color32::GREEN };
+                    let color = if *is_error {
+                        egui::Color32::RED
+                    } else {
+                        egui::Color32::GREEN
+                    };
                     ui.colored_label(color, msg);
                 }
 
@@ -1838,7 +1975,8 @@ impl RequirementsApp {
                         self.settings_form_email = self.user_settings.email.clone();
                         self.settings_form_handle = self.user_settings.handle.clone();
                         self.settings_form_font_size = self.user_settings.base_font_size;
-                        self.settings_form_perspective = self.user_settings.preferred_perspective.clone();
+                        self.settings_form_perspective =
+                            self.user_settings.preferred_perspective.clone();
                         self.settings_form_theme = self.user_settings.theme.clone();
                         self.settings_form_keybindings = self.user_settings.keybindings.clone();
                         self.capturing_key_for = None;
@@ -1848,7 +1986,11 @@ impl RequirementsApp {
                         self.settings_form_digits = self.store.id_config.digits;
                         self.show_settings_dialog = true;
                     }
-                    if ui.button("?").on_hover_text("Help - Open User Guide").clicked() {
+                    if ui
+                        .button("?")
+                        .on_hover_text("Help - Open User Guide")
+                        .clicked()
+                    {
                         Self::open_user_guide();
                     }
                     // Show current zoom level
@@ -1872,13 +2014,33 @@ impl RequirementsApp {
                 // Tabs
                 ui.horizontal(|ui| {
                     ui.selectable_value(&mut self.settings_tab, SettingsTab::User, "👤 User");
-                    ui.selectable_value(&mut self.settings_tab, SettingsTab::Appearance, "🎨 Appearance");
+                    ui.selectable_value(
+                        &mut self.settings_tab,
+                        SettingsTab::Appearance,
+                        "🎨 Appearance",
+                    );
                     ui.selectable_value(&mut self.settings_tab, SettingsTab::Keybindings, "⌨ Keys");
                     ui.selectable_value(&mut self.settings_tab, SettingsTab::Project, "📋 Project");
-                    ui.selectable_value(&mut self.settings_tab, SettingsTab::Relationships, "🔗 Relations");
-                    ui.selectable_value(&mut self.settings_tab, SettingsTab::Reactions, "😊 Reactions");
-                    ui.selectable_value(&mut self.settings_tab, SettingsTab::TypeDefinitions, "📝 Types");
-                    ui.selectable_value(&mut self.settings_tab, SettingsTab::Administration, "🔧 Admin");
+                    ui.selectable_value(
+                        &mut self.settings_tab,
+                        SettingsTab::Relationships,
+                        "🔗 Relations",
+                    );
+                    ui.selectable_value(
+                        &mut self.settings_tab,
+                        SettingsTab::Reactions,
+                        "😊 Reactions",
+                    );
+                    ui.selectable_value(
+                        &mut self.settings_tab,
+                        SettingsTab::TypeDefinitions,
+                        "📝 Types",
+                    );
+                    ui.selectable_value(
+                        &mut self.settings_tab,
+                        SettingsTab::Administration,
+                        "🔧 Admin",
+                    );
                 });
 
                 ui.separator();
@@ -1923,7 +2085,8 @@ impl RequirementsApp {
                         self.user_settings.email = self.settings_form_email.clone();
                         self.user_settings.handle = self.settings_form_handle.clone();
                         self.user_settings.base_font_size = self.settings_form_font_size;
-                        self.user_settings.preferred_perspective = self.settings_form_perspective.clone();
+                        self.user_settings.preferred_perspective =
+                            self.settings_form_perspective.clone();
                         self.user_settings.theme = self.settings_form_theme.clone();
                         self.user_settings.keybindings = self.settings_form_keybindings.clone();
 
@@ -1945,7 +2108,8 @@ impl RequirementsApp {
                         match self.user_settings.save() {
                             Ok(()) => {}
                             Err(e) => {
-                                self.message = Some((format!("Failed to save user settings: {}", e), true));
+                                self.message =
+                                    Some((format!("Failed to save user settings: {}", e), true));
                                 save_success = false;
                             }
                         }
@@ -1954,10 +2118,14 @@ impl RequirementsApp {
                         if save_success {
                             match self.storage.save(&self.store) {
                                 Ok(()) => {
-                                    self.message = Some(("Settings saved successfully".to_string(), false));
+                                    self.message =
+                                        Some(("Settings saved successfully".to_string(), false));
                                 }
                                 Err(e) => {
-                                    self.message = Some((format!("Failed to save project settings: {}", e), true));
+                                    self.message = Some((
+                                        format!("Failed to save project settings: {}", e),
+                                        true,
+                                    ));
                                 }
                             }
                         }
@@ -1980,18 +2148,24 @@ impl RequirementsApp {
             .spacing([20.0, 10.0])
             .show(ui, |ui| {
                 ui.label("Name:");
-                ui.add(egui::TextEdit::singleline(&mut self.settings_form_name)
-                    .hint_text("Your full name"));
+                ui.add(
+                    egui::TextEdit::singleline(&mut self.settings_form_name)
+                        .hint_text("Your full name"),
+                );
                 ui.end_row();
 
                 ui.label("Email:");
-                ui.add(egui::TextEdit::singleline(&mut self.settings_form_email)
-                    .hint_text("your.email@example.com"));
+                ui.add(
+                    egui::TextEdit::singleline(&mut self.settings_form_email)
+                        .hint_text("your.email@example.com"),
+                );
                 ui.end_row();
 
                 ui.label("Handle (@):");
-                ui.add(egui::TextEdit::singleline(&mut self.settings_form_handle)
-                    .hint_text("nickname for @mentions"));
+                ui.add(
+                    egui::TextEdit::singleline(&mut self.settings_form_handle)
+                        .hint_text("nickname for @mentions"),
+                );
                 ui.end_row();
             });
     }
@@ -2008,19 +2182,44 @@ impl RequirementsApp {
                 egui::ComboBox::from_id_salt("settings_theme_combo")
                     .selected_text(self.settings_form_theme.label())
                     .show_ui(ui, |ui| {
-                        ui.selectable_value(&mut self.settings_form_theme, Theme::Dark, Theme::Dark.label());
-                        ui.selectable_value(&mut self.settings_form_theme, Theme::Light, Theme::Light.label());
-                        ui.selectable_value(&mut self.settings_form_theme, Theme::HighContrastDark, Theme::HighContrastDark.label());
-                        ui.selectable_value(&mut self.settings_form_theme, Theme::SolarizedDark, Theme::SolarizedDark.label());
-                        ui.selectable_value(&mut self.settings_form_theme, Theme::Nord, Theme::Nord.label());
+                        ui.selectable_value(
+                            &mut self.settings_form_theme,
+                            Theme::Dark,
+                            Theme::Dark.label(),
+                        );
+                        ui.selectable_value(
+                            &mut self.settings_form_theme,
+                            Theme::Light,
+                            Theme::Light.label(),
+                        );
+                        ui.selectable_value(
+                            &mut self.settings_form_theme,
+                            Theme::HighContrastDark,
+                            Theme::HighContrastDark.label(),
+                        );
+                        ui.selectable_value(
+                            &mut self.settings_form_theme,
+                            Theme::SolarizedDark,
+                            Theme::SolarizedDark.label(),
+                        );
+                        ui.selectable_value(
+                            &mut self.settings_form_theme,
+                            Theme::Nord,
+                            Theme::Nord.label(),
+                        );
                     });
                 ui.end_row();
 
                 ui.label("Base Font Size:");
                 ui.horizontal(|ui| {
-                    ui.add(egui::Slider::new(&mut self.settings_form_font_size, MIN_FONT_SIZE..=MAX_FONT_SIZE)
+                    ui.add(
+                        egui::Slider::new(
+                            &mut self.settings_form_font_size,
+                            MIN_FONT_SIZE..=MAX_FONT_SIZE,
+                        )
                         .suffix("pt")
-                        .step_by(1.0));
+                        .step_by(1.0),
+                    );
                     if ui.button("Reset").clicked() {
                         self.settings_form_font_size = DEFAULT_FONT_SIZE;
                     }
@@ -2031,10 +2230,26 @@ impl RequirementsApp {
                 egui::ComboBox::from_id_salt("settings_perspective_combo")
                     .selected_text(self.settings_form_perspective.label())
                     .show_ui(ui, |ui| {
-                        ui.selectable_value(&mut self.settings_form_perspective, Perspective::Flat, Perspective::Flat.label());
-                        ui.selectable_value(&mut self.settings_form_perspective, Perspective::ParentChild, Perspective::ParentChild.label());
-                        ui.selectable_value(&mut self.settings_form_perspective, Perspective::Verification, Perspective::Verification.label());
-                        ui.selectable_value(&mut self.settings_form_perspective, Perspective::References, Perspective::References.label());
+                        ui.selectable_value(
+                            &mut self.settings_form_perspective,
+                            Perspective::Flat,
+                            Perspective::Flat.label(),
+                        );
+                        ui.selectable_value(
+                            &mut self.settings_form_perspective,
+                            Perspective::ParentChild,
+                            Perspective::ParentChild.label(),
+                        );
+                        ui.selectable_value(
+                            &mut self.settings_form_perspective,
+                            Perspective::Verification,
+                            Perspective::Verification.label(),
+                        );
+                        ui.selectable_value(
+                            &mut self.settings_form_perspective,
+                            Perspective::References,
+                            Perspective::References.label(),
+                        );
                     });
                 ui.end_row();
             });
@@ -2049,11 +2264,16 @@ impl RequirementsApp {
 
         // If we're capturing a key, show instructions
         if let Some(action) = self.capturing_key_for {
-            ui.colored_label(egui::Color32::YELLOW, format!("Press a key for '{}' (Escape to cancel)", action.label()));
+            ui.colored_label(
+                egui::Color32::YELLOW,
+                format!("Press a key for '{}' (Escape to cancel)", action.label()),
+            );
             ui.add_space(5.0);
 
             // Get the current context for this action (to preserve it)
-            let current_context = self.settings_form_keybindings.bindings
+            let current_context = self
+                .settings_form_keybindings
+                .bindings
                 .get(&action)
                 .map(|b| b.context)
                 .unwrap_or(action.default_context());
@@ -2066,19 +2286,70 @@ impl RequirementsApp {
                 }
                 // Check for any key press
                 for key in [
-                    egui::Key::ArrowUp, egui::Key::ArrowDown, egui::Key::ArrowLeft, egui::Key::ArrowRight,
-                    egui::Key::Enter, egui::Key::Space, egui::Key::Tab, egui::Key::Backspace, egui::Key::Delete,
-                    egui::Key::Home, egui::Key::End, egui::Key::PageUp, egui::Key::PageDown,
-                    egui::Key::Plus, egui::Key::Minus, egui::Key::Equals,
-                    egui::Key::Num0, egui::Key::Num1, egui::Key::Num2, egui::Key::Num3, egui::Key::Num4,
-                    egui::Key::Num5, egui::Key::Num6, egui::Key::Num7, egui::Key::Num8, egui::Key::Num9,
-                    egui::Key::A, egui::Key::B, egui::Key::C, egui::Key::D, egui::Key::E, egui::Key::F,
-                    egui::Key::G, egui::Key::H, egui::Key::I, egui::Key::J, egui::Key::K, egui::Key::L,
-                    egui::Key::M, egui::Key::N, egui::Key::O, egui::Key::P, egui::Key::Q, egui::Key::R,
-                    egui::Key::S, egui::Key::T, egui::Key::U, egui::Key::V, egui::Key::W, egui::Key::X,
-                    egui::Key::Y, egui::Key::Z,
-                    egui::Key::F1, egui::Key::F2, egui::Key::F3, egui::Key::F4, egui::Key::F5, egui::Key::F6,
-                    egui::Key::F7, egui::Key::F8, egui::Key::F9, egui::Key::F10, egui::Key::F11, egui::Key::F12,
+                    egui::Key::ArrowUp,
+                    egui::Key::ArrowDown,
+                    egui::Key::ArrowLeft,
+                    egui::Key::ArrowRight,
+                    egui::Key::Enter,
+                    egui::Key::Space,
+                    egui::Key::Tab,
+                    egui::Key::Backspace,
+                    egui::Key::Delete,
+                    egui::Key::Home,
+                    egui::Key::End,
+                    egui::Key::PageUp,
+                    egui::Key::PageDown,
+                    egui::Key::Plus,
+                    egui::Key::Minus,
+                    egui::Key::Equals,
+                    egui::Key::Num0,
+                    egui::Key::Num1,
+                    egui::Key::Num2,
+                    egui::Key::Num3,
+                    egui::Key::Num4,
+                    egui::Key::Num5,
+                    egui::Key::Num6,
+                    egui::Key::Num7,
+                    egui::Key::Num8,
+                    egui::Key::Num9,
+                    egui::Key::A,
+                    egui::Key::B,
+                    egui::Key::C,
+                    egui::Key::D,
+                    egui::Key::E,
+                    egui::Key::F,
+                    egui::Key::G,
+                    egui::Key::H,
+                    egui::Key::I,
+                    egui::Key::J,
+                    egui::Key::K,
+                    egui::Key::L,
+                    egui::Key::M,
+                    egui::Key::N,
+                    egui::Key::O,
+                    egui::Key::P,
+                    egui::Key::Q,
+                    egui::Key::R,
+                    egui::Key::S,
+                    egui::Key::T,
+                    egui::Key::U,
+                    egui::Key::V,
+                    egui::Key::W,
+                    egui::Key::X,
+                    egui::Key::Y,
+                    egui::Key::Z,
+                    egui::Key::F1,
+                    egui::Key::F2,
+                    egui::Key::F3,
+                    egui::Key::F4,
+                    egui::Key::F5,
+                    egui::Key::F6,
+                    egui::Key::F7,
+                    egui::Key::F8,
+                    egui::Key::F9,
+                    egui::Key::F10,
+                    egui::Key::F11,
+                    egui::Key::F12,
                 ] {
                     if i.key_pressed(key) {
                         let binding = KeyBinding {
@@ -2086,7 +2357,7 @@ impl RequirementsApp {
                             ctrl: i.modifiers.ctrl,
                             shift: i.modifiers.shift,
                             alt: i.modifiers.alt,
-                            context: current_context,  // Preserve the context
+                            context: current_context, // Preserve the context
                         };
                         return Some(Some(binding));
                     }
@@ -2097,7 +2368,9 @@ impl RequirementsApp {
             if let Some(result) = captured {
                 if let Some(binding) = result {
                     // Set the new binding
-                    self.settings_form_keybindings.bindings.insert(action, binding);
+                    self.settings_form_keybindings
+                        .bindings
+                        .insert(action, binding);
                 }
                 self.capturing_key_for = None;
             }
@@ -2123,7 +2396,9 @@ impl RequirementsApp {
                     for action in actions {
                         ui.label(action.label());
 
-                        let binding_display = self.settings_form_keybindings.bindings
+                        let binding_display = self
+                            .settings_form_keybindings
+                            .bindings
                             .get(&action)
                             .map(|b| b.display())
                             .unwrap_or_else(|| "Unbound".to_string());
@@ -2136,7 +2411,9 @@ impl RequirementsApp {
                         }
 
                         // Context selector
-                        let current_context = self.settings_form_keybindings.bindings
+                        let current_context = self
+                            .settings_form_keybindings
+                            .bindings
                             .get(&action)
                             .map(|b| b.context)
                             .unwrap_or(action.default_context());
@@ -2153,7 +2430,9 @@ impl RequirementsApp {
 
                         // Update context if changed
                         if selected_context != current_context {
-                            if let Some(binding) = self.settings_form_keybindings.bindings.get_mut(&action) {
+                            if let Some(binding) =
+                                self.settings_form_keybindings.bindings.get_mut(&action)
+                            {
                                 binding.context = selected_context;
                             }
                         }
@@ -2274,9 +2553,11 @@ impl RequirementsApp {
         // Migration button (only show if changes are valid and migration is possible)
         if validation.valid && validation.can_migrate && validation.affected_count > 0 {
             ui.add_space(5.0);
-            if ui.button("🔄 Migrate Existing IDs").on_hover_text(
-                "Update all existing requirement IDs to match the new format"
-            ).clicked() {
+            if ui
+                .button("🔄 Migrate Existing IDs")
+                .on_hover_text("Update all existing requirement IDs to match the new format")
+                .clicked()
+            {
                 self.pending_migration = Some((
                     self.settings_form_id_format.clone(),
                     self.settings_form_numbering.clone(),
@@ -2320,7 +2601,7 @@ impl RequirementsApp {
         if validation.affected_count == 0 {
             ui.colored_label(
                 egui::Color32::from_rgb(180, 180, 100),
-                "Note: Changes will apply to new requirements only."
+                "Note: Changes will apply to new requirements only.",
             );
         }
     }
@@ -2366,28 +2647,40 @@ impl RequirementsApp {
                                 ui.label(
                                     egui::RichText::new("[built-in]")
                                         .small()
-                                        .color(egui::Color32::GRAY)
+                                        .color(egui::Color32::GRAY),
                                 );
                             }
-                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                // Delete button (only for non-built-in)
-                                if !def.built_in {
-                                    if ui.small_button("🗑").on_hover_text("Delete").clicked() {
-                                        if let Err(e) = self.store.remove_relationship_definition(&def.name) {
-                                            self.message = Some((format!("Failed to remove: {}", e), true));
-                                        } else {
-                                            self.save();
-                                            self.message = Some(("Relationship definition removed".to_string(), false));
+                            ui.with_layout(
+                                egui::Layout::right_to_left(egui::Align::Center),
+                                |ui| {
+                                    // Delete button (only for non-built-in)
+                                    if !def.built_in {
+                                        if ui.small_button("🗑").on_hover_text("Delete").clicked()
+                                        {
+                                            if let Err(e) =
+                                                self.store.remove_relationship_definition(&def.name)
+                                            {
+                                                self.message = Some((
+                                                    format!("Failed to remove: {}", e),
+                                                    true,
+                                                ));
+                                            } else {
+                                                self.save();
+                                                self.message = Some((
+                                                    "Relationship definition removed".to_string(),
+                                                    false,
+                                                ));
+                                            }
                                         }
                                     }
-                                }
-                                // Edit button
-                                if ui.small_button("✏").on_hover_text("Edit").clicked() {
-                                    self.editing_rel_def = Some(def.name.clone());
-                                    self.load_rel_def_form(&def);
-                                    self.show_rel_def_form = true;
-                                }
-                            });
+                                    // Edit button
+                                    if ui.small_button("✏").on_hover_text("Edit").clicked() {
+                                        self.editing_rel_def = Some(def.name.clone());
+                                        self.load_rel_def_form(&def);
+                                        self.show_rel_def_form = true;
+                                    }
+                                },
+                            );
                         });
 
                         // Details
@@ -2407,7 +2700,7 @@ impl RequirementsApp {
                             ui.label(
                                 egui::RichText::new(&def.description)
                                     .small()
-                                    .color(egui::Color32::GRAY)
+                                    .color(egui::Color32::GRAY),
                             );
                         }
 
@@ -2416,14 +2709,20 @@ impl RequirementsApp {
                             ui.horizontal(|ui| {
                                 if !def.source_types.is_empty() {
                                     ui.label(
-                                        egui::RichText::new(format!("From: {}", def.source_types.join(", ")))
-                                            .small()
+                                        egui::RichText::new(format!(
+                                            "From: {}",
+                                            def.source_types.join(", ")
+                                        ))
+                                        .small(),
                                     );
                                 }
                                 if !def.target_types.is_empty() {
                                     ui.label(
-                                        egui::RichText::new(format!("To: {}", def.target_types.join(", ")))
-                                            .small()
+                                        egui::RichText::new(format!(
+                                            "To: {}",
+                                            def.target_types.join(", ")
+                                        ))
+                                        .small(),
                                     );
                                 }
                             });
@@ -2436,7 +2735,7 @@ impl RequirementsApp {
                                 if let Some(c) = parse_hex_color(color) {
                                     let (rect, _) = ui.allocate_exact_size(
                                         egui::vec2(16.0, 16.0),
-                                        egui::Sense::hover()
+                                        egui::Sense::hover(),
                                     );
                                     ui.painter().rect_filled(rect, 2.0, c);
                                 }
@@ -2476,7 +2775,8 @@ impl RequirementsApp {
     fn show_rel_def_form_ui(&mut self, ui: &mut egui::Ui) {
         let is_editing = self.editing_rel_def.is_some();
         let is_built_in = if let Some(ref name) = self.editing_rel_def {
-            self.store.get_relationship_definition(name)
+            self.store
+                .get_relationship_definition(name)
                 .map(|d| d.built_in)
                 .unwrap_or(false)
         } else {
@@ -2485,7 +2785,11 @@ impl RequirementsApp {
 
         ui.group(|ui| {
             let title = if is_editing {
-                if is_built_in { "Edit Built-in Relationship (limited)" } else { "Edit Relationship" }
+                if is_built_in {
+                    "Edit Built-in Relationship (limited)"
+                } else {
+                    "Edit Relationship"
+                }
             } else {
                 "Add Relationship Type"
             };
@@ -2501,30 +2805,38 @@ impl RequirementsApp {
                     if is_editing {
                         ui.label(&self.rel_def_form_name);
                     } else {
-                        ui.add(egui::TextEdit::singleline(&mut self.rel_def_form_name)
-                            .hint_text("e.g., blocks"));
+                        ui.add(
+                            egui::TextEdit::singleline(&mut self.rel_def_form_name)
+                                .hint_text("e.g., blocks"),
+                        );
                     }
                     ui.end_row();
 
                     // Display name (editable)
                     ui.label("Display Name:");
-                    ui.add(egui::TextEdit::singleline(&mut self.rel_def_form_display_name)
-                        .hint_text("e.g., Blocks"));
+                    ui.add(
+                        egui::TextEdit::singleline(&mut self.rel_def_form_display_name)
+                            .hint_text("e.g., Blocks"),
+                    );
                     ui.end_row();
 
                     // Description (editable)
                     ui.label("Description:");
-                    ui.add(egui::TextEdit::singleline(&mut self.rel_def_form_description)
-                        .hint_text("What this relationship means"));
+                    ui.add(
+                        egui::TextEdit::singleline(&mut self.rel_def_form_description)
+                            .hint_text("What this relationship means"),
+                    );
                     ui.end_row();
 
                     // For non-built-in: inverse, symmetric, cardinality
                     if !is_built_in {
                         ui.label("Inverse:");
                         ui.horizontal(|ui| {
-                            ui.add(egui::TextEdit::singleline(&mut self.rel_def_form_inverse)
-                                .hint_text("e.g., blocked_by")
-                                .desired_width(120.0));
+                            ui.add(
+                                egui::TextEdit::singleline(&mut self.rel_def_form_inverse)
+                                    .hint_text("e.g., blocked_by")
+                                    .desired_width(120.0),
+                            );
                             ui.checkbox(&mut self.rel_def_form_symmetric, "Symmetric");
                         });
                         ui.end_row();
@@ -2533,38 +2845,58 @@ impl RequirementsApp {
                         egui::ComboBox::from_id_salt("cardinality_combo")
                             .selected_text(format!("{}", self.rel_def_form_cardinality))
                             .show_ui(ui, |ui| {
-                                ui.selectable_value(&mut self.rel_def_form_cardinality, Cardinality::ManyToMany, "N:N (Many to Many)");
-                                ui.selectable_value(&mut self.rel_def_form_cardinality, Cardinality::OneToMany, "1:N (One to Many)");
-                                ui.selectable_value(&mut self.rel_def_form_cardinality, Cardinality::ManyToOne, "N:1 (Many to One)");
-                                ui.selectable_value(&mut self.rel_def_form_cardinality, Cardinality::OneToOne, "1:1 (One to One)");
+                                ui.selectable_value(
+                                    &mut self.rel_def_form_cardinality,
+                                    Cardinality::ManyToMany,
+                                    "N:N (Many to Many)",
+                                );
+                                ui.selectable_value(
+                                    &mut self.rel_def_form_cardinality,
+                                    Cardinality::OneToMany,
+                                    "1:N (One to Many)",
+                                );
+                                ui.selectable_value(
+                                    &mut self.rel_def_form_cardinality,
+                                    Cardinality::ManyToOne,
+                                    "N:1 (Many to One)",
+                                );
+                                ui.selectable_value(
+                                    &mut self.rel_def_form_cardinality,
+                                    Cardinality::OneToOne,
+                                    "1:1 (One to One)",
+                                );
                             });
                         ui.end_row();
                     }
 
                     // Source types (editable)
                     ui.label("Source Types:");
-                    ui.add(egui::TextEdit::singleline(&mut self.rel_def_form_source_types)
-                        .hint_text("Functional, System (comma-separated, empty = all)"));
+                    ui.add(
+                        egui::TextEdit::singleline(&mut self.rel_def_form_source_types)
+                            .hint_text("Functional, System (comma-separated, empty = all)"),
+                    );
                     ui.end_row();
 
                     // Target types (editable)
                     ui.label("Target Types:");
-                    ui.add(egui::TextEdit::singleline(&mut self.rel_def_form_target_types)
-                        .hint_text("Functional, System (comma-separated, empty = all)"));
+                    ui.add(
+                        egui::TextEdit::singleline(&mut self.rel_def_form_target_types)
+                            .hint_text("Functional, System (comma-separated, empty = all)"),
+                    );
                     ui.end_row();
 
                     // Color (editable)
                     ui.label("Color:");
                     ui.horizontal(|ui| {
-                        ui.add(egui::TextEdit::singleline(&mut self.rel_def_form_color)
-                            .hint_text("#ff6b6b")
-                            .desired_width(80.0));
+                        ui.add(
+                            egui::TextEdit::singleline(&mut self.rel_def_form_color)
+                                .hint_text("#ff6b6b")
+                                .desired_width(80.0),
+                        );
                         // Show color preview
                         if let Some(c) = parse_hex_color(&self.rel_def_form_color) {
-                            let (rect, _) = ui.allocate_exact_size(
-                                egui::vec2(20.0, 20.0),
-                                egui::Sense::hover()
-                            );
+                            let (rect, _) = ui
+                                .allocate_exact_size(egui::vec2(20.0, 20.0), egui::Sense::hover());
                             ui.painter().rect_filled(rect, 2.0, c);
                         }
                     });
@@ -2586,13 +2918,15 @@ impl RequirementsApp {
 
     fn save_rel_def_form(&mut self) {
         // Parse source/target types
-        let source_types: Vec<String> = self.rel_def_form_source_types
+        let source_types: Vec<String> = self
+            .rel_def_form_source_types
             .split(',')
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty())
             .collect();
 
-        let target_types: Vec<String> = self.rel_def_form_target_types
+        let target_types: Vec<String> = self
+            .rel_def_form_target_types
             .split(',')
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty())
@@ -2612,17 +2946,28 @@ impl RequirementsApp {
 
         if let Some(ref edit_name) = self.editing_rel_def {
             // Update existing
-            let is_built_in = self.store.get_relationship_definition(edit_name)
+            let is_built_in = self
+                .store
+                .get_relationship_definition(edit_name)
                 .map(|d| d.built_in)
                 .unwrap_or(false);
 
             let mut updated = if is_built_in {
                 // For built-in, start from existing and only update allowed fields
-                self.store.get_relationship_definition(edit_name)
+                self.store
+                    .get_relationship_definition(edit_name)
                     .cloned()
-                    .unwrap_or_else(|| RelationshipDefinition::new(&self.rel_def_form_name, &self.rel_def_form_display_name))
+                    .unwrap_or_else(|| {
+                        RelationshipDefinition::new(
+                            &self.rel_def_form_name,
+                            &self.rel_def_form_display_name,
+                        )
+                    })
             } else {
-                RelationshipDefinition::new(&self.rel_def_form_name, &self.rel_def_form_display_name)
+                RelationshipDefinition::new(
+                    &self.rel_def_form_name,
+                    &self.rel_def_form_display_name,
+                )
             };
 
             updated.display_name = self.rel_def_form_display_name.clone();
@@ -2637,7 +2982,10 @@ impl RequirementsApp {
                 updated.cardinality = self.rel_def_form_cardinality.clone();
             }
 
-            match self.store.update_relationship_definition(edit_name, updated) {
+            match self
+                .store
+                .update_relationship_definition(edit_name, updated)
+            {
                 Ok(()) => {
                     self.save();
                     self.message = Some(("Relationship definition updated".to_string(), false));
@@ -2749,19 +3097,26 @@ impl RequirementsApp {
                             && !self.reaction_def_form_emoji.is_empty()
                             && !self.reaction_def_form_label.is_empty();
 
-                        if ui.add_enabled(can_save, egui::Button::new("💾 Save")).clicked() {
+                        if ui
+                            .add_enabled(can_save, egui::Button::new("💾 Save"))
+                            .clicked()
+                        {
                             if let Some(ref editing_name) = self.editing_reaction_def.clone() {
                                 // Update existing
-                                if let Some(def) = self.store.reaction_definitions.iter_mut()
+                                if let Some(def) = self
+                                    .store
+                                    .reaction_definitions
+                                    .iter_mut()
                                     .find(|d| &d.name == editing_name)
                                 {
                                     def.emoji = self.reaction_def_form_emoji.clone();
                                     def.label = self.reaction_def_form_label.clone();
-                                    def.description = if self.reaction_def_form_description.is_empty() {
-                                        None
-                                    } else {
-                                        Some(self.reaction_def_form_description.clone())
-                                    };
+                                    def.description =
+                                        if self.reaction_def_form_description.is_empty() {
+                                            None
+                                        } else {
+                                            Some(self.reaction_def_form_description.clone())
+                                        };
                                 }
                             } else {
                                 // Add new
@@ -2771,7 +3126,8 @@ impl RequirementsApp {
                                     self.reaction_def_form_label.clone(),
                                 );
                                 if !self.reaction_def_form_description.is_empty() {
-                                    new_def.description = Some(self.reaction_def_form_description.clone());
+                                    new_def.description =
+                                        Some(self.reaction_def_form_description.clone());
                                 }
                                 self.store.reaction_definitions.push(new_def);
                             }
@@ -2857,7 +3213,11 @@ impl RequirementsApp {
             ui.add_space(15.0);
 
             // Reset to defaults button
-            if ui.button("↺ Reset to Defaults").on_hover_text("Restore built-in reactions").clicked() {
+            if ui
+                .button("↺ Reset to Defaults")
+                .on_hover_text("Restore built-in reactions")
+                .clicked()
+            {
                 self.store.reaction_definitions = requirements_core::default_reaction_definitions();
                 self.save();
             }
@@ -2884,7 +3244,12 @@ impl RequirementsApp {
                 self.type_def_form_display_name.clear();
                 self.type_def_form_description.clear();
                 self.type_def_form_prefix.clear();
-                self.type_def_form_statuses = vec!["Draft".to_string(), "Approved".to_string(), "Completed".to_string(), "Rejected".to_string()];
+                self.type_def_form_statuses = vec![
+                    "Draft".to_string(),
+                    "Approved".to_string(),
+                    "Completed".to_string(),
+                    "Rejected".to_string(),
+                ];
                 self.type_def_form_fields.clear();
                 self.show_type_def_form = true;
             }
@@ -2905,115 +3270,126 @@ impl RequirementsApp {
                     let header = egui::collapsing_header::CollapsingState::load_with_default_open(
                         ui.ctx(),
                         egui::Id::new(format!("type_def_{}", type_def.name)),
-                        false
+                        false,
                     );
 
-                    header.show_header(ui, |ui| {
-                        ui.horizontal(|ui| {
-                            ui.label(format!("{} {}",
-                                if type_def.built_in { "📦" } else { "📝" },
-                                &type_def.display_name
-                            ));
+                    header
+                        .show_header(ui, |ui| {
+                            ui.horizontal(|ui| {
+                                ui.label(format!(
+                                    "{} {}",
+                                    if type_def.built_in { "📦" } else { "📝" },
+                                    &type_def.display_name
+                                ));
 
-                            // Edit button
-                            if ui.small_button("✏").on_hover_text("Edit type").clicked() {
-                                type_to_edit = Some(type_def.name.clone());
-                            }
-
-                            // Reset to default button (only for built-in types)
-                            if type_def.built_in {
-                                if ui.small_button("↺").on_hover_text("Reset to default").clicked() {
-                                    type_to_reset = Some(type_def.name.clone());
-                                }
-                            } else {
-                                // Delete button (only for custom types)
-                                if ui.small_button("🗑").on_hover_text("Delete type").clicked() {
-                                    type_to_delete = Some(type_def.name.clone());
-                                }
-                            }
-                        });
-                    }).body(|ui| {
-                        egui::Grid::new(format!("type_def_grid_{}", type_def.name))
-                            .num_columns(2)
-                            .spacing([10.0, 5.0])
-                            .show(ui, |ui| {
-                                ui.label("Internal Name:");
-                                ui.label(&type_def.name);
-                                ui.end_row();
-
-                                if let Some(ref prefix) = type_def.prefix {
-                                    ui.label("ID Prefix:");
-                                    ui.label(prefix);
-                                    ui.end_row();
+                                // Edit button
+                                if ui.small_button("✏").on_hover_text("Edit type").clicked() {
+                                    type_to_edit = Some(type_def.name.clone());
                                 }
 
-                                if let Some(ref desc) = type_def.description {
-                                    ui.label("Description:");
-                                    ui.label(desc);
-                                    ui.end_row();
-                                }
-
+                                // Reset to default button (only for built-in types)
                                 if type_def.built_in {
-                                    ui.label("");
-                                    ui.small("[Built-in type]");
-                                    ui.end_row();
+                                    if ui
+                                        .small_button("↺")
+                                        .on_hover_text("Reset to default")
+                                        .clicked()
+                                    {
+                                        type_to_reset = Some(type_def.name.clone());
+                                    }
+                                } else {
+                                    // Delete button (only for custom types)
+                                    if ui.small_button("🗑").on_hover_text("Delete type").clicked()
+                                    {
+                                        type_to_delete = Some(type_def.name.clone());
+                                    }
                                 }
                             });
-
-                        // Statuses section
-                        if !type_def.statuses.is_empty() {
-                            ui.add_space(5.0);
-                            ui.label("Available Statuses:");
-                            ui.horizontal_wrapped(|ui| {
-                                for status in &type_def.statuses {
-                                    ui.label(format!("• {}", status));
-                                }
-                            });
-                        }
-
-                        // Custom fields section
-                        if !type_def.custom_fields.is_empty() {
-                            ui.add_space(5.0);
-                            ui.label("Custom Fields:");
-                            egui::Grid::new(format!("custom_fields_grid_{}", type_def.name))
-                                .num_columns(4)
-                                .striped(true)
-                                .spacing([10.0, 3.0])
+                        })
+                        .body(|ui| {
+                            egui::Grid::new(format!("type_def_grid_{}", type_def.name))
+                                .num_columns(2)
+                                .spacing([10.0, 5.0])
                                 .show(ui, |ui| {
-                                    ui.strong("Field");
-                                    ui.strong("Type");
-                                    ui.strong("Required");
-                                    ui.strong("Options/Default");
+                                    ui.label("Internal Name:");
+                                    ui.label(&type_def.name);
                                     ui.end_row();
 
-                                    for field in &type_def.custom_fields {
-                                        ui.label(&field.label);
-                                        ui.label(Self::field_type_display(&field.field_type));
-                                        ui.label(if field.required { "Yes" } else { "No" });
-                                        // Show options or default
-                                        let extra_info = if !field.options.is_empty() {
-                                            field.options.join(", ")
-                                        } else if let Some(ref def) = field.default_value {
-                                            format!("Default: {}", def)
-                                        } else {
-                                            "-".to_string()
-                                        };
-                                        ui.label(extra_info);
+                                    if let Some(ref prefix) = type_def.prefix {
+                                        ui.label("ID Prefix:");
+                                        ui.label(prefix);
+                                        ui.end_row();
+                                    }
+
+                                    if let Some(ref desc) = type_def.description {
+                                        ui.label("Description:");
+                                        ui.label(desc);
+                                        ui.end_row();
+                                    }
+
+                                    if type_def.built_in {
+                                        ui.label("");
+                                        ui.small("[Built-in type]");
                                         ui.end_row();
                                     }
                                 });
-                        }
-                    });
+
+                            // Statuses section
+                            if !type_def.statuses.is_empty() {
+                                ui.add_space(5.0);
+                                ui.label("Available Statuses:");
+                                ui.horizontal_wrapped(|ui| {
+                                    for status in &type_def.statuses {
+                                        ui.label(format!("• {}", status));
+                                    }
+                                });
+                            }
+
+                            // Custom fields section
+                            if !type_def.custom_fields.is_empty() {
+                                ui.add_space(5.0);
+                                ui.label("Custom Fields:");
+                                egui::Grid::new(format!("custom_fields_grid_{}", type_def.name))
+                                    .num_columns(4)
+                                    .striped(true)
+                                    .spacing([10.0, 3.0])
+                                    .show(ui, |ui| {
+                                        ui.strong("Field");
+                                        ui.strong("Type");
+                                        ui.strong("Required");
+                                        ui.strong("Options/Default");
+                                        ui.end_row();
+
+                                        for field in &type_def.custom_fields {
+                                            ui.label(&field.label);
+                                            ui.label(Self::field_type_display(&field.field_type));
+                                            ui.label(if field.required { "Yes" } else { "No" });
+                                            // Show options or default
+                                            let extra_info = if !field.options.is_empty() {
+                                                field.options.join(", ")
+                                            } else if let Some(ref def) = field.default_value {
+                                                format!("Default: {}", def)
+                                            } else {
+                                                "-".to_string()
+                                            };
+                                            ui.label(extra_info);
+                                            ui.end_row();
+                                        }
+                                    });
+                            }
+                        });
                     ui.add_space(5.0);
                 }
 
                 // Handle edit action
                 if let Some(name) = type_to_edit {
-                    if let Some(type_def) = self.store.type_definitions.iter().find(|t| t.name == name) {
+                    if let Some(type_def) =
+                        self.store.type_definitions.iter().find(|t| t.name == name)
+                    {
                         self.editing_type_def = Some(name);
                         self.type_def_form_name = type_def.name.clone();
                         self.type_def_form_display_name = type_def.display_name.clone();
-                        self.type_def_form_description = type_def.description.clone().unwrap_or_default();
+                        self.type_def_form_description =
+                            type_def.description.clone().unwrap_or_default();
                         self.type_def_form_prefix = type_def.prefix.clone().unwrap_or_default();
                         self.type_def_form_statuses = type_def.statuses.clone();
                         self.type_def_form_fields = type_def.custom_fields.clone();
@@ -3025,7 +3401,12 @@ impl RequirementsApp {
                 if let Some(name) = type_to_reset {
                     let defaults = requirements_core::default_type_definitions();
                     if let Some(default_def) = defaults.iter().find(|t| t.name == name) {
-                        if let Some(idx) = self.store.type_definitions.iter().position(|t| t.name == name) {
+                        if let Some(idx) = self
+                            .store
+                            .type_definitions
+                            .iter()
+                            .position(|t| t.name == name)
+                        {
                             self.store.type_definitions[idx] = default_def.clone();
                             self.save();
                         }
@@ -3035,9 +3416,19 @@ impl RequirementsApp {
                 // Handle delete action
                 if let Some(name) = type_to_delete {
                     // Check if any requirements use this type
-                    let in_use = self.store.requirements.iter().any(|r| format!("{:?}", r.req_type) == name);
+                    let in_use = self
+                        .store
+                        .requirements
+                        .iter()
+                        .any(|r| format!("{:?}", r.req_type) == name);
                     if in_use {
-                        self.message = Some((format!("Cannot delete '{}': type is in use by existing requirements", name), true));
+                        self.message = Some((
+                            format!(
+                                "Cannot delete '{}': type is in use by existing requirements",
+                                name
+                            ),
+                            true,
+                        ));
                     } else {
                         self.store.type_definitions.retain(|t| t.name != name);
                         self.save();
@@ -3048,7 +3439,11 @@ impl RequirementsApp {
             ui.add_space(15.0);
 
             // Reset all to defaults button
-            if ui.button("↺ Reset All to Defaults").on_hover_text("Restore all built-in type definitions").clicked() {
+            if ui
+                .button("↺ Reset All to Defaults")
+                .on_hover_text("Restore all built-in type definitions")
+                .clicked()
+            {
                 self.store.type_definitions = requirements_core::default_type_definitions();
                 self.save();
             }
@@ -3094,31 +3489,39 @@ impl RequirementsApp {
                 if is_editing {
                     ui.label(&self.type_def_form_name);
                 } else {
-                    ui.add(egui::TextEdit::singleline(&mut self.type_def_form_name)
-                        .hint_text("e.g., BugReport")
-                        .desired_width(200.0));
+                    ui.add(
+                        egui::TextEdit::singleline(&mut self.type_def_form_name)
+                            .hint_text("e.g., BugReport")
+                            .desired_width(200.0),
+                    );
                 }
                 ui.end_row();
 
                 // Display name
                 ui.label("Display Name:");
-                ui.add(egui::TextEdit::singleline(&mut self.type_def_form_display_name)
-                    .hint_text("e.g., Bug Report")
-                    .desired_width(200.0));
+                ui.add(
+                    egui::TextEdit::singleline(&mut self.type_def_form_display_name)
+                        .hint_text("e.g., Bug Report")
+                        .desired_width(200.0),
+                );
                 ui.end_row();
 
                 // Description
                 ui.label("Description:");
-                ui.add(egui::TextEdit::singleline(&mut self.type_def_form_description)
-                    .hint_text("Optional description")
-                    .desired_width(300.0));
+                ui.add(
+                    egui::TextEdit::singleline(&mut self.type_def_form_description)
+                        .hint_text("Optional description")
+                        .desired_width(300.0),
+                );
                 ui.end_row();
 
                 // ID Prefix
                 ui.label("ID Prefix:");
-                ui.add(egui::TextEdit::singleline(&mut self.type_def_form_prefix)
-                    .hint_text("e.g., BUG")
-                    .desired_width(100.0));
+                ui.add(
+                    egui::TextEdit::singleline(&mut self.type_def_form_prefix)
+                        .hint_text("e.g., BUG")
+                        .desired_width(100.0),
+                );
                 ui.end_row();
             });
 
@@ -3135,7 +3538,11 @@ impl RequirementsApp {
                 ui.group(|ui| {
                     ui.horizontal(|ui| {
                         ui.label(status);
-                        if ui.small_button("✕").on_hover_text("Remove status").clicked() {
+                        if ui
+                            .small_button("✕")
+                            .on_hover_text("Remove status")
+                            .clicked()
+                        {
                             status_to_remove = Some(idx);
                         }
                     });
@@ -3148,11 +3555,14 @@ impl RequirementsApp {
             let status_name = &self.type_def_form_statuses[idx];
             if let Some(ref editing_name) = self.editing_type_def {
                 let in_use = self.store.requirements.iter().any(|r| {
-                    format!("{:?}", r.req_type) == *editing_name &&
-                    r.custom_status.as_ref() == Some(status_name)
+                    format!("{:?}", r.req_type) == *editing_name
+                        && r.custom_status.as_ref() == Some(status_name)
                 });
                 if in_use {
-                    self.message = Some((format!("Cannot remove '{}': status is in use", status_name), true));
+                    self.message = Some((
+                        format!("Cannot remove '{}': status is in use", status_name),
+                        true,
+                    ));
                 } else {
                     self.type_def_form_statuses.remove(idx);
                 }
@@ -3163,12 +3573,15 @@ impl RequirementsApp {
 
         // Add new status
         ui.horizontal(|ui| {
-            ui.add(egui::TextEdit::singleline(&mut self.new_status_input)
-                .hint_text("New status name")
-                .desired_width(150.0));
+            ui.add(
+                egui::TextEdit::singleline(&mut self.new_status_input)
+                    .hint_text("New status name")
+                    .desired_width(150.0),
+            );
             if ui.button("Add Status").clicked() && !self.new_status_input.is_empty() {
                 if !self.type_def_form_statuses.contains(&self.new_status_input) {
-                    self.type_def_form_statuses.push(self.new_status_input.clone());
+                    self.type_def_form_statuses
+                        .push(self.new_status_input.clone());
                     self.new_status_input.clear();
                 }
             }
@@ -3239,11 +3652,14 @@ impl RequirementsApp {
                 let field_name = &self.type_def_form_fields[idx].name;
                 if let Some(ref editing_name) = self.editing_type_def {
                     let in_use = self.store.requirements.iter().any(|r| {
-                        format!("{:?}", r.req_type) == *editing_name &&
-                        r.custom_fields.contains_key(field_name)
+                        format!("{:?}", r.req_type) == *editing_name
+                            && r.custom_fields.contains_key(field_name)
                     });
                     if in_use {
-                        self.message = Some((format!("Cannot remove '{}': field is in use", field_name), true));
+                        self.message = Some((
+                            format!("Cannot remove '{}': field is in use", field_name),
+                            true,
+                        ));
                     } else {
                         self.type_def_form_fields.remove(idx);
                     }
@@ -3271,11 +3687,14 @@ impl RequirementsApp {
 
         // Save/Cancel buttons
         ui.horizontal(|ui| {
-            let can_save = !self.type_def_form_name.is_empty() &&
-                           !self.type_def_form_display_name.is_empty() &&
-                           !self.type_def_form_statuses.is_empty();
+            let can_save = !self.type_def_form_name.is_empty()
+                && !self.type_def_form_display_name.is_empty()
+                && !self.type_def_form_statuses.is_empty();
 
-            if ui.add_enabled(can_save, egui::Button::new("💾 Save")).clicked() {
+            if ui
+                .add_enabled(can_save, egui::Button::new("💾 Save"))
+                .clicked()
+            {
                 self.save_type_definition();
             }
 
@@ -3294,7 +3713,11 @@ impl RequirementsApp {
 
     fn show_custom_field_form(&mut self, ui: &mut egui::Ui) {
         let is_editing = self.editing_field_idx.is_some();
-        let title = if is_editing { "Edit Custom Field" } else { "Add Custom Field" };
+        let title = if is_editing {
+            "Edit Custom Field"
+        } else {
+            "Add Custom Field"
+        };
 
         ui.heading(title);
         ui.add_space(10.0);
@@ -3308,17 +3731,21 @@ impl RequirementsApp {
                 if is_editing {
                     ui.label(&self.field_form_name);
                 } else {
-                    ui.add(egui::TextEdit::singleline(&mut self.field_form_name)
-                        .hint_text("e.g., impact_level")
-                        .desired_width(200.0));
+                    ui.add(
+                        egui::TextEdit::singleline(&mut self.field_form_name)
+                            .hint_text("e.g., impact_level")
+                            .desired_width(200.0),
+                    );
                 }
                 ui.end_row();
 
                 // Label (display name)
                 ui.label("Label:");
-                ui.add(egui::TextEdit::singleline(&mut self.field_form_label)
-                    .hint_text("e.g., Impact Level")
-                    .desired_width(200.0));
+                ui.add(
+                    egui::TextEdit::singleline(&mut self.field_form_label)
+                        .hint_text("e.g., Impact Level")
+                        .desired_width(200.0),
+                );
                 ui.end_row();
 
                 // Field type
@@ -3326,14 +3753,46 @@ impl RequirementsApp {
                 egui::ComboBox::from_id_salt("field_type_combo")
                     .selected_text(Self::field_type_display(&self.field_form_type))
                     .show_ui(ui, |ui| {
-                        ui.selectable_value(&mut self.field_form_type, CustomFieldType::Text, "Text");
-                        ui.selectable_value(&mut self.field_form_type, CustomFieldType::TextArea, "Text Area");
-                        ui.selectable_value(&mut self.field_form_type, CustomFieldType::Select, "Select");
-                        ui.selectable_value(&mut self.field_form_type, CustomFieldType::Boolean, "Boolean");
-                        ui.selectable_value(&mut self.field_form_type, CustomFieldType::Date, "Date");
-                        ui.selectable_value(&mut self.field_form_type, CustomFieldType::Number, "Number");
-                        ui.selectable_value(&mut self.field_form_type, CustomFieldType::User, "User Reference");
-                        ui.selectable_value(&mut self.field_form_type, CustomFieldType::Requirement, "Requirement Reference");
+                        ui.selectable_value(
+                            &mut self.field_form_type,
+                            CustomFieldType::Text,
+                            "Text",
+                        );
+                        ui.selectable_value(
+                            &mut self.field_form_type,
+                            CustomFieldType::TextArea,
+                            "Text Area",
+                        );
+                        ui.selectable_value(
+                            &mut self.field_form_type,
+                            CustomFieldType::Select,
+                            "Select",
+                        );
+                        ui.selectable_value(
+                            &mut self.field_form_type,
+                            CustomFieldType::Boolean,
+                            "Boolean",
+                        );
+                        ui.selectable_value(
+                            &mut self.field_form_type,
+                            CustomFieldType::Date,
+                            "Date",
+                        );
+                        ui.selectable_value(
+                            &mut self.field_form_type,
+                            CustomFieldType::Number,
+                            "Number",
+                        );
+                        ui.selectable_value(
+                            &mut self.field_form_type,
+                            CustomFieldType::User,
+                            "User Reference",
+                        );
+                        ui.selectable_value(
+                            &mut self.field_form_type,
+                            CustomFieldType::Requirement,
+                            "Requirement Reference",
+                        );
                     });
                 ui.end_row();
 
@@ -3345,17 +3804,21 @@ impl RequirementsApp {
                 // Options (for Select type)
                 if self.field_form_type == CustomFieldType::Select {
                     ui.label("Options:");
-                    ui.add(egui::TextEdit::singleline(&mut self.field_form_options)
-                        .hint_text("Option1, Option2, Option3")
-                        .desired_width(300.0));
+                    ui.add(
+                        egui::TextEdit::singleline(&mut self.field_form_options)
+                            .hint_text("Option1, Option2, Option3")
+                            .desired_width(300.0),
+                    );
                     ui.end_row();
                 }
 
                 // Default value
                 ui.label("Default Value:");
-                ui.add(egui::TextEdit::singleline(&mut self.field_form_default)
-                    .hint_text("Optional default")
-                    .desired_width(200.0));
+                ui.add(
+                    egui::TextEdit::singleline(&mut self.field_form_default)
+                        .hint_text("Optional default")
+                        .desired_width(200.0),
+                );
                 ui.end_row();
             });
 
@@ -3365,9 +3828,13 @@ impl RequirementsApp {
         ui.horizontal(|ui| {
             let can_save = !self.field_form_name.is_empty() && !self.field_form_label.is_empty();
 
-            if ui.add_enabled(can_save, egui::Button::new("💾 Save Field")).clicked() {
+            if ui
+                .add_enabled(can_save, egui::Button::new("💾 Save Field"))
+                .clicked()
+            {
                 let options: Vec<String> = if self.field_form_type == CustomFieldType::Select {
-                    self.field_form_options.split(',')
+                    self.field_form_options
+                        .split(',')
                         .map(|s| s.trim().to_string())
                         .filter(|s| !s.is_empty())
                         .collect()
@@ -3425,7 +3892,9 @@ impl RequirementsApp {
             custom_fields: self.type_def_form_fields.clone(),
             built_in: if let Some(ref editing_name) = self.editing_type_def {
                 // Preserve built_in status when editing
-                self.store.type_definitions.iter()
+                self.store
+                    .type_definitions
+                    .iter()
                     .find(|t| &t.name == editing_name)
                     .map(|t| t.built_in)
                     .unwrap_or(false)
@@ -3437,7 +3906,12 @@ impl RequirementsApp {
 
         if let Some(ref editing_name) = self.editing_type_def {
             // Update existing type
-            if let Some(idx) = self.store.type_definitions.iter().position(|t| &t.name == editing_name) {
+            if let Some(idx) = self
+                .store
+                .type_definitions
+                .iter()
+                .position(|t| &t.name == editing_name)
+            {
                 self.store.type_definitions[idx] = type_def;
             }
         } else {
@@ -3647,10 +4121,21 @@ impl RequirementsApp {
 
     fn show_users_table(&mut self, ui: &mut egui::Ui) {
         // Collect user data to avoid borrow issues
-        let users_data: Vec<(Uuid, Option<String>, String, String, String, bool)> = self.store.users
+        let users_data: Vec<(Uuid, Option<String>, String, String, String, bool)> = self
+            .store
+            .users
             .iter()
             .filter(|u| self.show_archived_users || !u.archived)
-            .map(|u| (u.id, u.spec_id.clone(), u.name.clone(), u.email.clone(), u.handle.clone(), u.archived))
+            .map(|u| {
+                (
+                    u.id,
+                    u.spec_id.clone(),
+                    u.name.clone(),
+                    u.email.clone(),
+                    u.handle.clone(),
+                    u.archived,
+                )
+            })
             .collect();
 
         if users_data.is_empty() {
@@ -3694,7 +4179,8 @@ impl RequirementsApp {
                         }
 
                         let archive_label = if *archived { "Unarchive" } else { "Archive" };
-                        if ui.small_button(if *archived { "↩" } else { "📁" })
+                        if ui
+                            .small_button(if *archived { "↩" } else { "📁" })
                             .on_hover_text(archive_label)
                             .clicked()
                         {
@@ -3761,13 +4247,22 @@ impl RequirementsApp {
 
         // Create backup filename with timestamp
         let backup_name = if let Some(stem) = db_path.file_stem() {
-            let ext = db_path.extension().map(|e| e.to_str().unwrap_or("yaml")).unwrap_or("yaml");
-            format!("{}_{}.{}", stem.to_str().unwrap_or("requirements"), timestamp, ext)
+            let ext = db_path
+                .extension()
+                .map(|e| e.to_str().unwrap_or("yaml"))
+                .unwrap_or("yaml");
+            format!(
+                "{}_{}.{}",
+                stem.to_str().unwrap_or("requirements"),
+                timestamp,
+                ext
+            )
         } else {
             format!("requirements_backup_{}.yaml", timestamp)
         };
 
-        let backup_path = db_path.parent()
+        let backup_path = db_path
+            .parent()
             .map(|p| p.join(&backup_name))
             .unwrap_or_else(|| std::path::PathBuf::from(&backup_name));
 
@@ -3787,7 +4282,8 @@ impl RequirementsApp {
         match &self.perspective {
             Perspective::Flat => {
                 // Flat view: simple filtered list in storage order (all treated as root)
-                self.store.requirements
+                self.store
+                    .requirements
                     .iter()
                     .enumerate()
                     .filter(|(_, req)| self.passes_filters(req, true))
@@ -3805,13 +4301,21 @@ impl RequirementsApp {
                     PerspectiveDirection::TopDown => {
                         let leaves = self.find_tree_leaves(&outgoing_type);
                         for leaf_idx in leaves {
-                            self.collect_tree_indices_bottom_up(leaf_idx, &outgoing_type, &mut result);
+                            self.collect_tree_indices_bottom_up(
+                                leaf_idx,
+                                &outgoing_type,
+                                &mut result,
+                            );
                         }
                     }
                     PerspectiveDirection::BottomUp => {
                         let roots = self.find_tree_roots(&outgoing_type);
                         for root_idx in roots {
-                            self.collect_tree_indices_top_down(root_idx, &outgoing_type, &mut result);
+                            self.collect_tree_indices_top_down(
+                                root_idx,
+                                &outgoing_type,
+                                &mut result,
+                            );
                         }
                     }
                 }
@@ -3821,14 +4325,22 @@ impl RequirementsApp {
     }
 
     /// Collect tree indices in top-down order (roots first, then children)
-    fn collect_tree_indices_top_down(&self, idx: usize, outgoing_rel_type: &RelationshipType, result: &mut Vec<usize>) {
+    fn collect_tree_indices_top_down(
+        &self,
+        idx: usize,
+        outgoing_rel_type: &RelationshipType,
+        result: &mut Vec<usize>,
+    ) {
         // Don't add duplicates
         if result.contains(&idx) {
             return;
         }
 
         // Check if this node is collapsed
-        let is_collapsed = self.store.requirements.get(idx)
+        let is_collapsed = self
+            .store
+            .requirements
+            .get(idx)
             .map(|req| self.tree_collapsed.get(&req.id).copied().unwrap_or(false))
             .unwrap_or(false);
 
@@ -3846,14 +4358,22 @@ impl RequirementsApp {
     }
 
     /// Collect tree indices in bottom-up order (leaves first, then parents)
-    fn collect_tree_indices_bottom_up(&self, idx: usize, outgoing_rel_type: &RelationshipType, result: &mut Vec<usize>) {
+    fn collect_tree_indices_bottom_up(
+        &self,
+        idx: usize,
+        outgoing_rel_type: &RelationshipType,
+        result: &mut Vec<usize>,
+    ) {
         // Don't add duplicates
         if result.contains(&idx) {
             return;
         }
 
         // Check if this node is collapsed
-        let is_collapsed = self.store.requirements.get(idx)
+        let is_collapsed = self
+            .store
+            .requirements
+            .get(idx)
             .map(|req| self.tree_collapsed.get(&req.id).copied().unwrap_or(false))
             .unwrap_or(false);
 
@@ -3878,20 +4398,33 @@ impl RequirementsApp {
             let search = self.filter_text.to_lowercase();
             if !req.title.to_lowercase().contains(&search)
                 && !req.description.to_lowercase().contains(&search)
-                && !req.spec_id.as_ref().map(|s| s.to_lowercase().contains(&search)).unwrap_or(false)
+                && !req
+                    .spec_id
+                    .as_ref()
+                    .map(|s| s.to_lowercase().contains(&search))
+                    .unwrap_or(false)
             {
                 return false;
             }
         }
 
         // Determine which filters to use based on root vs child
-        let (filter_types, filter_features, filter_prefixes) = if is_root || self.children_same_as_root {
-            // Root requirements or "same as root" mode: use root filters
-            (&self.filter_types, &self.filter_features, &self.filter_prefixes)
-        } else {
-            // Child requirements with separate filters
-            (&self.child_filter_types, &self.child_filter_features, &self.child_filter_prefixes)
-        };
+        let (filter_types, filter_features, filter_prefixes) =
+            if is_root || self.children_same_as_root {
+                // Root requirements or "same as root" mode: use root filters
+                (
+                    &self.filter_types,
+                    &self.filter_features,
+                    &self.filter_prefixes,
+                )
+            } else {
+                // Child requirements with separate filters
+                (
+                    &self.child_filter_types,
+                    &self.child_filter_features,
+                    &self.child_filter_prefixes,
+                )
+            };
 
         // Type filter (empty = show all)
         if !filter_types.is_empty() && !filter_types.contains(&req.req_type) {
@@ -3906,7 +4439,9 @@ impl RequirementsApp {
         // Prefix filter (empty = show all)
         if !filter_prefixes.is_empty() {
             // Extract prefix from spec_id (e.g., "SEC-001" -> "SEC")
-            let req_prefix = req.spec_id.as_ref()
+            let req_prefix = req
+                .spec_id
+                .as_ref()
                 .and_then(|s| s.split('-').next())
                 .unwrap_or("");
             if !filter_prefixes.contains(req_prefix) {
@@ -3924,7 +4459,9 @@ impl RequirementsApp {
 
     /// Get all unique feature names from requirements
     fn get_all_features(&self) -> Vec<String> {
-        let mut features: Vec<String> = self.store.requirements
+        let mut features: Vec<String> = self
+            .store
+            .requirements
             .iter()
             .map(|r| r.feature.clone())
             .collect::<HashSet<_>>()
@@ -3952,7 +4489,8 @@ impl RequirementsApp {
         }
 
         // Return indices of requirements that are NOT children (i.e., they are roots)
-        self.store.requirements
+        self.store
+            .requirements
             .iter()
             .enumerate()
             .filter(|(_, req)| !is_child.contains(&req.id) && self.passes_filters(req, true))
@@ -3965,14 +4503,16 @@ impl RequirementsApp {
         // Find the parent requirement
         if let Some(parent) = self.store.requirements.iter().find(|r| &r.id == parent_id) {
             // Get all target IDs where relationship type matches
-            let child_ids: Vec<Uuid> = parent.relationships
+            let child_ids: Vec<Uuid> = parent
+                .relationships
                 .iter()
                 .filter(|r| &r.rel_type == outgoing_rel_type)
                 .map(|r| r.target_id)
                 .collect();
 
             // Convert to indices, filtering by current filters (these are children)
-            self.store.requirements
+            self.store
+                .requirements
                 .iter()
                 .enumerate()
                 .filter(|(_, req)| child_ids.contains(&req.id) && self.passes_filters(req, false))
@@ -3989,14 +4529,16 @@ impl RequirementsApp {
         // Find all requirements that have an outgoing relationship to this child
         // e.g., find all requirements with a "Parent" relationship where target_id == child_id
         // In bottom-up view, parents are shown nested under children, so they're "children" in display terms
-        self.store.requirements
+        self.store
+            .requirements
             .iter()
             .enumerate()
             .filter(|(_, req)| {
-                self.passes_filters(req, false) &&
-                req.relationships.iter().any(|r|
-                    &r.rel_type == outgoing_rel_type && &r.target_id == child_id
-                )
+                self.passes_filters(req, false)
+                    && req
+                        .relationships
+                        .iter()
+                        .any(|r| &r.rel_type == outgoing_rel_type && &r.target_id == child_id)
             })
             .map(|(idx, _)| idx)
             .collect()
@@ -4005,12 +4547,16 @@ impl RequirementsApp {
     /// Find leaf nodes for bottom-up tree view (requirements with no outgoing relationships of the type)
     /// These are displayed at root level in bottom-up view
     fn find_tree_leaves(&self, outgoing_rel_type: &RelationshipType) -> Vec<usize> {
-        self.store.requirements
+        self.store
+            .requirements
             .iter()
             .enumerate()
             .filter(|(_, req)| {
-                self.passes_filters(req, true) &&
-                !req.relationships.iter().any(|r| &r.rel_type == outgoing_rel_type)
+                self.passes_filters(req, true)
+                    && !req
+                        .relationships
+                        .iter()
+                        .any(|r| &r.rel_type == outgoing_rel_type)
             })
             .map(|(idx, _)| idx)
             .collect()
@@ -4018,7 +4564,11 @@ impl RequirementsApp {
 
     /// Create a relationship based on drag-drop action and current perspective
     /// Returns (source_idx, target_idx, relationship_type) where source stores the relationship to target
-    fn get_relationship_for_drop(&self, dragged_idx: usize, drop_target_idx: usize) -> Option<(usize, usize, RelationshipType)> {
+    fn get_relationship_for_drop(
+        &self,
+        dragged_idx: usize,
+        drop_target_idx: usize,
+    ) -> Option<(usize, usize, RelationshipType)> {
         if dragged_idx == drop_target_idx {
             return None; // Can't create relationship to self
         }
@@ -4047,18 +4597,23 @@ impl RequirementsApp {
 
     /// Create a relationship between two requirements
     fn create_relationship_from_drop(&mut self, dragged_idx: usize, drop_target_idx: usize) {
-        if let Some((source_idx, target_idx, rel_type)) = self.get_relationship_for_drop(dragged_idx, drop_target_idx) {
+        if let Some((source_idx, target_idx, rel_type)) =
+            self.get_relationship_for_drop(dragged_idx, drop_target_idx)
+        {
             let source_id = self.store.requirements.get(source_idx).map(|r| r.id);
             let target_id = self.store.requirements.get(target_idx).map(|r| r.id);
 
             if let (Some(source_id), Some(target_id)) = (source_id, target_id) {
                 // Validate the relationship first
-                let validation = self.store.validate_relationship(&source_id, &rel_type, &target_id);
+                let validation = self
+                    .store
+                    .validate_relationship(&source_id, &rel_type, &target_id);
 
                 // Check for errors
                 if !validation.valid {
                     let error_msg = validation.errors.join("; ");
-                    self.message = Some((format!("Cannot create relationship: {}", error_msg), true));
+                    self.message =
+                        Some((format!("Cannot create relationship: {}", error_msg), true));
                     return;
                 }
 
@@ -4072,11 +4627,18 @@ impl RequirementsApp {
                 // source stores the relationship pointing to target
                 // Use inverse from definitions to determine bidirectionality
                 let bidirectional = self.store.get_inverse_type(&rel_type).is_some();
-                match self.store.set_relationship(&source_id, rel_type.clone(), &target_id, bidirectional) {
+                match self.store.set_relationship(
+                    &source_id,
+                    rel_type.clone(),
+                    &target_id,
+                    bidirectional,
+                ) {
                     Ok(()) => {
                         self.save();
                         // Get display name from definition
-                        let rel_name = self.store.get_definition_for_type(&rel_type)
+                        let rel_name = self
+                            .store
+                            .get_definition_for_type(&rel_type)
                             .map(|d| d.display_name.clone())
                             .unwrap_or_else(|| format!("{:?}", rel_type));
 
@@ -4095,178 +4657,237 @@ impl RequirementsApp {
     }
 
     fn show_list_panel(&mut self, ctx: &egui::Context, in_form_view: bool) {
-        egui::SidePanel::left("list_panel").min_width(400.0).show(ctx, |ui| {
-            // Header with optional collapse button
-            ui.horizontal(|ui| {
-                ui.heading("Requirements");
-                if in_form_view {
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if ui.button("▶ Hide").on_hover_text("Hide requirements list").clicked() {
-                            self.left_panel_collapsed = true;
-                        }
-                    });
-                }
-            });
-            ui.separator();
-
-            // Search bar
-            ui.horizontal(|ui| {
-                ui.label("🔍");
-                ui.add(egui::TextEdit::singleline(&mut self.filter_text)
-                    .hint_text("Search...")
-                    .desired_width(150.0));
-
-                // Filter toggle button
-                let filter_active = !self.filter_types.is_empty() || !self.filter_features.is_empty();
-                let filter_btn_text = if filter_active { "🔽 Filters ●" } else { "🔽 Filters" };
-                if ui.button(filter_btn_text).clicked() {
-                    self.show_filter_panel = !self.show_filter_panel;
-                }
-            });
-
-            // Perspective and preset selector
-            ui.horizontal(|ui| {
-                ui.label("View:");
-
-                // Determine what to show as selected text
-                let selected_text = if let Some(ref preset_name) = self.active_preset {
-                    if self.current_view_matches_active_preset() {
-                        preset_name.clone()
-                    } else {
-                        format!("{}*", preset_name)  // Modified indicator
+        egui::SidePanel::left("list_panel")
+            .min_width(400.0)
+            .show(ctx, |ui| {
+                // Header with optional collapse button
+                ui.horizontal(|ui| {
+                    ui.heading("Requirements");
+                    if in_form_view {
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            if ui
+                                .button("▶ Hide")
+                                .on_hover_text("Hide requirements list")
+                                .clicked()
+                            {
+                                self.left_panel_collapsed = true;
+                            }
+                        });
                     }
-                } else {
-                    self.perspective.label().to_string()
-                };
+                });
+                ui.separator();
 
-                // Clone presets for iteration
-                let presets: Vec<ViewPreset> = self.user_settings.view_presets.clone();
-                let mut preset_to_apply: Option<ViewPreset> = None;
-                let mut clear_active_preset = false;
+                // Search bar
+                ui.horizontal(|ui| {
+                    ui.label("🔍");
+                    ui.add(
+                        egui::TextEdit::singleline(&mut self.filter_text)
+                            .hint_text("Search...")
+                            .desired_width(150.0),
+                    );
 
-                egui::ComboBox::from_id_salt("perspective_combo")
-                    .selected_text(&selected_text)
-                    .show_ui(ui, |ui| {
-                        // Built-in perspectives section
-                        ui.label("Built-in Views");
-                        ui.separator();
+                    // Filter toggle button
+                    let filter_active =
+                        !self.filter_types.is_empty() || !self.filter_features.is_empty();
+                    let filter_btn_text = if filter_active {
+                        "🔽 Filters ●"
+                    } else {
+                        "🔽 Filters"
+                    };
+                    if ui.button(filter_btn_text).clicked() {
+                        self.show_filter_panel = !self.show_filter_panel;
+                    }
+                });
 
-                        // Check if current view matches a built-in (for highlighting)
-                        let is_flat = self.perspective == Perspective::Flat && self.active_preset.is_none();
-                        let is_parent_child = self.perspective == Perspective::ParentChild && self.active_preset.is_none();
-                        let is_verification = self.perspective == Perspective::Verification && self.active_preset.is_none();
-                        let is_references = self.perspective == Perspective::References && self.active_preset.is_none();
+                // Perspective and preset selector
+                ui.horizontal(|ui| {
+                    ui.label("View:");
 
-                        if ui.selectable_label(is_flat, Perspective::Flat.label()).clicked() {
-                            self.perspective = Perspective::Flat;
-                            clear_active_preset = true;
+                    // Determine what to show as selected text
+                    let selected_text = if let Some(ref preset_name) = self.active_preset {
+                        if self.current_view_matches_active_preset() {
+                            preset_name.clone()
+                        } else {
+                            format!("{}*", preset_name) // Modified indicator
                         }
-                        if ui.selectable_label(is_parent_child, Perspective::ParentChild.label()).clicked() {
-                            self.perspective = Perspective::ParentChild;
-                            clear_active_preset = true;
-                        }
-                        if ui.selectable_label(is_verification, Perspective::Verification.label()).clicked() {
-                            self.perspective = Perspective::Verification;
-                            clear_active_preset = true;
-                        }
-                        if ui.selectable_label(is_references, Perspective::References.label()).clicked() {
-                            self.perspective = Perspective::References;
-                            clear_active_preset = true;
-                        }
+                    } else {
+                        self.perspective.label().to_string()
+                    };
 
-                        // User presets section (if any exist)
-                        if !presets.is_empty() {
-                            ui.add_space(5.0);
-                            ui.label("Saved Presets");
+                    // Clone presets for iteration
+                    let presets: Vec<ViewPreset> = self.user_settings.view_presets.clone();
+                    let mut preset_to_apply: Option<ViewPreset> = None;
+                    let mut clear_active_preset = false;
+
+                    egui::ComboBox::from_id_salt("perspective_combo")
+                        .selected_text(&selected_text)
+                        .show_ui(ui, |ui| {
+                            // Built-in perspectives section
+                            ui.label("Built-in Views");
                             ui.separator();
 
-                            for preset in &presets {
-                                let is_selected = self.active_preset.as_ref() == Some(&preset.name)
-                                    && self.current_view_matches_active_preset();
+                            // Check if current view matches a built-in (for highlighting)
+                            let is_flat = self.perspective == Perspective::Flat
+                                && self.active_preset.is_none();
+                            let is_parent_child = self.perspective == Perspective::ParentChild
+                                && self.active_preset.is_none();
+                            let is_verification = self.perspective == Perspective::Verification
+                                && self.active_preset.is_none();
+                            let is_references = self.perspective == Perspective::References
+                                && self.active_preset.is_none();
 
-                                ui.horizontal(|ui| {
-                                    if ui.selectable_label(is_selected, &preset.name).clicked() {
-                                        preset_to_apply = Some(preset.clone());
-                                    }
-                                    // Delete button (small X)
-                                    if ui.small_button("✕").on_hover_text("Delete preset").clicked() {
-                                        self.show_delete_preset_confirm = Some(preset.name.clone());
-                                    }
-                                });
+                            if ui
+                                .selectable_label(is_flat, Perspective::Flat.label())
+                                .clicked()
+                            {
+                                self.perspective = Perspective::Flat;
+                                clear_active_preset = true;
                             }
-                        }
-                    });
+                            if ui
+                                .selectable_label(is_parent_child, Perspective::ParentChild.label())
+                                .clicked()
+                            {
+                                self.perspective = Perspective::ParentChild;
+                                clear_active_preset = true;
+                            }
+                            if ui
+                                .selectable_label(
+                                    is_verification,
+                                    Perspective::Verification.label(),
+                                )
+                                .clicked()
+                            {
+                                self.perspective = Perspective::Verification;
+                                clear_active_preset = true;
+                            }
+                            if ui
+                                .selectable_label(is_references, Perspective::References.label())
+                                .clicked()
+                            {
+                                self.perspective = Perspective::References;
+                                clear_active_preset = true;
+                            }
 
-                // Apply preset if one was selected
-                if let Some(preset) = preset_to_apply {
-                    self.apply_preset(&preset);
-                }
+                            // User presets section (if any exist)
+                            if !presets.is_empty() {
+                                ui.add_space(5.0);
+                                ui.label("Saved Presets");
+                                ui.separator();
 
-                // Clear active preset if built-in was selected
-                if clear_active_preset {
-                    self.active_preset = None;
-                }
+                                for preset in &presets {
+                                    let is_selected = self.active_preset.as_ref()
+                                        == Some(&preset.name)
+                                        && self.current_view_matches_active_preset();
 
-                // Direction selector (only shown for non-flat perspectives)
-                if self.perspective != Perspective::Flat {
-                    egui::ComboBox::from_id_salt("direction_combo")
-                        .selected_text(self.perspective_direction.label())
-                        .show_ui(ui, |ui| {
-                            ui.selectable_value(&mut self.perspective_direction, PerspectiveDirection::TopDown, "Top-down ↓");
-                            ui.selectable_value(&mut self.perspective_direction, PerspectiveDirection::BottomUp, "Bottom-up ↑");
+                                    ui.horizontal(|ui| {
+                                        if ui.selectable_label(is_selected, &preset.name).clicked()
+                                        {
+                                            preset_to_apply = Some(preset.clone());
+                                        }
+                                        // Delete button (small X)
+                                        if ui
+                                            .small_button("✕")
+                                            .on_hover_text("Delete preset")
+                                            .clicked()
+                                        {
+                                            self.show_delete_preset_confirm =
+                                                Some(preset.name.clone());
+                                        }
+                                    });
+                                }
+                            }
                         });
-                }
 
-                // Save As button (shown when view has unsaved changes)
-                if self.has_unsaved_view() {
-                    if ui.button("💾 Save As...").on_hover_text("Save current view as a preset").clicked() {
-                        // Pre-fill with active preset name if modifying, otherwise empty
-                        self.preset_name_input = self.active_preset.clone().unwrap_or_default();
-                        self.show_save_preset_dialog = true;
+                    // Apply preset if one was selected
+                    if let Some(preset) = preset_to_apply {
+                        self.apply_preset(&preset);
                     }
-                }
 
-                // Reset button (shown when not at default)
-                if self.perspective != Perspective::Flat
-                    || self.perspective_direction != PerspectiveDirection::TopDown
-                    || !self.filter_types.is_empty()
-                    || !self.filter_features.is_empty()
-                {
-                    if ui.small_button("↺").on_hover_text("Reset to default view").clicked() {
-                        self.reset_to_default_view();
+                    // Clear active preset if built-in was selected
+                    if clear_active_preset {
+                        self.active_preset = None;
                     }
-                }
-            });
 
-            // Collapsible filter panel
-            if self.show_filter_panel {
+                    // Direction selector (only shown for non-flat perspectives)
+                    if self.perspective != Perspective::Flat {
+                        egui::ComboBox::from_id_salt("direction_combo")
+                            .selected_text(self.perspective_direction.label())
+                            .show_ui(ui, |ui| {
+                                ui.selectable_value(
+                                    &mut self.perspective_direction,
+                                    PerspectiveDirection::TopDown,
+                                    "Top-down ↓",
+                                );
+                                ui.selectable_value(
+                                    &mut self.perspective_direction,
+                                    PerspectiveDirection::BottomUp,
+                                    "Bottom-up ↑",
+                                );
+                            });
+                    }
+
+                    // Save As button (shown when view has unsaved changes)
+                    if self.has_unsaved_view() {
+                        if ui
+                            .button("💾 Save As...")
+                            .on_hover_text("Save current view as a preset")
+                            .clicked()
+                        {
+                            // Pre-fill with active preset name if modifying, otherwise empty
+                            self.preset_name_input = self.active_preset.clone().unwrap_or_default();
+                            self.show_save_preset_dialog = true;
+                        }
+                    }
+
+                    // Reset button (shown when not at default)
+                    if self.perspective != Perspective::Flat
+                        || self.perspective_direction != PerspectiveDirection::TopDown
+                        || !self.filter_types.is_empty()
+                        || !self.filter_features.is_empty()
+                    {
+                        if ui
+                            .small_button("↺")
+                            .on_hover_text("Reset to default view")
+                            .clicked()
+                        {
+                            self.reset_to_default_view();
+                        }
+                    }
+                });
+
+                // Collapsible filter panel
+                if self.show_filter_panel {
+                    ui.separator();
+                    self.show_filter_controls(ui);
+                }
+
                 ui.separator();
-                self.show_filter_controls(ui);
-            }
 
-            ui.separator();
-
-            // Requirement list (flat or tree)
-            egui::ScrollArea::vertical().show(ui, |ui| {
-                match &self.perspective {
+                // Requirement list (flat or tree)
+                egui::ScrollArea::vertical().show(ui, |ui| match &self.perspective {
                     Perspective::Flat => {
                         self.show_flat_list(ui);
                     }
                     _ => {
                         self.show_tree_list(ui);
                     }
-                }
+                });
             });
-        });
     }
 
     fn show_filter_controls(&mut self, ui: &mut egui::Ui) {
         // Filter tabs: Root and Children
         ui.horizontal(|ui| {
-            if ui.selectable_label(self.filter_tab == FilterTab::Root, "Root").clicked() {
+            if ui
+                .selectable_label(self.filter_tab == FilterTab::Root, "Root")
+                .clicked()
+            {
                 self.filter_tab = FilterTab::Root;
             }
-            if ui.selectable_label(self.filter_tab == FilterTab::Children, "Children").clicked() {
+            if ui
+                .selectable_label(self.filter_tab == FilterTab::Children, "Children")
+                .clicked()
+            {
                 self.filter_tab = FilterTab::Children;
             }
         });
@@ -4327,7 +4948,11 @@ impl RequirementsApp {
                     feature.clone()
                 };
 
-                if ui.checkbox(&mut checked, &display_name).on_hover_text(feature).changed() {
+                if ui
+                    .checkbox(&mut checked, &display_name)
+                    .on_hover_text(feature)
+                    .changed()
+                {
                     if checked {
                         self.filter_features.insert(feature.clone());
                     } else {
@@ -4414,7 +5039,11 @@ impl RequirementsApp {
                         feature.clone()
                     };
 
-                    if ui.checkbox(&mut checked, &display_name).on_hover_text(feature).changed() {
+                    if ui
+                        .checkbox(&mut checked, &display_name)
+                        .on_hover_text(feature)
+                        .changed()
+                    {
                         if checked {
                             self.child_filter_features.insert(feature.clone());
                         } else {
@@ -4455,7 +5084,9 @@ impl RequirementsApp {
 
     fn show_flat_list(&mut self, ui: &mut egui::Ui) {
         // Collect filtered indices first to avoid borrow issues (flat view uses root filters)
-        let filtered_indices: Vec<usize> = self.store.requirements
+        let filtered_indices: Vec<usize> = self
+            .store
+            .requirements
             .iter()
             .enumerate()
             .filter(|(_, req)| self.passes_filters(req, true))
@@ -4469,7 +5100,9 @@ impl RequirementsApp {
 
     /// Render a single requirement item with drag-and-drop support
     fn show_draggable_requirement(&mut self, ui: &mut egui::Ui, idx: usize, indent: usize) {
-        let Some(req) = self.store.requirements.get(idx) else { return };
+        let Some(req) = self.store.requirements.get(idx) else {
+            return;
+        };
 
         let spec_id = req.spec_id.clone();
         let title = req.title.clone();
@@ -4484,21 +5117,21 @@ impl RequirementsApp {
             ui.add_space(indent_space);
 
             // Build the label
-            let label = format!("{} - {}",
-                spec_id.as_deref().unwrap_or("N/A"),
-                title
-            );
+            let label = format!("{} - {}", spec_id.as_deref().unwrap_or("N/A"), title);
 
             // Visual feedback for drag/drop state
             let (bg_color, stroke) = if is_drop_target && can_drag {
-                (egui::Color32::from_rgba_unmultiplied(100, 200, 100, 60),
-                 egui::Stroke::new(2.0, egui::Color32::GREEN))
+                (
+                    egui::Color32::from_rgba_unmultiplied(100, 200, 100, 60),
+                    egui::Stroke::new(2.0, egui::Color32::GREEN),
+                )
             } else if is_drag_source {
-                (egui::Color32::from_rgba_unmultiplied(100, 100, 200, 60),
-                 egui::Stroke::new(2.0, egui::Color32::LIGHT_BLUE))
+                (
+                    egui::Color32::from_rgba_unmultiplied(100, 100, 200, 60),
+                    egui::Stroke::new(2.0, egui::Color32::LIGHT_BLUE),
+                )
             } else if selected {
-                (ui.visuals().selection.bg_fill,
-                 egui::Stroke::NONE)
+                (ui.visuals().selection.bg_fill, egui::Stroke::NONE)
             } else {
                 (egui::Color32::TRANSPARENT, egui::Stroke::NONE)
             };
@@ -4512,7 +5145,12 @@ impl RequirementsApp {
 
             // Calculate size for the label
             let text = egui::WidgetText::from(&label);
-            let galley = text.into_galley(ui, Some(egui::TextWrapMode::Extend), f32::INFINITY, egui::TextStyle::Body);
+            let galley = text.into_galley(
+                ui,
+                Some(egui::TextWrapMode::Extend),
+                f32::INFINITY,
+                egui::TextStyle::Body,
+            );
             let desired_size = galley.size() + egui::vec2(8.0, 4.0); // padding
 
             let (rect, response) = ui.allocate_exact_size(desired_size, sense);
@@ -4621,8 +5259,16 @@ impl RequirementsApp {
         }
     }
 
-    fn show_tree_node(&mut self, ui: &mut egui::Ui, idx: usize, outgoing_rel_type: &RelationshipType, depth: usize) {
-        let Some(req) = self.store.requirements.get(idx) else { return };
+    fn show_tree_node(
+        &mut self,
+        ui: &mut egui::Ui,
+        idx: usize,
+        outgoing_rel_type: &RelationshipType,
+        depth: usize,
+    ) {
+        let Some(req) = self.store.requirements.get(idx) else {
+            return;
+        };
 
         let req_id = req.id;
         let children = self.get_children(&req_id, outgoing_rel_type);
@@ -4638,7 +5284,10 @@ impl RequirementsApp {
             let btn_size = egui::vec2(18.0, 18.0);
             if has_children {
                 let btn_text = if is_collapsed { "+" } else { "-" };
-                if ui.add_sized(btn_size, egui::Button::new(btn_text)).clicked() {
+                if ui
+                    .add_sized(btn_size, egui::Button::new(btn_text))
+                    .clicked()
+                {
                     self.tree_collapsed.insert(req_id, !is_collapsed);
                 }
             } else {
@@ -4660,7 +5309,9 @@ impl RequirementsApp {
 
     /// Render requirement item inline (without indent, for use in tree nodes)
     fn show_draggable_requirement_inline(&mut self, ui: &mut egui::Ui, idx: usize) {
-        let Some(req) = self.store.requirements.get(idx) else { return };
+        let Some(req) = self.store.requirements.get(idx) else {
+            return;
+        };
 
         let spec_id = req.spec_id.clone();
         let title = req.title.clone();
@@ -4668,28 +5319,33 @@ impl RequirementsApp {
         let is_drag_source = self.drag_source == Some(idx);
         let is_drop_target = self.drop_target == Some(idx);
 
-        let label = format!("{} - {}",
-            spec_id.as_deref().unwrap_or("N/A"),
-            title
-        );
+        let label = format!("{} - {}", spec_id.as_deref().unwrap_or("N/A"), title);
 
         // Visual feedback for drag/drop state
         let (bg_color, stroke) = if is_drop_target {
-            (egui::Color32::from_rgba_unmultiplied(100, 200, 100, 60),
-             egui::Stroke::new(2.0, egui::Color32::GREEN))
+            (
+                egui::Color32::from_rgba_unmultiplied(100, 200, 100, 60),
+                egui::Stroke::new(2.0, egui::Color32::GREEN),
+            )
         } else if is_drag_source {
-            (egui::Color32::from_rgba_unmultiplied(100, 100, 200, 60),
-             egui::Stroke::new(2.0, egui::Color32::LIGHT_BLUE))
+            (
+                egui::Color32::from_rgba_unmultiplied(100, 100, 200, 60),
+                egui::Stroke::new(2.0, egui::Color32::LIGHT_BLUE),
+            )
         } else if selected {
-            (ui.visuals().selection.bg_fill,
-             egui::Stroke::NONE)
+            (ui.visuals().selection.bg_fill, egui::Stroke::NONE)
         } else {
             (egui::Color32::TRANSPARENT, egui::Stroke::NONE)
         };
 
         // Calculate size for the label
         let text = egui::WidgetText::from(&label);
-        let galley = text.into_galley(ui, Some(egui::TextWrapMode::Extend), f32::INFINITY, egui::TextStyle::Body);
+        let galley = text.into_galley(
+            ui,
+            Some(egui::TextWrapMode::Extend),
+            f32::INFINITY,
+            egui::TextStyle::Body,
+        );
         let desired_size = galley.size() + egui::vec2(8.0, 4.0);
 
         let (rect, response) = ui.allocate_exact_size(desired_size, egui::Sense::click_and_drag());
@@ -4752,8 +5408,16 @@ impl RequirementsApp {
         }
     }
 
-    fn show_tree_node_bottom_up(&mut self, ui: &mut egui::Ui, idx: usize, outgoing_rel_type: &RelationshipType, depth: usize) {
-        let Some(req) = self.store.requirements.get(idx) else { return };
+    fn show_tree_node_bottom_up(
+        &mut self,
+        ui: &mut egui::Ui,
+        idx: usize,
+        outgoing_rel_type: &RelationshipType,
+        depth: usize,
+    ) {
+        let Some(req) = self.store.requirements.get(idx) else {
+            return;
+        };
 
         let req_id = req.id;
         let parents = self.get_parents(&req_id, outgoing_rel_type);
@@ -4769,7 +5433,10 @@ impl RequirementsApp {
             let btn_size = egui::vec2(18.0, 18.0);
             if has_parents {
                 let btn_text = if is_collapsed { "+" } else { "-" };
-                if ui.add_sized(btn_size, egui::Button::new(btn_text)).clicked() {
+                if ui
+                    .add_sized(btn_size, egui::Button::new(btn_text))
+                    .clicked()
+                {
                     self.tree_collapsed.insert(req_id, !is_collapsed);
                 }
             } else {
@@ -4872,30 +5539,44 @@ impl RequirementsApp {
 
                 // Tabbed content
                 ui.horizontal(|ui| {
-                    ui.selectable_value(&mut self.active_tab, DetailTab::Description, "📄 Description");
-                    ui.selectable_value(&mut self.active_tab, DetailTab::Comments, format!("💬 Comments ({})", req.comments.len()));
-                    ui.selectable_value(&mut self.active_tab, DetailTab::Links, format!("🔗 Links ({})", req.relationships.len() + req.urls.len()));
-                    ui.selectable_value(&mut self.active_tab, DetailTab::History, format!("📜 History ({})", req.history.len()));
+                    ui.selectable_value(
+                        &mut self.active_tab,
+                        DetailTab::Description,
+                        "📄 Description",
+                    );
+                    ui.selectable_value(
+                        &mut self.active_tab,
+                        DetailTab::Comments,
+                        format!("💬 Comments ({})", req.comments.len()),
+                    );
+                    ui.selectable_value(
+                        &mut self.active_tab,
+                        DetailTab::Links,
+                        format!("🔗 Links ({})", req.relationships.len() + req.urls.len()),
+                    );
+                    ui.selectable_value(
+                        &mut self.active_tab,
+                        DetailTab::History,
+                        format!("📜 History ({})", req.history.len()),
+                    );
                 });
 
                 ui.separator();
 
                 // Tab content
                 let req_id = req.id;
-                egui::ScrollArea::vertical().show(ui, |ui| {
-                    match &self.active_tab {
-                        DetailTab::Description => {
-                            self.show_description_tab(ui, &req);
-                        }
-                        DetailTab::Comments => {
-                            self.show_comments_tab(ui, &req, idx);
-                        }
-                        DetailTab::Links => {
-                            self.show_links_tab(ui, &req, req_id);
-                        }
-                        DetailTab::History => {
-                            self.show_history_tab(ui, &req);
-                        }
+                egui::ScrollArea::vertical().show(ui, |ui| match &self.active_tab {
+                    DetailTab::Description => {
+                        self.show_description_tab(ui, &req);
+                    }
+                    DetailTab::Comments => {
+                        self.show_comments_tab(ui, &req, idx);
+                    }
+                    DetailTab::Links => {
+                        self.show_links_tab(ui, &req, req_id);
+                    }
+                    DetailTab::History => {
+                        self.show_history_tab(ui, &req);
                     }
                 });
             }
@@ -4912,8 +5593,7 @@ impl RequirementsApp {
         ui.add_space(10.0);
 
         // Render description as markdown
-        CommonMarkViewer::new()
-            .show(ui, &mut self.markdown_cache, &req.description);
+        CommonMarkViewer::new().show(ui, &mut self.markdown_cache, &req.description);
     }
 
     fn show_comments_tab(&mut self, ui: &mut egui::Ui, req: &Requirement, idx: usize) {
@@ -4987,8 +5667,13 @@ impl RequirementsApp {
                     // Verification status indicator
                     if let Some(ok) = url_link.last_verified_ok {
                         if ok {
-                            ui.label("✅").on_hover_text(format!("Verified: {}",
-                                url_link.last_verified.map(|d| d.format("%Y-%m-%d %H:%M").to_string()).unwrap_or_default()));
+                            ui.label("✅").on_hover_text(format!(
+                                "Verified: {}",
+                                url_link
+                                    .last_verified
+                                    .map(|d| d.format("%Y-%m-%d %H:%M").to_string())
+                                    .unwrap_or_default()
+                            ));
                         } else {
                             ui.label("❌").on_hover_text("Last verification failed");
                         }
@@ -5051,43 +5736,77 @@ impl RequirementsApp {
             ui.label("No relationships defined");
         } else {
             // Collect relationship info first to avoid borrow issues
-            let rel_info: Vec<_> = req.relationships.iter().map(|rel| {
-                let target_idx = self.store.requirements.iter()
-                    .position(|r| r.id == rel.target_id);
-                let target_label = self.store.requirements.iter()
-                    .find(|r| r.id == rel.target_id)
-                    .and_then(|r| r.spec_id.as_ref())
-                    .cloned()
-                    .unwrap_or_else(|| "Unknown".to_string());
-                let target_title = self.store.requirements.iter()
-                    .find(|r| r.id == rel.target_id)
-                    .map(|r| r.title.clone())
-                    .unwrap_or_else(|| "(not found)".to_string());
+            let rel_info: Vec<_> = req
+                .relationships
+                .iter()
+                .map(|rel| {
+                    let target_idx = self
+                        .store
+                        .requirements
+                        .iter()
+                        .position(|r| r.id == rel.target_id);
+                    let target_label = self
+                        .store
+                        .requirements
+                        .iter()
+                        .find(|r| r.id == rel.target_id)
+                        .and_then(|r| r.spec_id.as_ref())
+                        .cloned()
+                        .unwrap_or_else(|| "Unknown".to_string());
+                    let target_title = self
+                        .store
+                        .requirements
+                        .iter()
+                        .find(|r| r.id == rel.target_id)
+                        .map(|r| r.title.clone())
+                        .unwrap_or_else(|| "(not found)".to_string());
 
-                // Get display name and color from relationship definition
-                let (display_name, color) = self.store.get_definition_for_type(&rel.rel_type)
-                    .map(|def| (def.display_name.clone(), def.color.clone()))
-                    .unwrap_or_else(|| (format!("{}", rel.rel_type), None));
+                    // Get display name and color from relationship definition
+                    let (display_name, color) = self
+                        .store
+                        .get_definition_for_type(&rel.rel_type)
+                        .map(|def| (def.display_name.clone(), def.color.clone()))
+                        .unwrap_or_else(|| (format!("{}", rel.rel_type), None));
 
-                (rel.rel_type.clone(), rel.target_id, target_idx, target_label, target_title, display_name, color)
-            }).collect();
+                    (
+                        rel.rel_type.clone(),
+                        rel.target_id,
+                        target_idx,
+                        target_label,
+                        target_title,
+                        display_name,
+                        color,
+                    )
+                })
+                .collect();
 
             let mut relationship_to_remove: Option<(RelationshipType, Uuid)> = None;
 
-            for (rel_type, target_id, target_idx, target_label, target_title, display_name, color) in rel_info {
+            for (
+                rel_type,
+                target_id,
+                target_idx,
+                target_label,
+                target_title,
+                display_name,
+                color,
+            ) in rel_info
+            {
                 ui.horizontal(|ui| {
                     // Break link button
-                    if ui.small_button("x").on_hover_text("Remove relationship").clicked() {
+                    if ui
+                        .small_button("x")
+                        .on_hover_text("Remove relationship")
+                        .clicked()
+                    {
                         relationship_to_remove = Some((rel_type.clone(), target_id));
                     }
 
                     // Show color indicator if defined
                     if let Some(ref hex_color) = color {
                         if let Some(c) = parse_hex_color(hex_color) {
-                            let (rect, _) = ui.allocate_exact_size(
-                                egui::vec2(12.0, 12.0),
-                                egui::Sense::hover()
-                            );
+                            let (rect, _) = ui
+                                .allocate_exact_size(egui::vec2(12.0, 12.0), egui::Sense::hover());
                             ui.painter().rect_filled(rect, 2.0, c);
                         }
                     }
@@ -5095,10 +5814,7 @@ impl RequirementsApp {
                     // Use display name from definition
                     let label = format!("{} {} - {}", display_name, target_label, target_title);
 
-                    let response = ui.add(
-                        egui::Label::new(&label)
-                            .sense(egui::Sense::click())
-                    );
+                    let response = ui.add(egui::Label::new(&label).sense(egui::Sense::click()));
 
                     // Show hover cursor and tooltip
                     if response.hovered() {
@@ -5120,7 +5836,10 @@ impl RequirementsApp {
             if let Some((rel_type, target_id)) = relationship_to_remove {
                 // Check if the relationship has an inverse defined
                 let bidirectional = self.store.get_inverse_type(&rel_type).is_some();
-                if let Err(e) = self.store.remove_relationship(&req_id, &rel_type, &target_id, bidirectional) {
+                if let Err(e) =
+                    self.store
+                        .remove_relationship(&req_id, &rel_type, &target_id, bidirectional)
+                {
                     self.message = Some((format!("Failed to remove relationship: {}", e), true));
                 } else {
                     self.save();
@@ -5132,7 +5851,11 @@ impl RequirementsApp {
 
     fn show_url_form_modal(&mut self, ui: &mut egui::Ui, req_id: Uuid) {
         let is_editing = self.editing_url_id.is_some();
-        let title = if is_editing { "Edit URL Link" } else { "Add URL Link" };
+        let title = if is_editing {
+            "Edit URL Link"
+        } else {
+            "Add URL Link"
+        };
 
         ui.heading(title);
         ui.add_space(10.0);
@@ -5143,13 +5866,19 @@ impl RequirementsApp {
             .show(ui, |ui| {
                 ui.label("URL:");
                 ui.horizontal(|ui| {
-                    ui.add(egui::TextEdit::singleline(&mut self.url_form_url)
-                        .hint_text("https://example.com/...")
-                        .desired_width(350.0));
+                    ui.add(
+                        egui::TextEdit::singleline(&mut self.url_form_url)
+                            .hint_text("https://example.com/...")
+                            .desired_width(350.0),
+                    );
 
                     // Verify button
-                    let verify_enabled = !self.url_form_url.is_empty() && !self.url_verification_in_progress;
-                    if ui.add_enabled(verify_enabled, egui::Button::new("🔍 Verify")).clicked() {
+                    let verify_enabled =
+                        !self.url_form_url.is_empty() && !self.url_verification_in_progress;
+                    if ui
+                        .add_enabled(verify_enabled, egui::Button::new("🔍 Verify"))
+                        .clicked()
+                    {
                         self.verify_url();
                     }
                 });
@@ -5159,9 +5888,15 @@ impl RequirementsApp {
                 if let Some((success, ref msg)) = self.url_verification_status {
                     ui.label("");
                     if success {
-                        ui.colored_label(egui::Color32::from_rgb(100, 200, 100), format!("✅ {}", msg));
+                        ui.colored_label(
+                            egui::Color32::from_rgb(100, 200, 100),
+                            format!("✅ {}", msg),
+                        );
                     } else {
-                        ui.colored_label(egui::Color32::from_rgb(200, 100, 100), format!("❌ {}", msg));
+                        ui.colored_label(
+                            egui::Color32::from_rgb(200, 100, 100),
+                            format!("❌ {}", msg),
+                        );
                     }
                     ui.end_row();
                 }
@@ -5173,15 +5908,19 @@ impl RequirementsApp {
                 }
 
                 ui.label("Title:");
-                ui.add(egui::TextEdit::singleline(&mut self.url_form_title)
-                    .hint_text("Display title (optional)")
-                    .desired_width(350.0));
+                ui.add(
+                    egui::TextEdit::singleline(&mut self.url_form_title)
+                        .hint_text("Display title (optional)")
+                        .desired_width(350.0),
+                );
                 ui.end_row();
 
                 ui.label("Description:");
-                ui.add(egui::TextEdit::singleline(&mut self.url_form_description)
-                    .hint_text("Brief description (optional)")
-                    .desired_width(350.0));
+                ui.add(
+                    egui::TextEdit::singleline(&mut self.url_form_description)
+                        .hint_text("Brief description (optional)")
+                        .desired_width(350.0),
+                );
                 ui.end_row();
             });
 
@@ -5191,7 +5930,10 @@ impl RequirementsApp {
         ui.horizontal(|ui| {
             let can_save = !self.url_form_url.is_empty();
 
-            if ui.add_enabled(can_save, egui::Button::new("💾 Save")).clicked() {
+            if ui
+                .add_enabled(can_save, egui::Button::new("💾 Save"))
+                .clicked()
+            {
                 self.save_url_link(req_id);
             }
 
@@ -5216,7 +5958,8 @@ impl RequirementsApp {
 
         // Check if it looks like a valid URL
         if !url.starts_with("http://") && !url.starts_with("https://") {
-            self.url_verification_status = Some((false, "URL must start with http:// or https://".to_string()));
+            self.url_verification_status =
+                Some((false, "URL must start with http:// or https://".to_string()));
             return;
         }
 
@@ -5229,12 +5972,19 @@ impl RequirementsApp {
 
                 // Check that it has a host
                 if parsed.host().is_none() {
-                    self.url_verification_status = Some((false, "Invalid URL: no host".to_string()));
+                    self.url_verification_status =
+                        Some((false, "Invalid URL: no host".to_string()));
                     return;
                 }
 
                 // For now, mark as "valid format" - actual HTTP check would need async
-                self.url_verification_status = Some((true, format!("Valid URL format (host: {})", parsed.host_str().unwrap_or("unknown"))));
+                self.url_verification_status = Some((
+                    true,
+                    format!(
+                        "Valid URL format (host: {})",
+                        parsed.host_str().unwrap_or("unknown")
+                    ),
+                ));
             }
             Err(e) => {
                 self.url_verification_status = Some((false, format!("Invalid URL: {}", e)));
@@ -5422,10 +6172,14 @@ impl RequirementsApp {
         if req.history.is_empty() {
             ui.label("No changes recorded yet");
         } else {
-            for entry in req.history.iter().rev() {  // Show newest first
+            for entry in req.history.iter().rev() {
+                // Show newest first
                 ui.group(|ui| {
                     ui.horizontal(|ui| {
-                        ui.label(format!("🕒 {}", entry.timestamp.format("%Y-%m-%d %H:%M:%S")));
+                        ui.label(format!(
+                            "🕒 {}",
+                            entry.timestamp.format("%Y-%m-%d %H:%M:%S")
+                        ));
                         ui.label(format!("👤 {}", entry.author));
                     });
 
@@ -5437,11 +6191,17 @@ impl RequirementsApp {
                         });
                         ui.horizontal(|ui| {
                             ui.label("    ❌");
-                            ui.colored_label(egui::Color32::from_rgb(200, 100, 100), &change.old_value);
+                            ui.colored_label(
+                                egui::Color32::from_rgb(200, 100, 100),
+                                &change.old_value,
+                            );
                         });
                         ui.horizontal(|ui| {
                             ui.label("    ✅");
-                            ui.colored_label(egui::Color32::from_rgb(100, 200, 100), &change.new_value);
+                            ui.colored_label(
+                                egui::Color32::from_rgb(100, 200, 100),
+                                &change.new_value,
+                            );
                         });
                     }
                 });
@@ -5451,7 +6211,11 @@ impl RequirementsApp {
     }
 
     fn show_form(&mut self, ui: &mut egui::Ui, is_edit: bool) {
-        let title = if is_edit { "Edit Requirement" } else { "Add Requirement" };
+        let title = if is_edit {
+            "Edit Requirement"
+        } else {
+            "Add Requirement"
+        };
         ui.heading(title);
         ui.separator();
 
@@ -5463,7 +6227,13 @@ impl RequirementsApp {
         let title_output = egui::TextEdit::singleline(&mut self.form_title)
             .desired_width(available_width)
             .show(ui);
-        show_text_context_menu(ui, &title_output.response, &mut self.form_title, title_output.response.id, &mut self.last_text_selection);
+        show_text_context_menu(
+            ui,
+            &title_output.response,
+            &mut self.form_title,
+            title_output.response.id,
+            &mut self.last_text_selection,
+        );
         ui.add_space(8.0);
 
         // Metadata row - Type first (affects available statuses), then Status, Priority
@@ -5474,11 +6244,23 @@ impl RequirementsApp {
             egui::ComboBox::new("type_combo", "")
                 .selected_text(format!("{:?}", self.form_type))
                 .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut self.form_type, RequirementType::Functional, "Functional");
-                    ui.selectable_value(&mut self.form_type, RequirementType::NonFunctional, "NonFunctional");
+                    ui.selectable_value(
+                        &mut self.form_type,
+                        RequirementType::Functional,
+                        "Functional",
+                    );
+                    ui.selectable_value(
+                        &mut self.form_type,
+                        RequirementType::NonFunctional,
+                        "NonFunctional",
+                    );
                     ui.selectable_value(&mut self.form_type, RequirementType::System, "System");
                     ui.selectable_value(&mut self.form_type, RequirementType::User, "User");
-                    ui.selectable_value(&mut self.form_type, RequirementType::ChangeRequest, "Change Request");
+                    ui.selectable_value(
+                        &mut self.form_type,
+                        RequirementType::ChangeRequest,
+                        "Change Request",
+                    );
                 });
             type_changed = old_type != self.form_type;
 
@@ -5490,7 +6272,10 @@ impl RequirementsApp {
                 .selected_text(&self.form_status_string)
                 .show_ui(ui, |ui| {
                     for status in &statuses {
-                        if ui.selectable_label(self.form_status_string == *status, status).clicked() {
+                        if ui
+                            .selectable_label(self.form_status_string == *status, status)
+                            .clicked()
+                        {
                             self.form_status_string = status.clone();
                         }
                     }
@@ -5502,7 +6287,11 @@ impl RequirementsApp {
                 .selected_text(format!("{:?}", self.form_priority))
                 .show_ui(ui, |ui| {
                     ui.selectable_value(&mut self.form_priority, RequirementPriority::High, "High");
-                    ui.selectable_value(&mut self.form_priority, RequirementPriority::Medium, "Medium");
+                    ui.selectable_value(
+                        &mut self.form_priority,
+                        RequirementPriority::Medium,
+                        "Medium",
+                    );
                     ui.selectable_value(&mut self.form_priority, RequirementPriority::Low, "Low");
                 });
         });
@@ -5512,7 +6301,10 @@ impl RequirementsApp {
             let statuses = self.store.get_statuses_for_type(&self.form_type);
             if !statuses.contains(&self.form_status_string) {
                 // Reset to first available status for new type
-                self.form_status_string = statuses.first().cloned().unwrap_or_else(|| "Draft".to_string());
+                self.form_status_string = statuses
+                    .first()
+                    .cloned()
+                    .unwrap_or_else(|| "Draft".to_string());
             }
             // Clear custom fields when type changes (they may not be relevant)
             self.form_custom_fields.clear();
@@ -5521,19 +6313,19 @@ impl RequirementsApp {
 
         ui.horizontal_wrapped(|ui| {
             ui.label("Owner:");
-            ui.add(egui::TextEdit::singleline(&mut self.form_owner)
-                .desired_width(150.0));
+            ui.add(egui::TextEdit::singleline(&mut self.form_owner).desired_width(150.0));
 
             ui.add_space(16.0);
             ui.label("Feature:");
-            ui.add(egui::TextEdit::singleline(&mut self.form_feature)
-                .desired_width(150.0));
+            ui.add(egui::TextEdit::singleline(&mut self.form_feature).desired_width(150.0));
 
             ui.add_space(16.0);
             ui.label("Tags:");
-            ui.add(egui::TextEdit::singleline(&mut self.form_tags)
-                .desired_width(200.0)
-                .hint_text("comma-separated"));
+            ui.add(
+                egui::TextEdit::singleline(&mut self.form_tags)
+                    .desired_width(200.0)
+                    .hint_text("comma-separated"),
+            );
         });
         ui.add_space(4.0);
 
@@ -5602,7 +6394,10 @@ impl RequirementsApp {
         // Show parent relationship for new requirements (not edit)
         if !is_edit {
             if let Some(parent_id) = self.form_parent_id {
-                let parent_info = self.store.requirements.iter()
+                let parent_info = self
+                    .store
+                    .requirements
+                    .iter()
                     .find(|r| r.id == parent_id)
                     .map(|r| {
                         let spec = r.spec_id.as_deref().unwrap_or("N/A");
@@ -5613,7 +6408,11 @@ impl RequirementsApp {
                     ui.horizontal(|ui| {
                         ui.label("Parent:");
                         ui.label(&parent_label);
-                        if ui.small_button("x").on_hover_text("Remove parent").clicked() {
+                        if ui
+                            .small_button("x")
+                            .on_hover_text("Remove parent")
+                            .clicked()
+                        {
                             self.form_parent_id = None;
                         }
                     });
@@ -5643,7 +6442,8 @@ impl RequirementsApp {
                     ui.label(&label);
 
                     // Get current value or default
-                    let current_value = self.form_custom_fields
+                    let current_value = self
+                        .form_custom_fields
                         .get(&field.name)
                         .cloned()
                         .or_else(|| field.default_value.clone())
@@ -5652,16 +6452,23 @@ impl RequirementsApp {
                     match field.field_type {
                         CustomFieldType::Text => {
                             let mut value = current_value;
-                            if ui.add(egui::TextEdit::singleline(&mut value)
-                                .desired_width(200.0)).changed() {
+                            if ui
+                                .add(egui::TextEdit::singleline(&mut value).desired_width(200.0))
+                                .changed()
+                            {
                                 self.form_custom_fields.insert(field.name.clone(), value);
                             }
                         }
                         CustomFieldType::TextArea => {
                             let mut value = current_value;
-                            if ui.add(egui::TextEdit::multiline(&mut value)
-                                .desired_width(300.0)
-                                .desired_rows(3)).changed() {
+                            if ui
+                                .add(
+                                    egui::TextEdit::multiline(&mut value)
+                                        .desired_width(300.0)
+                                        .desired_rows(3),
+                                )
+                                .changed()
+                            {
                                 self.form_custom_fields.insert(field.name.clone(), value);
                             }
                         }
@@ -5670,8 +6477,12 @@ impl RequirementsApp {
                                 .selected_text(&current_value)
                                 .show_ui(ui, |ui| {
                                     for option in &field.options {
-                                        if ui.selectable_label(current_value == *option, option).clicked() {
-                                            self.form_custom_fields.insert(field.name.clone(), option.clone());
+                                        if ui
+                                            .selectable_label(current_value == *option, option)
+                                            .clicked()
+                                        {
+                                            self.form_custom_fields
+                                                .insert(field.name.clone(), option.clone());
                                         }
                                     }
                                 });
@@ -5679,13 +6490,16 @@ impl RequirementsApp {
                         CustomFieldType::Boolean => {
                             let mut checked = current_value == "true";
                             if ui.checkbox(&mut checked, "").changed() {
-                                self.form_custom_fields.insert(field.name.clone(), checked.to_string());
+                                self.form_custom_fields
+                                    .insert(field.name.clone(), checked.to_string());
                             }
                         }
                         CustomFieldType::Number => {
                             let mut value = current_value;
-                            if ui.add(egui::TextEdit::singleline(&mut value)
-                                .desired_width(80.0)).changed() {
+                            if ui
+                                .add(egui::TextEdit::singleline(&mut value).desired_width(80.0))
+                                .changed()
+                            {
                                 // Basic numeric validation
                                 if value.is_empty() || value.parse::<f64>().is_ok() {
                                     self.form_custom_fields.insert(field.name.clone(), value);
@@ -5694,35 +6508,54 @@ impl RequirementsApp {
                         }
                         CustomFieldType::Date => {
                             let mut value = current_value;
-                            if ui.add(egui::TextEdit::singleline(&mut value)
-                                .desired_width(120.0)
-                                .hint_text("YYYY-MM-DD")).changed() {
+                            if ui
+                                .add(
+                                    egui::TextEdit::singleline(&mut value)
+                                        .desired_width(120.0)
+                                        .hint_text("YYYY-MM-DD"),
+                                )
+                                .changed()
+                            {
                                 self.form_custom_fields.insert(field.name.clone(), value);
                             }
                         }
                         CustomFieldType::User => {
                             // Show a dropdown of available users
-                            let active_users: Vec<_> = self.store.users.iter()
-                                .filter(|u| !u.archived)
-                                .collect();
+                            let active_users: Vec<_> =
+                                self.store.users.iter().filter(|u| !u.archived).collect();
                             let display_text = if current_value.is_empty() {
                                 "(select user)".to_string()
                             } else {
-                                active_users.iter()
-                                    .find(|u| u.id.to_string() == current_value || u.spec_id.as_deref() == Some(&current_value))
+                                active_users
+                                    .iter()
+                                    .find(|u| {
+                                        u.id.to_string() == current_value
+                                            || u.spec_id.as_deref() == Some(&current_value)
+                                    })
                                     .map(|u| u.name.clone())
                                     .unwrap_or_else(|| current_value.clone())
                             };
                             egui::ComboBox::new(format!("{}_user", field.name), "")
                                 .selected_text(&display_text)
                                 .show_ui(ui, |ui| {
-                                    if ui.selectable_label(current_value.is_empty(), "(none)").clicked() {
-                                        self.form_custom_fields.insert(field.name.clone(), String::new());
+                                    if ui
+                                        .selectable_label(current_value.is_empty(), "(none)")
+                                        .clicked()
+                                    {
+                                        self.form_custom_fields
+                                            .insert(field.name.clone(), String::new());
                                     }
                                     for user in &active_users {
-                                        let user_id = user.spec_id.clone().unwrap_or_else(|| user.id.to_string());
-                                        if ui.selectable_label(current_value == user_id, &user.name).clicked() {
-                                            self.form_custom_fields.insert(field.name.clone(), user_id);
+                                        let user_id = user
+                                            .spec_id
+                                            .clone()
+                                            .unwrap_or_else(|| user.id.to_string());
+                                        if ui
+                                            .selectable_label(current_value == user_id, &user.name)
+                                            .clicked()
+                                        {
+                                            self.form_custom_fields
+                                                .insert(field.name.clone(), user_id);
                                         }
                                     }
                                 });
@@ -5732,8 +6565,13 @@ impl RequirementsApp {
                             let display_name = if current_value.is_empty() {
                                 "(select requirement)".to_string()
                             } else {
-                                self.store.requirements.iter()
-                                    .find(|r| r.id.to_string() == current_value || r.spec_id.as_deref() == Some(&current_value))
+                                self.store
+                                    .requirements
+                                    .iter()
+                                    .find(|r| {
+                                        r.id.to_string() == current_value
+                                            || r.spec_id.as_deref() == Some(&current_value)
+                                    })
                                     .map(|r| {
                                         let spec = r.spec_id.as_deref().unwrap_or("N/A");
                                         format!("{} - {}", spec, r.title)
@@ -5743,14 +6581,30 @@ impl RequirementsApp {
                             egui::ComboBox::new(format!("{}_req", field.name), "")
                                 .selected_text(&display_name)
                                 .show_ui(ui, |ui| {
-                                    if ui.selectable_label(current_value.is_empty(), "(none)").clicked() {
-                                        self.form_custom_fields.insert(field.name.clone(), String::new());
+                                    if ui
+                                        .selectable_label(current_value.is_empty(), "(none)")
+                                        .clicked()
+                                    {
+                                        self.form_custom_fields
+                                            .insert(field.name.clone(), String::new());
                                     }
-                                    for req in self.store.requirements.iter().take(50) { // Limit to prevent huge lists
-                                        let req_id = req.spec_id.clone().unwrap_or_else(|| req.id.to_string());
-                                        let label = format!("{} - {}", req.spec_id.as_deref().unwrap_or("N/A"), req.title);
-                                        if ui.selectable_label(current_value == req_id, label).clicked() {
-                                            self.form_custom_fields.insert(field.name.clone(), req_id);
+                                    for req in self.store.requirements.iter().take(50) {
+                                        // Limit to prevent huge lists
+                                        let req_id = req
+                                            .spec_id
+                                            .clone()
+                                            .unwrap_or_else(|| req.id.to_string());
+                                        let label = format!(
+                                            "{} - {}",
+                                            req.spec_id.as_deref().unwrap_or("N/A"),
+                                            req.title
+                                        );
+                                        if ui
+                                            .selectable_label(current_value == req_id, label)
+                                            .clicked()
+                                        {
+                                            self.form_custom_fields
+                                                .insert(field.name.clone(), req_id);
                                         }
                                     }
                                 });
@@ -5772,11 +6626,19 @@ impl RequirementsApp {
             ui.label("Description:");
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 // Preview toggle button
-                let preview_label = if self.show_description_preview { "✏ Edit" } else { "👁 Preview" };
+                let preview_label = if self.show_description_preview {
+                    "✏ Edit"
+                } else {
+                    "👁 Preview"
+                };
                 if ui.button(preview_label).clicked() {
                     self.show_description_preview = !self.show_description_preview;
                 }
-                if ui.link("Supports Markdown").on_hover_text("Click for Markdown help").clicked() {
+                if ui
+                    .link("Supports Markdown")
+                    .on_hover_text("Click for Markdown help")
+                    .clicked()
+                {
                     self.show_markdown_help = true;
                 }
             });
@@ -5791,8 +6653,11 @@ impl RequirementsApp {
             .show(ui, |ui| {
                 if self.show_description_preview {
                     // Preview mode - render as markdown
-                    CommonMarkViewer::new()
-                        .show(ui, &mut self.markdown_cache, &self.form_description);
+                    CommonMarkViewer::new().show(
+                        ui,
+                        &mut self.markdown_cache,
+                        &self.form_description,
+                    );
                 } else {
                     // Edit mode - text editor with context menu
                     let output = egui::TextEdit::multiline(&mut self.form_description)
@@ -5800,7 +6665,13 @@ impl RequirementsApp {
                         .desired_rows(8)
                         .hint_text("Enter requirement description (Markdown supported)...")
                         .show(ui);
-                    show_text_context_menu(ui, &output.response, &mut self.form_description, output.response.id, &mut self.last_text_selection);
+                    show_text_context_menu(
+                        ui,
+                        &output.response,
+                        &mut self.form_description,
+                        output.response.id,
+                        &mut self.last_text_selection,
+                    );
                 }
             });
 
@@ -5834,21 +6705,30 @@ impl RequirementsApp {
         let available_width = ui.available_width();
 
         ui.group(|ui| {
-            ui.label(if self.reply_to_comment.is_some() { "Add Reply" } else { "Add Comment" });
+            ui.label(if self.reply_to_comment.is_some() {
+                "Add Reply"
+            } else {
+                "Add Comment"
+            });
 
             ui.horizontal(|ui| {
                 ui.label("Author:");
-                ui.add(egui::TextEdit::singleline(&mut self.comment_author)
-                    .desired_width(200.0));
+                ui.add(egui::TextEdit::singleline(&mut self.comment_author).desired_width(200.0));
             });
 
             ui.label("Content:");
             let comment_output = egui::TextEdit::multiline(&mut self.comment_content)
-                .desired_width(available_width - 20.0)  // Account for group padding
+                .desired_width(available_width - 20.0) // Account for group padding
                 .desired_rows(4)
                 .hint_text("Enter comment...")
                 .show(ui);
-            show_text_context_menu(ui, &comment_output.response, &mut self.comment_content, comment_output.response.id, &mut self.last_text_selection);
+            show_text_context_menu(
+                ui,
+                &comment_output.response,
+                &mut self.comment_content,
+                comment_output.response.id,
+                &mut self.last_text_selection,
+            );
 
             ui.horizontal(|ui| {
                 if ui.button("💾 Save").clicked() {
@@ -5871,9 +6751,19 @@ impl RequirementsApp {
         });
     }
 
-    fn show_comment_tree(&mut self, ui: &mut egui::Ui, comment: &Comment, req_idx: usize, depth: usize) {
+    fn show_comment_tree(
+        &mut self,
+        ui: &mut egui::Ui,
+        comment: &Comment,
+        req_idx: usize,
+        depth: usize,
+    ) {
         let indent = depth as f32 * 24.0;
-        let is_collapsed = self.collapsed_comments.get(&comment.id).copied().unwrap_or(false);
+        let is_collapsed = self
+            .collapsed_comments
+            .get(&comment.id)
+            .copied()
+            .unwrap_or(false);
         let comment_id = comment.id;
         let show_picker = self.show_reaction_picker == Some(comment_id);
 
@@ -5885,7 +6775,9 @@ impl RequirementsApp {
         let current_user = self.user_settings.display_name();
 
         // Build list of reactions the current user has
-        let user_reactions: Vec<String> = comment.reactions.iter()
+        let user_reactions: Vec<String> = comment
+            .reactions
+            .iter()
             .filter(|r| r.author == current_user)
             .map(|r| r.reaction.clone())
             .collect();
@@ -5910,7 +6802,10 @@ impl RequirementsApp {
                         let btn_size = egui::vec2(18.0, 18.0);
                         if !comment.replies.is_empty() {
                             let button_text = if is_collapsed { "+" } else { "-" };
-                            if ui.add_sized(btn_size, egui::Button::new(button_text)).clicked() {
+                            if ui
+                                .add_sized(btn_size, egui::Button::new(button_text))
+                                .clicked()
+                            {
                                 self.collapsed_comments.insert(comment.id, !is_collapsed);
                             }
                         } else {
@@ -5918,7 +6813,10 @@ impl RequirementsApp {
                         }
 
                         ui.label(format!("👤 {}", comment.author));
-                        ui.label(format!("🕒 {}", comment.created_at.format("%Y-%m-%d %H:%M")));
+                        ui.label(format!(
+                            "🕒 {}",
+                            comment.created_at.format("%Y-%m-%d %H:%M")
+                        ));
                     });
 
                     // Comment content on its own line with text wrapping
@@ -5935,12 +6833,11 @@ impl RequirementsApp {
                                     } else {
                                         format!("{} {}", def.emoji, count)
                                     };
-                                    let btn = egui::Button::new(&label)
-                                        .small();
-                                    let response = ui.add(btn)
-                                        .on_hover_text(&def.label);
+                                    let btn = egui::Button::new(&label).small();
+                                    let response = ui.add(btn).on_hover_text(&def.label);
                                     if response.clicked() {
-                                        self.pending_reaction_toggle = Some((comment_id, def.name.clone()));
+                                        self.pending_reaction_toggle =
+                                            Some((comment_id, def.name.clone()));
                                     }
                                 }
                             }
@@ -5958,7 +6855,11 @@ impl RequirementsApp {
 
                         // Reaction picker button
                         let react_btn = if show_picker { "😊 ▼" } else { "😊" };
-                        if ui.small_button(react_btn).on_hover_text("Add reaction").clicked() {
+                        if ui
+                            .small_button(react_btn)
+                            .on_hover_text("Add reaction")
+                            .clicked()
+                        {
                             if show_picker {
                                 self.show_reaction_picker = None;
                             } else {
@@ -5982,10 +6883,10 @@ impl RequirementsApp {
                                 } else {
                                     def.emoji.clone()
                                 };
-                                let response = ui.button(&btn_text)
-                                    .on_hover_text(&def.label);
+                                let response = ui.button(&btn_text).on_hover_text(&def.label);
                                 if response.clicked() {
-                                    self.pending_reaction_toggle = Some((comment_id, def.name.clone()));
+                                    self.pending_reaction_toggle =
+                                        Some((comment_id, def.name.clone()));
                                     self.show_reaction_picker = None;
                                 }
                             }
@@ -6003,7 +6904,13 @@ impl RequirementsApp {
         }
     }
 
-    fn add_comment_to_requirement(&mut self, idx: usize, author: String, content: String, parent_id: Option<Uuid>) {
+    fn add_comment_to_requirement(
+        &mut self,
+        idx: usize,
+        author: String,
+        content: String,
+        parent_id: Option<Uuid>,
+    ) {
         if let Some(req) = self.store.requirements.get_mut(idx) {
             if let Some(parent) = parent_id {
                 // This is a reply
@@ -6041,7 +6948,12 @@ impl RequirementsApp {
         let author = self.user_settings.display_name();
         if let Some(req) = self.store.requirements.get_mut(req_idx) {
             // Helper function to toggle reaction on a comment or its nested replies
-            fn toggle_in_comments(comments: &mut [Comment], comment_id: Uuid, reaction: &str, author: &str) -> bool {
+            fn toggle_in_comments(
+                comments: &mut [Comment],
+                comment_id: Uuid,
+                reaction: &str,
+                author: &str,
+            ) -> bool {
                 for comment in comments.iter_mut() {
                     if comment.id == comment_id {
                         comment.toggle_reaction(reaction, author);
@@ -6070,11 +6982,9 @@ impl RequirementsApp {
             return;
         };
 
-        let validation = self.store.validate_id_config_change(
-            &new_format,
-            &new_numbering,
-            new_digits,
-        );
+        let validation =
+            self.store
+                .validate_id_config_change(&new_format, &new_numbering, new_digits);
 
         egui::Window::new("⚠ Confirm Migration")
             .collapsible(false)
@@ -6171,7 +7081,7 @@ impl RequirementsApp {
                 let response = ui.add(
                     egui::TextEdit::singleline(&mut self.preset_name_input)
                         .hint_text("Preset name")
-                        .desired_width(280.0)
+                        .desired_width(280.0),
                 );
 
                 // Focus the text field when dialog opens
@@ -6180,11 +7090,17 @@ impl RequirementsApp {
                 }
 
                 // Check if name already exists
-                let name_exists = self.user_settings.view_presets.iter()
+                let name_exists = self
+                    .user_settings
+                    .view_presets
+                    .iter()
                     .any(|p| p.name == self.preset_name_input);
 
                 if name_exists {
-                    ui.colored_label(egui::Color32::YELLOW, "⚠ This will overwrite existing preset");
+                    ui.colored_label(
+                        egui::Color32::YELLOW,
+                        "⚠ This will overwrite existing preset",
+                    );
                 }
 
                 ui.add_space(10.0);
@@ -6194,10 +7110,15 @@ impl RequirementsApp {
                     ui.label("Current View Settings:");
                     ui.label(format!("  Perspective: {}", self.perspective.label()));
                     if self.perspective != Perspective::Flat {
-                        ui.label(format!("  Direction: {}", self.perspective_direction.label()));
+                        ui.label(format!(
+                            "  Direction: {}",
+                            self.perspective_direction.label()
+                        ));
                     }
                     if !self.filter_types.is_empty() {
-                        let types: Vec<_> = self.filter_types.iter()
+                        let types: Vec<_> = self
+                            .filter_types
+                            .iter()
                             .map(|t| format!("{:?}", t))
                             .collect();
                         ui.label(format!("  Type filters: {}", types.join(", ")));
@@ -6213,7 +7134,9 @@ impl RequirementsApp {
                 ui.horizontal(|ui| {
                     let can_save = !self.preset_name_input.trim().is_empty();
 
-                    if ui.add_enabled(can_save, egui::Button::new("Save")).clicked()
+                    if ui
+                        .add_enabled(can_save, egui::Button::new("Save"))
+                        .clicked()
                         || (can_save && ui.input(|i| i.key_pressed(egui::Key::Enter)))
                     {
                         let name = self.preset_name_input.trim().to_string();
@@ -6222,7 +7145,9 @@ impl RequirementsApp {
                         self.preset_name_input.clear();
                     }
 
-                    if ui.button("Cancel").clicked() || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                    if ui.button("Cancel").clicked()
+                        || ui.input(|i| i.key_pressed(egui::Key::Escape))
+                    {
                         self.show_save_preset_dialog = false;
                         self.preset_name_input.clear();
                     }
@@ -6255,7 +7180,9 @@ impl RequirementsApp {
                         self.show_delete_preset_confirm = None;
                     }
 
-                    if ui.button("Cancel").clicked() || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                    if ui.button("Cancel").clicked()
+                        || ui.input(|i| i.key_pressed(egui::Key::Escape))
+                    {
                         self.show_delete_preset_confirm = None;
                     }
                 });
@@ -6284,7 +7211,7 @@ impl eframe::App for RequirementsApp {
 
         self.current_key_context = if text_input_focused || in_form_view || in_settings {
             // When typing in a text field, in form view, or in settings - only global shortcuts should work
-            KeyContext::Form  // Use Form context - this is NOT Global and NOT RequirementsList
+            KeyContext::Form // Use Form context - this is NOT Global and NOT RequirementsList
         } else {
             match self.current_view {
                 View::List => KeyContext::RequirementsList,
@@ -6298,18 +7225,34 @@ impl eframe::App for RequirementsApp {
         let mut zoom_reset = false;
 
         // Check for zoom keybindings
-        if self.user_settings.keybindings.is_pressed(KeyAction::ZoomIn, ctx, self.current_key_context) {
+        if self.user_settings.keybindings.is_pressed(
+            KeyAction::ZoomIn,
+            ctx,
+            self.current_key_context,
+        ) {
             zoom_delta = 1.0;
         }
-        if self.user_settings.keybindings.is_pressed(KeyAction::ZoomOut, ctx, self.current_key_context) {
+        if self.user_settings.keybindings.is_pressed(
+            KeyAction::ZoomOut,
+            ctx,
+            self.current_key_context,
+        ) {
             zoom_delta = -1.0;
         }
-        if self.user_settings.keybindings.is_pressed(KeyAction::ZoomReset, ctx, self.current_key_context) {
+        if self.user_settings.keybindings.is_pressed(
+            KeyAction::ZoomReset,
+            ctx,
+            self.current_key_context,
+        ) {
             zoom_reset = true;
         }
 
         // Check for theme cycling keybinding (global context)
-        if self.user_settings.keybindings.is_pressed(KeyAction::CycleTheme, ctx, self.current_key_context) {
+        if self.user_settings.keybindings.is_pressed(
+            KeyAction::CycleTheme,
+            ctx,
+            self.current_key_context,
+        ) {
             self.user_settings.theme = self.user_settings.theme.next();
             self.user_settings.theme.apply(ctx);
             let _ = self.user_settings.save();
@@ -6363,14 +7306,26 @@ impl eframe::App for RequirementsApp {
             let mut nav_delta: i32 = 0;
 
             // Check navigation keybindings (context-aware)
-            if self.user_settings.keybindings.is_pressed(KeyAction::NavigateDown, ctx, self.current_key_context) {
+            if self.user_settings.keybindings.is_pressed(
+                KeyAction::NavigateDown,
+                ctx,
+                self.current_key_context,
+            ) {
                 nav_delta = 1;
-            } else if self.user_settings.keybindings.is_pressed(KeyAction::NavigateUp, ctx, self.current_key_context) {
+            } else if self.user_settings.keybindings.is_pressed(
+                KeyAction::NavigateUp,
+                ctx,
+                self.current_key_context,
+            ) {
                 nav_delta = -1;
             }
 
             // Edit keybinding (context-aware)
-            if self.user_settings.keybindings.is_pressed(KeyAction::Edit, ctx, self.current_key_context) {
+            if self.user_settings.keybindings.is_pressed(
+                KeyAction::Edit,
+                ctx,
+                self.current_key_context,
+            ) {
                 if let Some(idx) = self.selected_idx {
                     self.load_form_from_requirement(idx);
                     self.pending_view_change = Some(View::Edit);
@@ -6378,12 +7333,17 @@ impl eframe::App for RequirementsApp {
             }
 
             // Toggle expand/collapse in tree views (context-aware)
-            if self.user_settings.keybindings.is_pressed(KeyAction::ToggleExpand, ctx, self.current_key_context) {
+            if self.user_settings.keybindings.is_pressed(
+                KeyAction::ToggleExpand,
+                ctx,
+                self.current_key_context,
+            ) {
                 if self.perspective != Perspective::Flat {
                     if let Some(idx) = self.selected_idx {
                         if let Some(req) = self.store.requirements.get(idx) {
                             let req_id = req.id;
-                            let is_collapsed = self.tree_collapsed.get(&req_id).copied().unwrap_or(false);
+                            let is_collapsed =
+                                self.tree_collapsed.get(&req_id).copied().unwrap_or(false);
                             self.tree_collapsed.insert(req_id, !is_collapsed);
                         }
                     }
@@ -6391,7 +7351,11 @@ impl eframe::App for RequirementsApp {
             }
 
             // Save keybinding (context-aware - works in Form context)
-            if self.user_settings.keybindings.is_pressed(KeyAction::Save, ctx, self.current_key_context) {
+            if self.user_settings.keybindings.is_pressed(
+                KeyAction::Save,
+                ctx,
+                self.current_key_context,
+            ) {
                 self.pending_save = true;
             }
 
@@ -6400,11 +7364,14 @@ impl eframe::App for RequirementsApp {
                 if !filtered_indices.is_empty() {
                     let new_selection = if let Some(current_idx) = self.selected_idx {
                         // Find current position in filtered list
-                        if let Some(pos) = filtered_indices.iter().position(|&idx| idx == current_idx) {
+                        if let Some(pos) =
+                            filtered_indices.iter().position(|&idx| idx == current_idx)
+                        {
                             // Move up or down within bounds
                             let new_pos = (pos as i32 + nav_delta)
                                 .max(0)
-                                .min(filtered_indices.len() as i32 - 1) as usize;
+                                .min(filtered_indices.len() as i32 - 1)
+                                as usize;
                             Some(filtered_indices[new_pos])
                         } else {
                             // Current selection not in filtered list, select first/last
@@ -6499,7 +7466,11 @@ impl eframe::App for RequirementsApp {
             // Show panel toggle button in form view when panel is hidden
             if in_form_view && !show_left_panel {
                 ui.horizontal(|ui| {
-                    if ui.button("◀ Show List").on_hover_text("Show requirements list").clicked() {
+                    if ui
+                        .button("◀ Show List")
+                        .on_hover_text("Show requirements list")
+                        .clicked()
+                    {
                         self.left_panel_collapsed = false;
                     }
                 });

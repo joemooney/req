@@ -403,19 +403,15 @@ pub fn default_type_definitions() -> Vec<CustomTypeDefinition> {
         CustomTypeDefinition::built_in("Functional", "Functional")
             .with_prefix("FR")
             .with_description("Functional requirements describing system behavior"),
-
         CustomTypeDefinition::built_in("NonFunctional", "Non-Functional")
             .with_prefix("NFR")
             .with_description("Non-functional requirements (performance, security, etc.)"),
-
         CustomTypeDefinition::built_in("System", "System")
             .with_prefix("SYS")
             .with_description("System-level requirements"),
-
         CustomTypeDefinition::built_in("User", "User Story")
             .with_prefix("US")
             .with_description("User stories and user requirements"),
-
         CustomTypeDefinition::built_in("ChangeRequest", "Change Request")
             .with_prefix("CR")
             .with_description("Change requests for existing functionality")
@@ -432,30 +428,34 @@ pub fn default_type_definitions() -> Vec<CustomTypeDefinition> {
             ])
             .with_color("#9333ea")
             .with_field(
-                CustomFieldDefinition::select("impact", "Impact Level", vec![
-                    "Low".to_string(),
-                    "Medium".to_string(),
-                    "High".to_string(),
-                    "Critical".to_string(),
-                ])
+                CustomFieldDefinition::select(
+                    "impact",
+                    "Impact Level",
+                    vec![
+                        "Low".to_string(),
+                        "Medium".to_string(),
+                        "High".to_string(),
+                        "Critical".to_string(),
+                    ],
+                )
                 .with_description("Impact of this change on the system")
-                .with_order(1)
+                .with_order(1),
             )
             .with_field(
                 CustomFieldDefinition::user_ref("requested_by", "Requested By")
                     .with_description("User who requested this change")
-                    .with_order(2)
+                    .with_order(2),
             )
             .with_field(
                 CustomFieldDefinition::text("target_release", "Target Release")
                     .with_description("Target release version for this change")
-                    .with_order(3)
+                    .with_order(3),
             )
             .with_field(
                 CustomFieldDefinition::text("justification", "Justification")
                     .required()
                     .with_description("Business justification for the change")
-                    .with_order(4)
+                    .with_order(4),
             ),
     ]
 }
@@ -632,35 +632,74 @@ impl RelationshipDefinition {
             RelationshipDefinition::built_in("child", "Child", "Hierarchical child requirement")
                 .with_inverse("parent")
                 .with_cardinality(Cardinality::OneToMany),
-            RelationshipDefinition::built_in("verifies", "Verifies", "Test or verification relationship")
-                .with_inverse("verified_by"),
-            RelationshipDefinition::built_in("verified_by", "Verified By", "Verified by a test requirement")
-                .with_inverse("verifies"),
-            RelationshipDefinition::built_in("duplicate", "Duplicate", "Marks requirements as duplicates")
-                .with_symmetric(true),
+            RelationshipDefinition::built_in(
+                "verifies",
+                "Verifies",
+                "Test or verification relationship",
+            )
+            .with_inverse("verified_by"),
+            RelationshipDefinition::built_in(
+                "verified_by",
+                "Verified By",
+                "Verified by a test requirement",
+            )
+            .with_inverse("verifies"),
+            RelationshipDefinition::built_in(
+                "duplicate",
+                "Duplicate",
+                "Marks requirements as duplicates",
+            )
+            .with_symmetric(true),
             RelationshipDefinition::built_in("references", "References", "General reference link"),
             RelationshipDefinition::built_in("depends_on", "Depends On", "Dependency relationship")
                 .with_inverse("dependency_of"),
-            RelationshipDefinition::built_in("dependency_of", "Dependency Of", "Inverse dependency relationship")
-                .with_inverse("depends_on"),
-            RelationshipDefinition::built_in("implements", "Implements", "Implementation relationship")
-                .with_inverse("implemented_by"),
-            RelationshipDefinition::built_in("implemented_by", "Implemented By", "Inverse implementation relationship")
-                .with_inverse("implements"),
-
+            RelationshipDefinition::built_in(
+                "dependency_of",
+                "Dependency Of",
+                "Inverse dependency relationship",
+            )
+            .with_inverse("depends_on"),
+            RelationshipDefinition::built_in(
+                "implements",
+                "Implements",
+                "Implementation relationship",
+            )
+            .with_inverse("implemented_by"),
+            RelationshipDefinition::built_in(
+                "implemented_by",
+                "Implemented By",
+                "Inverse implementation relationship",
+            )
+            .with_inverse("implements"),
             // User-to-requirement relationships
-            RelationshipDefinition::built_in("created_by", "Created By", "User who created the requirement")
-                .with_cardinality(Cardinality::ManyToOne)
-                .with_color("#4a9eff"),
-            RelationshipDefinition::built_in("assigned_to", "Assigned To", "User assigned to work on this requirement")
-                .with_cardinality(Cardinality::ManyToOne)
-                .with_color("#22c55e"),
-            RelationshipDefinition::built_in("tested_by", "Tested By", "User who tested/verified the requirement")
-                .with_cardinality(Cardinality::ManyToMany)
-                .with_color("#f59e0b"),
-            RelationshipDefinition::built_in("closed_by", "Closed By", "User who closed/completed the requirement")
-                .with_cardinality(Cardinality::ManyToOne)
-                .with_color("#ef4444"),
+            RelationshipDefinition::built_in(
+                "created_by",
+                "Created By",
+                "User who created the requirement",
+            )
+            .with_cardinality(Cardinality::ManyToOne)
+            .with_color("#4a9eff"),
+            RelationshipDefinition::built_in(
+                "assigned_to",
+                "Assigned To",
+                "User assigned to work on this requirement",
+            )
+            .with_cardinality(Cardinality::ManyToOne)
+            .with_color("#22c55e"),
+            RelationshipDefinition::built_in(
+                "tested_by",
+                "Tested By",
+                "User who tested/verified the requirement",
+            )
+            .with_cardinality(Cardinality::ManyToMany)
+            .with_color("#f59e0b"),
+            RelationshipDefinition::built_in(
+                "closed_by",
+                "Closed By",
+                "User who closed/completed the requirement",
+            )
+            .with_cardinality(Cardinality::ManyToOne)
+            .with_color("#ef4444"),
         ]
     }
 
@@ -670,7 +709,9 @@ impl RelationshipDefinition {
             return true;
         }
         let type_str = req_type.to_string();
-        self.source_types.iter().any(|t| t.eq_ignore_ascii_case(&type_str))
+        self.source_types
+            .iter()
+            .any(|t| t.eq_ignore_ascii_case(&type_str))
     }
 
     /// Check if a target requirement type is allowed
@@ -679,7 +720,9 @@ impl RelationshipDefinition {
             return true;
         }
         let type_str = req_type.to_string();
-        self.target_types.iter().any(|t| t.eq_ignore_ascii_case(&type_str))
+        self.target_types
+            .iter()
+            .any(|t| t.eq_ignore_ascii_case(&type_str))
     }
 }
 
@@ -783,10 +826,18 @@ impl RequirementTypeDefinition {
 fn default_requirement_types() -> Vec<RequirementTypeDefinition> {
     vec![
         RequirementTypeDefinition::new("Functional", "FR", "Functional requirements"),
-        RequirementTypeDefinition::new("Non-Functional", "NFR", "Non-functional requirements (performance, security, etc.)"),
+        RequirementTypeDefinition::new(
+            "Non-Functional",
+            "NFR",
+            "Non-functional requirements (performance, security, etc.)",
+        ),
         RequirementTypeDefinition::new("System", "SR", "System-level requirements"),
         RequirementTypeDefinition::new("User", "UR", "User story requirements"),
-        RequirementTypeDefinition::new("Change Request", "CR", "Change requests for modifications to existing functionality"),
+        RequirementTypeDefinition::new(
+            "Change Request",
+            "CR",
+            "Change requests for modifications to existing functionality",
+        ),
     ]
 }
 
@@ -855,7 +906,10 @@ impl Default for IdConfiguration {
 impl IdConfiguration {
     /// Get all reserved prefixes (type prefixes that cannot be used as feature prefixes)
     pub fn reserved_prefixes(&self) -> Vec<String> {
-        self.requirement_types.iter().map(|t| t.prefix.clone()).collect()
+        self.requirement_types
+            .iter()
+            .map(|t| t.prefix.clone())
+            .collect()
     }
 
     /// Check if a prefix is reserved (used by a requirement type)
@@ -867,7 +921,9 @@ impl IdConfiguration {
     /// Get a requirement type definition by name
     pub fn get_type_by_name(&self, name: &str) -> Option<&RequirementTypeDefinition> {
         let lower = name.to_lowercase();
-        self.requirement_types.iter().find(|t| t.name.to_lowercase() == lower)
+        self.requirement_types
+            .iter()
+            .find(|t| t.name.to_lowercase() == lower)
     }
 
     /// Get a requirement type definition by prefix
@@ -974,7 +1030,11 @@ pub struct ReactionDefinition {
 
 impl ReactionDefinition {
     /// Creates a new reaction definition
-    pub fn new(name: impl Into<String>, emoji: impl Into<String>, label: impl Into<String>) -> Self {
+    pub fn new(
+        name: impl Into<String>,
+        emoji: impl Into<String>,
+        label: impl Into<String>,
+    ) -> Self {
         Self {
             name: name.into(),
             emoji: emoji.into(),
@@ -985,7 +1045,12 @@ impl ReactionDefinition {
     }
 
     /// Creates a built-in reaction definition
-    pub fn builtin(name: impl Into<String>, emoji: impl Into<String>, label: impl Into<String>, description: impl Into<String>) -> Self {
+    pub fn builtin(
+        name: impl Into<String>,
+        emoji: impl Into<String>,
+        label: impl Into<String>,
+        description: impl Into<String>,
+    ) -> Self {
         Self {
             name: name.into(),
             emoji: emoji.into(),
@@ -999,12 +1064,27 @@ impl ReactionDefinition {
 /// Returns the default set of reaction definitions
 pub fn default_reaction_definitions() -> Vec<ReactionDefinition> {
     vec![
-        ReactionDefinition::builtin("resolved", "✅", "Resolved", "Mark comment as resolved/addressed"),
-        ReactionDefinition::builtin("rejected", "❌", "Rejected", "Mark comment as rejected/declined"),
+        ReactionDefinition::builtin(
+            "resolved",
+            "✅",
+            "Resolved",
+            "Mark comment as resolved/addressed",
+        ),
+        ReactionDefinition::builtin(
+            "rejected",
+            "❌",
+            "Rejected",
+            "Mark comment as rejected/declined",
+        ),
         ReactionDefinition::builtin("thumbs_up", "👍", "Thumbs Up", "Agree or approve"),
         ReactionDefinition::builtin("thumbs_down", "👎", "Thumbs Down", "Disagree or disapprove"),
         ReactionDefinition::builtin("question", "❓", "Question", "Needs clarification"),
-        ReactionDefinition::builtin("important", "⚠️", "Important", "Mark as important/attention needed"),
+        ReactionDefinition::builtin(
+            "important",
+            "⚠️",
+            "Important",
+            "Mark as important/attention needed",
+        ),
     ]
 }
 
@@ -1065,7 +1145,11 @@ pub struct UrlLink {
 
 impl UrlLink {
     /// Creates a new URL link
-    pub fn new(url: impl Into<String>, title: impl Into<String>, added_by: impl Into<String>) -> Self {
+    pub fn new(
+        url: impl Into<String>,
+        title: impl Into<String>,
+        added_by: impl Into<String>,
+    ) -> Self {
         Self {
             id: Uuid::new_v4(),
             url: url.into(),
@@ -1151,7 +1235,11 @@ impl Comment {
     /// Returns true if reaction was added, false if user already has this reaction
     pub fn add_reaction(&mut self, reaction: &str, author: &str) -> bool {
         // Check if user already has this reaction
-        if self.reactions.iter().any(|r| r.reaction == reaction && r.author == author) {
+        if self
+            .reactions
+            .iter()
+            .any(|r| r.reaction == reaction && r.author == author)
+        {
             return false;
         }
         self.reactions.push(CommentReaction::new(reaction, author));
@@ -1162,7 +1250,8 @@ impl Comment {
     /// Returns true if reaction was removed, false if not found
     pub fn remove_reaction(&mut self, reaction: &str, author: &str) -> bool {
         let initial_len = self.reactions.len();
-        self.reactions.retain(|r| !(r.reaction == reaction && r.author == author));
+        self.reactions
+            .retain(|r| !(r.reaction == reaction && r.author == author));
         self.reactions.len() < initial_len
     }
 
@@ -1188,7 +1277,9 @@ impl Comment {
 
     /// Checks if a user has a specific reaction
     pub fn has_reaction(&self, reaction: &str, author: &str) -> bool {
-        self.reactions.iter().any(|r| r.reaction == reaction && r.author == author)
+        self.reactions
+            .iter()
+            .any(|r| r.reaction == reaction && r.author == author)
     }
 
     /// Adds a reply to this comment
@@ -1374,7 +1465,8 @@ impl Requirement {
         let now = Utc::now();
 
         // Get default feature name from environment variable
-        let default_feature = env::var("REQ_FEATURE").unwrap_or_else(|_| String::from("Uncategorized"));
+        let default_feature =
+            env::var("REQ_FEATURE").unwrap_or_else(|_| String::from("Uncategorized"));
 
         Self {
             id: Uuid::new_v4(),
@@ -1403,7 +1495,9 @@ impl Requirement {
 
     /// Gets the effective status string, preferring custom_status if set
     pub fn effective_status(&self) -> String {
-        self.custom_status.clone().unwrap_or_else(|| self.status.to_string())
+        self.custom_status
+            .clone()
+            .unwrap_or_else(|| self.status.to_string())
     }
 
     /// Sets the status from a string, using custom_status for non-standard values
@@ -1665,16 +1759,21 @@ impl RequirementsStore {
     pub fn get_statuses_for_type(&self, req_type: &RequirementType) -> Vec<String> {
         self.get_type_definition(req_type)
             .map(|td| td.get_statuses())
-            .unwrap_or_else(|| vec![
-                "Draft".to_string(),
-                "Approved".to_string(),
-                "Completed".to_string(),
-                "Rejected".to_string(),
-            ])
+            .unwrap_or_else(|| {
+                vec![
+                    "Draft".to_string(),
+                    "Approved".to_string(),
+                    "Completed".to_string(),
+                    "Rejected".to_string(),
+                ]
+            })
     }
 
     /// Gets the custom field definitions for a requirement type
-    pub fn get_custom_fields_for_type(&self, req_type: &RequirementType) -> Vec<CustomFieldDefinition> {
+    pub fn get_custom_fields_for_type(
+        &self,
+        req_type: &RequirementType,
+    ) -> Vec<CustomFieldDefinition> {
         self.get_type_definition(req_type)
             .map(|td| {
                 let mut fields = td.custom_fields.clone();
@@ -1743,7 +1842,9 @@ impl RequirementsStore {
         if !self.restrict_prefixes {
             return true;
         }
-        self.allowed_prefixes.iter().any(|p| p.eq_ignore_ascii_case(prefix))
+        self.allowed_prefixes
+            .iter()
+            .any(|p| p.eq_ignore_ascii_case(prefix))
     }
 
     /// Generates the next meta-type ID for a given prefix (e.g., "$USER" -> "$USER-001")
@@ -1774,12 +1875,16 @@ impl RequirementsStore {
 
     /// Finds a user by spec_id (e.g., "$USER-001")
     pub fn find_user_by_spec_id(&self, spec_id: &str) -> Option<&User> {
-        self.users.iter().find(|u| u.spec_id.as_deref() == Some(spec_id))
+        self.users
+            .iter()
+            .find(|u| u.spec_id.as_deref() == Some(spec_id))
     }
 
     /// Finds a user by spec_id (mutable)
     pub fn find_user_by_spec_id_mut(&mut self, spec_id: &str) -> Option<&mut User> {
-        self.users.iter_mut().find(|u| u.spec_id.as_deref() == Some(spec_id))
+        self.users
+            .iter_mut()
+            .find(|u| u.spec_id.as_deref() == Some(spec_id))
     }
 
     /// Finds a user by UUID
@@ -1791,7 +1896,10 @@ impl RequirementsStore {
     pub fn migrate_users_to_spec_ids(&mut self) {
         for user in &mut self.users {
             if user.spec_id.is_none() {
-                let counter = self.meta_counters.entry(META_PREFIX_USER.to_string()).or_insert(1);
+                let counter = self
+                    .meta_counters
+                    .entry(META_PREFIX_USER.to_string())
+                    .or_insert(1);
                 let spec_id = format!("{}-{:03}", META_PREFIX_USER, *counter);
                 *counter += 1;
                 user.spec_id = Some(spec_id);
@@ -1856,7 +1964,9 @@ impl RequirementsStore {
 
             // If both have prefix numbers, compare them numerically
             if a_parts.len() > 1 && b_parts.len() > 1 {
-                if let (Ok(a_num), Ok(b_num)) = (a_parts[0].parse::<u32>(), b_parts[0].parse::<u32>()) {
+                if let (Ok(a_num), Ok(b_num)) =
+                    (a_parts[0].parse::<u32>(), b_parts[0].parse::<u32>())
+                {
                     return a_num.cmp(&b_num);
                 }
             }
@@ -1909,16 +2019,16 @@ impl RequirementsStore {
 
     /// Gets a requirement by SPEC-ID
     pub fn get_requirement_by_spec_id(&self, spec_id: &str) -> Option<&Requirement> {
-        self.requirements.iter().find(|r| {
-            r.spec_id.as_ref().map(|s| s.as_str()) == Some(spec_id)
-        })
+        self.requirements
+            .iter()
+            .find(|r| r.spec_id.as_ref().map(|s| s.as_str()) == Some(spec_id))
     }
 
     /// Gets a mutable reference to a requirement by SPEC-ID
     pub fn get_requirement_by_spec_id_mut(&mut self, spec_id: &str) -> Option<&mut Requirement> {
-        self.requirements.iter_mut().find(|r| {
-            r.spec_id.as_ref().map(|s| s.as_str()) == Some(spec_id)
-        })
+        self.requirements
+            .iter_mut()
+            .find(|r| r.spec_id.as_ref().map(|s| s.as_str()) == Some(spec_id))
     }
 
     /// Assigns SPEC-IDs to requirements that don't have them
@@ -1975,7 +2085,8 @@ impl RequirementsStore {
             anyhow::bail!(
                 "Prefix '{}' is reserved for requirement type '{}'",
                 prefix_upper,
-                self.id_config.get_type_by_prefix(&prefix_upper)
+                self.id_config
+                    .get_type_by_prefix(&prefix_upper)
                     .map(|t| t.name.as_str())
                     .unwrap_or("unknown")
             );
@@ -1983,7 +2094,10 @@ impl RequirementsStore {
 
         // Check if prefix is already used by another feature
         if self.features.iter().any(|f| f.prefix == prefix_upper) {
-            anyhow::bail!("Prefix '{}' is already used by another feature", prefix_upper);
+            anyhow::bail!(
+                "Prefix '{}' is already used by another feature",
+                prefix_upper
+            );
         }
 
         let feature = FeatureDefinition::new(self.next_feature_number, name, &prefix_upper);
@@ -1995,7 +2109,9 @@ impl RequirementsStore {
     /// Get a feature by name
     pub fn get_feature_by_name(&self, name: &str) -> Option<&FeatureDefinition> {
         let lower = name.to_lowercase();
-        self.features.iter().find(|f| f.name.to_lowercase() == lower)
+        self.features
+            .iter()
+            .find(|f| f.name.to_lowercase() == lower)
     }
 
     /// Get a feature by prefix
@@ -2069,7 +2185,13 @@ impl RequirementsStore {
                     }
                 };
 
-                format!("{}-{}-{:0>width$}", feat, typ, number, width = digits as usize)
+                format!(
+                    "{}-{}-{:0>width$}",
+                    feat,
+                    typ,
+                    number,
+                    width = digits as usize
+                )
             }
         }
     }
@@ -2112,7 +2234,12 @@ impl RequirementsStore {
             }
         };
 
-        format!("{}-{:0>width$}", prefix_upper, number, width = digits as usize)
+        format!(
+            "{}-{:0>width$}",
+            prefix_upper,
+            number,
+            width = digits as usize
+        )
     }
 
     /// Get the type prefix for a RequirementType enum value
@@ -2124,7 +2251,9 @@ impl RequirementsStore {
             RequirementType::User => "User",
             RequirementType::ChangeRequest => "Change Request",
         };
-        self.id_config.get_type_by_name(type_name).map(|t| t.prefix.clone())
+        self.id_config
+            .get_type_by_name(type_name)
+            .map(|t| t.prefix.clone())
     }
 
     /// Generate a new spec_id for a requirement with a new prefix override
@@ -2144,12 +2273,16 @@ impl RequirementsStore {
         };
 
         // Check if this ID is already taken by another requirement
-        let conflicts = self.requirements.iter().any(|r| {
-            r.id != *req_uuid && r.spec_id.as_deref() == Some(&new_spec_id)
-        });
+        let conflicts = self
+            .requirements
+            .iter()
+            .any(|r| r.id != *req_uuid && r.spec_id.as_deref() == Some(&new_spec_id));
 
         if conflicts {
-            Err(format!("ID '{}' is already in use by another requirement", new_spec_id))
+            Err(format!(
+                "ID '{}' is already in use by another requirement",
+                new_spec_id
+            ))
         } else {
             Ok(new_spec_id)
         }
@@ -2158,8 +2291,7 @@ impl RequirementsStore {
     /// Check if a spec_id is available (not used by any requirement, or only by the given UUID)
     pub fn is_spec_id_available(&self, spec_id: &str, exclude_uuid: Option<&Uuid>) -> bool {
         !self.requirements.iter().any(|r| {
-            r.spec_id.as_deref() == Some(spec_id) &&
-            exclude_uuid.map_or(true, |uuid| r.id != *uuid)
+            r.spec_id.as_deref() == Some(spec_id) && exclude_uuid.map_or(true, |uuid| r.id != *uuid)
         })
     }
 
@@ -2214,13 +2346,17 @@ impl RequirementsStore {
         }
 
         // Collect data needed for ID generation (to avoid borrow issues)
-        let req_data: Vec<(usize, Option<String>, Option<String>, Option<String>)> = self.requirements.iter()
+        let req_data: Vec<(usize, Option<String>, Option<String>, Option<String>)> = self
+            .requirements
+            .iter()
             .enumerate()
             .map(|(i, req)| {
                 // Check for prefix_override first
                 let prefix_override = req.prefix_override.clone();
 
-                let feature_prefix = self.features.iter()
+                let feature_prefix = self
+                    .features
+                    .iter()
                     .find(|f| req.feature.contains(&f.name))
                     .map(|f| f.prefix.clone());
                 let type_prefix = match req.req_type {
@@ -2241,10 +2377,7 @@ impl RequirementsStore {
                 self.generate_requirement_id_with_override(override_prefix)
             } else {
                 // Use standard feature/type prefix logic
-                self.generate_requirement_id(
-                    feature_prefix.as_deref(),
-                    type_prefix.as_deref(),
-                )
+                self.generate_requirement_id(feature_prefix.as_deref(), type_prefix.as_deref())
             };
             self.requirements[i].spec_id = Some(new_id);
         }
@@ -2293,19 +2426,23 @@ impl RequirementsStore {
         // Check format change constraints
         if format_changed {
             // For format changes, we require Global numbering for safe migration
-            if self.id_config.numbering != NumberingStrategy::Global &&
-               *new_numbering != NumberingStrategy::Global {
+            if self.id_config.numbering != NumberingStrategy::Global
+                && *new_numbering != NumberingStrategy::Global
+            {
                 result.valid = false;
                 result.can_migrate = false;
                 result.error = Some(
                     "Format changes require Global numbering strategy. \
-                     Please switch to Global numbering first.".to_string()
+                     Please switch to Global numbering first."
+                        .to_string(),
                 );
                 return result;
             }
 
             // Count affected requirements
-            result.affected_count = self.requirements.iter()
+            result.affected_count = self
+                .requirements
+                .iter()
                 .filter(|r| r.spec_id.is_some())
                 .count();
 
@@ -2317,7 +2454,9 @@ impl RequirementsStore {
             }
         } else if numbering_changed || digits_changed {
             // For numbering/digit changes only, count affected
-            result.affected_count = self.requirements.iter()
+            result.affected_count = self
+                .requirements
+                .iter()
                 .filter(|r| r.spec_id.is_some())
                 .count();
 
@@ -2374,13 +2513,17 @@ impl RequirementsStore {
         self.prefix_counters.clear();
 
         // Collect requirement data for migration (to avoid borrow issues)
-        let req_data: Vec<(usize, Option<String>, Option<String>, Option<String>)> = self.requirements.iter()
+        let req_data: Vec<(usize, Option<String>, Option<String>, Option<String>)> = self
+            .requirements
+            .iter()
             .enumerate()
             .map(|(i, req)| {
                 // Check for prefix_override first
                 let prefix_override = req.prefix_override.clone();
 
-                let feature_prefix = self.features.iter()
+                let feature_prefix = self
+                    .features
+                    .iter()
                     .find(|f| req.feature.contains(&f.name))
                     .map(|f| f.prefix.clone());
                 let type_prefix = match req.req_type {
@@ -2403,10 +2546,7 @@ impl RequirementsStore {
                 self.generate_requirement_id_with_override(override_prefix)
             } else {
                 // Use standard feature/type prefix logic
-                self.generate_requirement_id(
-                    feature_prefix.as_deref(),
-                    type_prefix.as_deref(),
-                )
+                self.generate_requirement_id(feature_prefix.as_deref(), type_prefix.as_deref())
             };
             self.requirements[i].spec_id = Some(new_id);
             migrated_count += 1;
@@ -2416,12 +2556,20 @@ impl RequirementsStore {
     }
 
     /// Add a new requirement type definition
-    pub fn add_requirement_type(&mut self, name: &str, prefix: &str, description: &str) -> anyhow::Result<()> {
+    pub fn add_requirement_type(
+        &mut self,
+        name: &str,
+        prefix: &str,
+        description: &str,
+    ) -> anyhow::Result<()> {
         let prefix_upper = prefix.to_uppercase();
 
         // Check if prefix is already used
         if self.id_config.get_type_by_prefix(&prefix_upper).is_some() {
-            anyhow::bail!("Prefix '{}' is already used by another requirement type", prefix_upper);
+            anyhow::bail!(
+                "Prefix '{}' is already used by another requirement type",
+                prefix_upper
+            );
         }
 
         // Check if it conflicts with a feature prefix
@@ -2429,7 +2577,13 @@ impl RequirementsStore {
             anyhow::bail!("Prefix '{}' is already used by a feature", prefix_upper);
         }
 
-        self.id_config.requirement_types.push(RequirementTypeDefinition::new(name, &prefix_upper, description));
+        self.id_config
+            .requirement_types
+            .push(RequirementTypeDefinition::new(
+                name,
+                &prefix_upper,
+                description,
+            ));
         Ok(())
     }
 
@@ -2545,9 +2699,9 @@ impl RequirementsStore {
                 if let Some(inverse_type) = rel_type.inverse() {
                     for old_target in old_targets {
                         if let Some(old_target_req) = self.get_requirement_by_id_mut(&old_target) {
-                            old_target_req
-                                .relationships
-                                .retain(|r| !(r.target_id == *source_id && r.rel_type == inverse_type));
+                            old_target_req.relationships.retain(|r| {
+                                !(r.target_id == *source_id && r.rel_type == inverse_type)
+                            });
                         }
                     }
                 }
@@ -2577,11 +2731,7 @@ impl RequirementsStore {
             .retain(|r| !(r.target_id == *target_id && r.rel_type == *rel_type));
 
         if source_req.relationships.len() == original_len {
-            anyhow::bail!(
-                "Relationship '{}' to {} not found",
-                rel_type,
-                target_id
-            );
+            anyhow::bail!("Relationship '{}' to {} not found", rel_type, target_id);
         }
 
         // Remove inverse relationship if bidirectional
@@ -2611,11 +2761,7 @@ impl RequirementsStore {
     }
 
     /// Get all relationships of a specific type for a requirement
-    pub fn get_relationships_by_type(
-        &self,
-        id: &Uuid,
-        rel_type: &RelationshipType,
-    ) -> Vec<Uuid> {
+    pub fn get_relationships_by_type(&self, id: &Uuid, rel_type: &RelationshipType) -> Vec<Uuid> {
         self.get_requirement_by_id(id)
             .map(|req| {
                 req.relationships
@@ -2634,11 +2780,16 @@ impl RequirementsStore {
     /// Get a relationship definition by name
     pub fn get_relationship_definition(&self, name: &str) -> Option<&RelationshipDefinition> {
         let name_lower = name.to_lowercase();
-        self.relationship_definitions.iter().find(|d| d.name == name_lower)
+        self.relationship_definitions
+            .iter()
+            .find(|d| d.name == name_lower)
     }
 
     /// Get a relationship definition for a RelationshipType
-    pub fn get_definition_for_type(&self, rel_type: &RelationshipType) -> Option<&RelationshipDefinition> {
+    pub fn get_definition_for_type(
+        &self,
+        rel_type: &RelationshipType,
+    ) -> Option<&RelationshipDefinition> {
         self.get_relationship_definition(&rel_type.name())
     }
 
@@ -2648,11 +2799,18 @@ impl RequirementsStore {
     }
 
     /// Add a new relationship definition
-    pub fn add_relationship_definition(&mut self, definition: RelationshipDefinition) -> anyhow::Result<()> {
+    pub fn add_relationship_definition(
+        &mut self,
+        definition: RelationshipDefinition,
+    ) -> anyhow::Result<()> {
         let name_lower = definition.name.to_lowercase();
 
         // Check if name already exists
-        if self.relationship_definitions.iter().any(|d| d.name == name_lower) {
+        if self
+            .relationship_definitions
+            .iter()
+            .any(|d| d.name == name_lower)
+        {
             anyhow::bail!("Relationship definition '{}' already exists", name_lower);
         }
 
@@ -2660,7 +2818,11 @@ impl RequirementsStore {
         if let Some(ref inverse) = definition.inverse {
             let inverse_lower = inverse.to_lowercase();
             // Only warn if the inverse doesn't exist - it might be added later
-            if !self.relationship_definitions.iter().any(|d| d.name == inverse_lower) {
+            if !self
+                .relationship_definitions
+                .iter()
+                .any(|d| d.name == inverse_lower)
+            {
                 // This is okay - the inverse might be defined later
             }
         }
@@ -2673,10 +2835,15 @@ impl RequirementsStore {
     }
 
     /// Update an existing relationship definition
-    pub fn update_relationship_definition(&mut self, name: &str, definition: RelationshipDefinition) -> anyhow::Result<()> {
+    pub fn update_relationship_definition(
+        &mut self,
+        name: &str,
+        definition: RelationshipDefinition,
+    ) -> anyhow::Result<()> {
         let name_lower = name.to_lowercase();
 
-        let def = self.relationship_definitions
+        let def = self
+            .relationship_definitions
             .iter_mut()
             .find(|d| d.name == name_lower)
             .ok_or_else(|| anyhow::anyhow!("Relationship definition '{}' not found", name_lower))?;
@@ -2706,16 +2873,21 @@ impl RequirementsStore {
     pub fn remove_relationship_definition(&mut self, name: &str) -> anyhow::Result<()> {
         let name_lower = name.to_lowercase();
 
-        let def = self.relationship_definitions
+        let def = self
+            .relationship_definitions
             .iter()
             .find(|d| d.name == name_lower)
             .ok_or_else(|| anyhow::anyhow!("Relationship definition '{}' not found", name_lower))?;
 
         if def.built_in {
-            anyhow::bail!("Cannot remove built-in relationship definition '{}'", name_lower);
+            anyhow::bail!(
+                "Cannot remove built-in relationship definition '{}'",
+                name_lower
+            );
         }
 
-        self.relationship_definitions.retain(|d| d.name != name_lower);
+        self.relationship_definitions
+            .retain(|d| d.name != name_lower);
         Ok(())
     }
 
@@ -2723,7 +2895,11 @@ impl RequirementsStore {
     pub fn ensure_builtin_relationships(&mut self) {
         let defaults = RelationshipDefinition::defaults();
         for default_def in defaults {
-            if !self.relationship_definitions.iter().any(|d| d.name == default_def.name) {
+            if !self
+                .relationship_definitions
+                .iter()
+                .any(|d| d.name == default_def.name)
+            {
                 self.relationship_definitions.push(default_def);
             }
         }
@@ -2754,7 +2930,11 @@ impl RequirementsStore {
         };
 
         // Check if relationship already exists
-        if source.relationships.iter().any(|r| r.target_id == *target_id && r.rel_type == *rel_type) {
+        if source
+            .relationships
+            .iter()
+            .any(|r| r.target_id == *target_id && r.rel_type == *rel_type)
+        {
             return RelationshipValidation::error(&format!(
                 "Relationship '{}' to {} already exists",
                 rel_type, target_id
@@ -2794,7 +2974,9 @@ impl RequirementsStore {
         match definition.cardinality {
             Cardinality::OneToOne => {
                 // Source can only have one outgoing relationship of this type
-                let existing_outgoing = source.relationships.iter()
+                let existing_outgoing = source
+                    .relationships
+                    .iter()
                     .filter(|r| r.rel_type == *rel_type)
                     .count();
                 if existing_outgoing > 0 {
@@ -2804,7 +2986,9 @@ impl RequirementsStore {
                     ));
                 }
                 // Target can only have one incoming relationship of this type
-                let existing_incoming = self.requirements.iter()
+                let existing_incoming = self
+                    .requirements
+                    .iter()
                     .filter(|r| r.id != *source_id)
                     .flat_map(|r| r.relationships.iter())
                     .filter(|r| r.target_id == *target_id && r.rel_type == *rel_type)
@@ -2818,7 +3002,9 @@ impl RequirementsStore {
             }
             Cardinality::ManyToOne => {
                 // Source can only have one outgoing relationship of this type
-                let existing_outgoing = source.relationships.iter()
+                let existing_outgoing = source
+                    .relationships
+                    .iter()
                     .filter(|r| r.rel_type == *rel_type)
                     .count();
                 if existing_outgoing > 0 {
@@ -2830,7 +3016,9 @@ impl RequirementsStore {
             }
             Cardinality::OneToMany => {
                 // Target can only have one incoming relationship of this type
-                let existing_incoming = self.requirements.iter()
+                let existing_incoming = self
+                    .requirements
+                    .iter()
                     .filter(|r| r.id != *source_id)
                     .flat_map(|r| r.relationships.iter())
                     .filter(|r| r.target_id == *target_id && r.rel_type == *rel_type)
@@ -2858,7 +3046,12 @@ impl RequirementsStore {
     }
 
     /// Check if adding a relationship would create a cycle
-    fn would_create_cycle(&self, source_id: &Uuid, target_id: &Uuid, rel_type: &RelationshipType) -> bool {
+    fn would_create_cycle(
+        &self,
+        source_id: &Uuid,
+        target_id: &Uuid,
+        rel_type: &RelationshipType,
+    ) -> bool {
         // For parent relationships, check if target is already an ancestor of source
         // For child relationships, check if target is already a descendant of source
         let check_type = if rel_type.name() == "parent" {
@@ -3020,7 +3213,10 @@ mod tests {
 
         let result = store.validate_unique_spec_ids();
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Duplicate SPEC-ID"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Duplicate SPEC-ID"));
     }
 
     #[test]
@@ -3052,7 +3248,10 @@ mod tests {
         // Verify relationship was added
         let req1_updated = store.get_requirement_by_id(&id1).unwrap();
         assert_eq!(req1_updated.relationships.len(), 1);
-        assert_eq!(req1_updated.relationships[0].rel_type, RelationshipType::Parent);
+        assert_eq!(
+            req1_updated.relationships[0].rel_type,
+            RelationshipType::Parent
+        );
         assert_eq!(req1_updated.relationships[0].target_id, id2);
     }
 
@@ -3075,12 +3274,18 @@ mod tests {
         // Verify forward relationship
         let req1_updated = store.get_requirement_by_id(&id1).unwrap();
         assert_eq!(req1_updated.relationships.len(), 1);
-        assert_eq!(req1_updated.relationships[0].rel_type, RelationshipType::Parent);
+        assert_eq!(
+            req1_updated.relationships[0].rel_type,
+            RelationshipType::Parent
+        );
 
         // Verify inverse relationship
         let req2_updated = store.get_requirement_by_id(&id2).unwrap();
         assert_eq!(req2_updated.relationships.len(), 1);
-        assert_eq!(req2_updated.relationships[0].rel_type, RelationshipType::Child);
+        assert_eq!(
+            req2_updated.relationships[0].rel_type,
+            RelationshipType::Child
+        );
         assert_eq!(req2_updated.relationships[0].target_id, id1);
     }
 
@@ -3095,7 +3300,10 @@ mod tests {
         // Try to add self-relationship
         let result = store.add_relationship(&id, RelationshipType::Parent, &id, false);
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Cannot create relationship to self"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Cannot create relationship to self"));
     }
 
     #[test]
@@ -3111,7 +3319,9 @@ mod tests {
         store.add_requirement_with_spec_id(req2);
 
         // Add relationship
-        store.add_relationship(&id1, RelationshipType::Parent, &id2, false).unwrap();
+        store
+            .add_relationship(&id1, RelationshipType::Parent, &id2, false)
+            .unwrap();
 
         // Try to add duplicate
         let result = store.add_relationship(&id1, RelationshipType::Parent, &id2, false);
@@ -3130,7 +3340,9 @@ mod tests {
 
         store.add_requirement_with_spec_id(req1);
         store.add_requirement_with_spec_id(req2);
-        store.add_relationship(&id1, RelationshipType::Parent, &id2, false).unwrap();
+        store
+            .add_relationship(&id1, RelationshipType::Parent, &id2, false)
+            .unwrap();
 
         // Remove relationship
         let result = store.remove_relationship(&id1, &RelationshipType::Parent, &id2, false);
@@ -3152,7 +3364,9 @@ mod tests {
 
         store.add_requirement_with_spec_id(req1);
         store.add_requirement_with_spec_id(req2);
-        store.add_relationship(&id1, RelationshipType::Parent, &id2, true).unwrap();
+        store
+            .add_relationship(&id1, RelationshipType::Parent, &id2, true)
+            .unwrap();
 
         // Remove bidirectional relationship
         let result = store.remove_relationship(&id1, &RelationshipType::Parent, &id2, true);
@@ -3168,12 +3382,27 @@ mod tests {
 
     #[test]
     fn test_relationship_type_from_str() {
-        assert_eq!(RelationshipType::from_str("parent"), RelationshipType::Parent);
+        assert_eq!(
+            RelationshipType::from_str("parent"),
+            RelationshipType::Parent
+        );
         assert_eq!(RelationshipType::from_str("child"), RelationshipType::Child);
-        assert_eq!(RelationshipType::from_str("duplicate"), RelationshipType::Duplicate);
-        assert_eq!(RelationshipType::from_str("verifies"), RelationshipType::Verifies);
-        assert_eq!(RelationshipType::from_str("verified-by"), RelationshipType::VerifiedBy);
-        assert_eq!(RelationshipType::from_str("references"), RelationshipType::References);
+        assert_eq!(
+            RelationshipType::from_str("duplicate"),
+            RelationshipType::Duplicate
+        );
+        assert_eq!(
+            RelationshipType::from_str("verifies"),
+            RelationshipType::Verifies
+        );
+        assert_eq!(
+            RelationshipType::from_str("verified-by"),
+            RelationshipType::VerifiedBy
+        );
+        assert_eq!(
+            RelationshipType::from_str("references"),
+            RelationshipType::References
+        );
 
         // Test custom type
         if let RelationshipType::Custom(name) = RelationshipType::from_str("implements") {
@@ -3185,11 +3414,26 @@ mod tests {
 
     #[test]
     fn test_relationship_type_inverse() {
-        assert_eq!(RelationshipType::Parent.inverse(), Some(RelationshipType::Child));
-        assert_eq!(RelationshipType::Child.inverse(), Some(RelationshipType::Parent));
-        assert_eq!(RelationshipType::Verifies.inverse(), Some(RelationshipType::VerifiedBy));
-        assert_eq!(RelationshipType::VerifiedBy.inverse(), Some(RelationshipType::Verifies));
-        assert_eq!(RelationshipType::Duplicate.inverse(), Some(RelationshipType::Duplicate));
+        assert_eq!(
+            RelationshipType::Parent.inverse(),
+            Some(RelationshipType::Child)
+        );
+        assert_eq!(
+            RelationshipType::Child.inverse(),
+            Some(RelationshipType::Parent)
+        );
+        assert_eq!(
+            RelationshipType::Verifies.inverse(),
+            Some(RelationshipType::VerifiedBy)
+        );
+        assert_eq!(
+            RelationshipType::VerifiedBy.inverse(),
+            Some(RelationshipType::Verifies)
+        );
+        assert_eq!(
+            RelationshipType::Duplicate.inverse(),
+            Some(RelationshipType::Duplicate)
+        );
         assert_eq!(RelationshipType::References.inverse(), None);
         assert_eq!(RelationshipType::Custom("test".to_string()).inverse(), None);
     }
