@@ -11,6 +11,122 @@ use std::path::PathBuf;
 use uuid::Uuid;
 use serde::{Deserialize, Serialize};
 
+/// Helper to get selection range from CCursorRange (handles primary/secondary ordering)
+fn get_sorted_range(range: &egui::text::CCursorRange) -> (usize, usize) {
+    let start = range.primary.index.min(range.secondary.index);
+    let end = range.primary.index.max(range.secondary.index);
+    (start, end)
+}
+
+/// Helper to add context menu (right-click) with Copy/Cut/Paste to a TextEdit response
+fn add_text_edit_context_menu(
+    _ui: &mut egui::Ui,
+    response: &egui::Response,
+    text: &mut String,
+    id: egui::Id,
+) {
+    response.context_menu(|ui| {
+        // Get the current selection from TextEditState
+        let state = egui::TextEdit::load_state(ui.ctx(), id);
+        let selected_text = state.as_ref().and_then(|s| {
+            s.cursor.char_range().map(|range| {
+                let (start, end) = get_sorted_range(&range);
+                text.chars().skip(start).take(end - start).collect::<String>()
+            })
+        }).unwrap_or_default();
+
+        let has_selection = !selected_text.is_empty();
+
+        // Cut
+        if ui.add_enabled(has_selection, egui::Button::new("✂ Cut")).clicked() {
+            if let Some(state) = &state {
+                if let Some(range) = state.cursor.char_range() {
+                    let (start, end) = get_sorted_range(&range);
+                    let cut_text: String = text.chars().skip(start).take(end - start).collect();
+
+                    // Copy to clipboard (both regular and primary on Linux)
+                    ui.ctx().copy_text(cut_text.clone());
+                    copy_to_primary_selection(&cut_text);
+
+                    // Remove the selected text
+                    let before: String = text.chars().take(start).collect();
+                    let after: String = text.chars().skip(end).collect();
+                    *text = before + &after;
+                }
+            }
+            ui.close_menu();
+        }
+
+        // Copy
+        if ui.add_enabled(has_selection, egui::Button::new("📋 Copy")).clicked() {
+            // Copy to clipboard (both regular and primary on Linux)
+            ui.ctx().copy_text(selected_text.clone());
+            copy_to_primary_selection(&selected_text);
+            ui.close_menu();
+        }
+
+        // Paste
+        // Try to get clipboard content for paste
+        let can_paste = get_clipboard_text().is_some();
+
+        if ui.add_enabled(can_paste, egui::Button::new("📥 Paste")).clicked() {
+            if let Some(paste_text) = get_clipboard_text() {
+                if let Some(state) = &state {
+                    if let Some(range) = state.cursor.char_range() {
+                        // Replace selection with pasted text
+                        let (start, end) = get_sorted_range(&range);
+                        let before: String = text.chars().take(start).collect();
+                        let after: String = text.chars().skip(end).collect();
+                        *text = before + &paste_text + &after;
+                    } else {
+                        // No selection, append at end (or we'd need cursor position)
+                        text.push_str(&paste_text);
+                    }
+                } else {
+                    // No state, just append
+                    text.push_str(&paste_text);
+                }
+            }
+            ui.close_menu();
+        }
+
+        ui.separator();
+
+        // Select All
+        if ui.button("Select All").clicked() {
+            if let Some(mut state) = state {
+                let len = text.chars().count();
+                state.cursor.set_char_range(Some(egui::text::CCursorRange::two(
+                    egui::text::CCursor::new(0),
+                    egui::text::CCursor::new(len),
+                )));
+                state.store(ui.ctx(), id);
+            }
+            ui.close_menu();
+        }
+    });
+}
+
+/// Copy text to the X11/Wayland primary selection (middle-click paste buffer)
+#[cfg(target_os = "linux")]
+fn copy_to_primary_selection(text: &str) {
+    use arboard::SetExtLinux;
+    if let Ok(mut clipboard) = arboard::Clipboard::new() {
+        // Set to primary selection for middle-click paste
+        let _ = clipboard.set().clipboard(arboard::LinuxClipboardKind::Primary).text(text.to_string());
+    }
+}
+
+#[cfg(not(target_os = "linux"))]
+fn copy_to_primary_selection(_text: &str) {
+    // Primary selection is Linux-specific, no-op on other platforms
+}
+
+/// Get text from the system clipboard
+fn get_clipboard_text() -> Option<String> {
+    arboard::Clipboard::new().ok().and_then(|mut c| c.get_text().ok())
+}
+
 /// Default base font size in points
 const DEFAULT_FONT_SIZE: f32 = 14.0;
 /// Minimum font size
@@ -5209,10 +5325,12 @@ impl RequirementsApp {
         // Calculate available width for text fields
         let available_width = ui.available_width();
 
-        // Title field - full width
+        // Title field - full width with context menu
         ui.label("Title:");
-        ui.add(egui::TextEdit::singleline(&mut self.form_title)
-            .desired_width(available_width));
+        let title_output = egui::TextEdit::singleline(&mut self.form_title)
+            .desired_width(available_width)
+            .show(ui);
+        add_text_edit_context_menu(ui, &title_output.response, &mut self.form_title, title_output.response.id);
         ui.add_space(8.0);
 
         // Metadata row - Type first (affects available statuses), then Status, Priority
@@ -5543,11 +5661,13 @@ impl RequirementsApp {
                     CommonMarkViewer::new()
                         .show(ui, &mut self.markdown_cache, &self.form_description);
                 } else {
-                    // Edit mode - text editor
-                    ui.add(egui::TextEdit::multiline(&mut self.form_description)
+                    // Edit mode - text editor with context menu
+                    let output = egui::TextEdit::multiline(&mut self.form_description)
                         .desired_width(available_width)
                         .desired_rows(8)
-                        .hint_text("Enter requirement description (Markdown supported)..."));
+                        .hint_text("Enter requirement description (Markdown supported)...")
+                        .show(ui);
+                    add_text_edit_context_menu(ui, &output.response, &mut self.form_description, output.response.id);
                 }
             });
 
@@ -5590,10 +5710,12 @@ impl RequirementsApp {
             });
 
             ui.label("Content:");
-            ui.add(egui::TextEdit::multiline(&mut self.comment_content)
+            let comment_output = egui::TextEdit::multiline(&mut self.comment_content)
                 .desired_width(available_width - 20.0)  // Account for group padding
                 .desired_rows(4)
-                .hint_text("Enter comment..."));
+                .hint_text("Enter comment...")
+                .show(ui);
+            add_text_edit_context_menu(ui, &comment_output.response, &mut self.comment_content, comment_output.response.id);
 
             ui.horizontal(|ui| {
                 if ui.button("💾 Save").clicked() {

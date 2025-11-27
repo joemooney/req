@@ -26,3 +26,4 @@ serde_yaml = { workspace = true }
 dirs = "5.0"
 url = "2"
 open = "5"
+arboard = "3"

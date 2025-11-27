@@ -704,6 +704,10 @@ requirements:
     target_id: 0aefc969-49e7-4825-9118-ba20f778636c
   - rel_type: Child
     target_id: baf7ce9a-b022-41d6-9781-c8b5d1c32acd
+  - rel_type: Child
+    target_id: 2c0c3c1a-aa65-4cce-8d03-3898775b3ac2
+  - rel_type: Child
+    target_id: 78670bb5-090f-45a1-a022-dfcac4c11dd0
   history:
   - id: e2ba3669-855e-4b99-9b7f-30300da178c5
     author: '@joe'
@@ -1254,15 +1258,115 @@ requirements:
 - id: baf7ce9a-b022-41d6-9781-c8b5d1c32acd
   spec_id: FR-0047
   title: Markdown help
-  description: |-
+  description: |+
     The "Supports Markdown" when clicked should show a modal of help or open a browswer page with help on what markdown is supported with
       examples.
+
+    implemented a Markdown help modal that appears when you click the "Supports Markdown" link in the form view. The modal includes:
+
+      - Headers - #, ##, ### syntax
+      - Text Formatting - bold, italic, strikethrough, inline code with visual examples showing the rendered result
+      - Lists - ordered and unordered, with nesting support
+      - Links - [text](url) syntax
+      - Code Blocks - with and without language specification for syntax highlighting
+      - Blockquotes - > syntax
+      - Horizontal Rules - --- syntax
+      - Tables - pipe-based table syntax
+      - Task Lists - - [ ] and - [x] checkbox syntax
+
+      The modal is a centered, resizable window with a scrollable content area and a Close button.
+
   status: Draft
   priority: Medium
   owner: ''
   feature: Uncategorized
   created_at: 2025-11-27T06:16:17.007809398Z
-  modified_at: 2025-11-27T06:16:17.007809398Z
+  modified_at: 2025-11-27T06:19:14.430193705Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
+  history:
+  - id: a3118ebc-5427-4e67-8a88-22765e6565e4
+    author: '@joe'
+    timestamp: 2025-11-27T06:19:14.430189932Z
+    changes:
+    - field_name: description
+      old_value: |-
+        The "Supports Markdown" when clicked should show a modal of help or open a browswer page with help on what markdown is supported with
+          examples.
+      new_value: |+
+        The "Supports Markdown" when clicked should show a modal of help or open a browswer page with help on what markdown is supported with
+          examples.
+
+        implemented a Markdown help modal that appears when you click the "Supports Markdown" link in the form view. The modal includes:
+
+          - Headers - #, ##, ### syntax
+          - Text Formatting - bold, italic, strikethrough, inline code with visual examples showing the rendered result
+          - Lists - ordered and unordered, with nesting support
+          - Links - [text](url) syntax
+          - Code Blocks - with and without language specification for syntax highlighting
+          - Blockquotes - > syntax
+          - Horizontal Rules - --- syntax
+          - Tables - pipe-based table syntax
+          - Task Lists - - [ ] and - [x] checkbox syntax
+
+          The modal is a centered, resizable window with a scrollable content area and a Close button.
+
+- id: 2c0c3c1a-aa65-4cce-8d03-3898775b3ac2
+  spec_id: FR-0048
+  title: textboxes should show a right click menu with Copy, Paste , Cut (optional)
+  description: textboxes should show a right click menu with Copy, Paste , Cut (optional)
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-27T06:18:35.852016323Z
+  modified_at: 2025-11-27T06:18:35.852016323Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
+- id: 78670bb5-090f-45a1-a022-dfcac4c11dd0
+  spec_id: FR-0049
+  title: Cut-n-Paste
+  description: |-
+    Ctrl-C copy in a textbox or whenever text is selected should copy the text into the system clipboard and secondard buffer. I do a middle click
+      paste elsewhere and it is not pasting in what I copied. Perhaps this is an behavior option if what I am asking for is non-standard. Not sure
+      if this makes sense
+
+    There is a known limitation of egui - it doesn't sync to the X11 primary selection (middle-click buffer) when you copy text. There's an
+      https://github.com/emilk/egui/issues/5852 in egui for this.
+
+      The workaround would be to add the arboard crate and manually sync to the primary selection. However, this is tricky because:
+
+      1. We'd need to intercept Ctrl+C before egui handles it
+      2. We'd need to know what text is currently selected in the TextEdit widget
+      3. egui doesn't expose a TextSelectionChanged event (there's https://github.com/emilk/egui/issues/7273 for this)
+
+      Options:
+      1. Wait for egui to add support - The underlying arboard crate already supports primary selection, but egui hasn't integrated it yet
+      2. Add a workaround - We could try to detect Ctrl+C and sync egui's clipboard to the primary selection using arboard, but we wouldn't be
+      able to sync on text selection alone (only on explicit copy)
+
+      Would you like me to attempt option 2? It won't give you the full "select text = primary selection" behavior that X11 apps typically have,
+      but it would at least make Ctrl+C copy to both the clipboard AND the primary selection buffer, so middle-click paste would work after you
+      explicitly copy.
+
+      Sources:
+      - https://github.com/emilk/egui/issues/5852
+      - https://github.com/emilk/egui/issues/7273
+      - https://shallowsky.com/blog/linux/x-selection.html
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-27T06:28:15.111308891Z
+  modified_at: 2025-11-27T06:28:15.111308891Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -1291,7 +1395,7 @@ id_config:
     description: Change requests for modifications to existing functionality
 features: []
 next_feature_number: 25
-next_spec_number: 48
+next_spec_number: 50
 prefix_counters: {}
 relationship_definitions:
 - name: parent
