@@ -279,6 +279,32 @@ A chronological record of development sessions and changes made to the Requireme
   - Updated show_list_panel() function signature to accept `in_form_view: bool`
   - Updated user guide with Responsive Layout section
 
+### Relationship Definition System
+- **Prompt**: Add ability to manage and add relationships with constraints on types and cardinality
+- **Actions**:
+  - Created design document (docs/RELATIONSHIP_DESIGN.md) with full specification
+  - Added `Cardinality` enum (OneToOne, OneToMany, ManyToOne, ManyToMany)
+  - Added `RelationshipDefinition` struct with full metadata:
+    - name, display_name, description
+    - inverse relationship name
+    - symmetric flag
+    - cardinality constraints
+    - source_types and target_types constraints
+    - built_in flag (cannot delete)
+    - color and icon for visualization
+  - Added `RelationshipValidation` struct for validation results
+  - Added `relationship_definitions` field to `RequirementsStore`
+  - Implemented default built-in relationships (parent, child, verifies, verified_by, etc.)
+  - Added new relationships: depends_on/dependency_of, implements/implemented_by
+  - Added validation methods:
+    - `validate_relationship()` - checks type constraints, cardinality, cycles
+    - `would_create_cycle()` - detects hierarchical cycles
+    - `get_inverse_type()` - looks up inverse from definitions
+  - Added management methods for definitions (add, update, remove, ensure_builtin)
+  - Added `RelDefCommand` to CLI with list/show/add/edit/remove subcommands
+  - Exported new types from requirements-core lib.rs
+  - Updated user guide with relationship definitions documentation
+
 ---
 
 ## Git Operations Summary

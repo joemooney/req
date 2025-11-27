@@ -12,6 +12,8 @@ pub use models::{
     // New ID system types
     IdFormat, NumberingStrategy, IdConfiguration,
     RequirementTypeDefinition, FeatureDefinition, IdConfigValidation,
+    // Relationship definition types
+    RelationshipDefinition, Cardinality, RelationshipValidation,
 };
 pub use storage::Storage;
 pub use registry::{Registry, get_registry_path};

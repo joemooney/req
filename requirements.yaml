@@ -12,6 +12,9 @@ requirements:
   req_type: Functional
   dependencies: []
   tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 2fd609e9-d194-47a3-adbd-417f6306190c
   history:
   - id: eb0f853e-6465-4a10-b0b2-72090bde5303
     author: '@joe'
@@ -52,6 +55,8 @@ requirements:
   relationships:
   - rel_type: Child
     target_id: 59d3cc0b-25a5-4076-8966-94b8ef4e36b1
+  - rel_type: Parent
+    target_id: 4c3bb89e-2d41-4841-b2ff-881bb67fee99
 - id: 5a8cda55-badf-48c6-82c9-b9ea53f3f69f
   spec_id: CR-0004
   title: relationship view shall how requirements in a tree structure
@@ -122,6 +127,9 @@ requirements:
   req_type: Functional
   dependencies: []
   tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 848840ae-7005-4fab-b478-163f9139359e
   comments:
   - id: 356349e8-c3a9-4238-b13a-4b475b0e3477
     author: '@joe'
@@ -141,6 +149,9 @@ requirements:
   req_type: Functional
   dependencies: []
   tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 2fd609e9-d194-47a3-adbd-417f6306190c
 - id: 93c22e3a-bb6c-4933-9c35-d9b8fd9173c5
   spec_id: FR-0007
   title: Title and description width should be width of window
@@ -154,6 +165,9 @@ requirements:
   req_type: Functional
   dependencies: []
   tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
 - id: 39824b9c-6ff0-49b9-988d-6819978e547b
   spec_id: FR-0008
   title: comments should be displayed nested
@@ -195,7 +209,8 @@ requirements:
   - rel_type: Parent
     target_id: 848840ae-7005-4fab-b478-163f9139359e
 - id: 04cff76c-978d-4e3a-845a-1d6f6b885cea
-  spec_id: FR-0010
+  spec_id: CHANGEREQUESTS-0029
+  prefix_override: CHANGEREQUESTS
   title: Change Request support
   description: 'Change Request should be one of the default requirement types. '
   status: Draft
@@ -203,13 +218,24 @@ requirements:
   owner: ''
   feature: 3-Uncategorized
   created_at: 2025-11-25T21:30:08.455035192Z
-  modified_at: 2025-11-25T21:30:08.455035192Z
+  modified_at: 2025-11-26T22:58:17.270717049Z
   req_type: Functional
   dependencies: []
   tags: []
   relationships:
   - rel_type: Child
     target_id: 61b19487-4000-4b67-87f0-5fd554bfebfa
+  history:
+  - id: 8d90fa4e-b6e9-44e9-86ff-151b6c6e859f
+    author: '@joe'
+    timestamp: 2025-11-26T22:58:17.270715939Z
+    changes:
+    - field_name: prefix_override
+      old_value: ''
+      new_value: CHANGEREQUESTS
+    - field_name: spec_id
+      old_value: FR-0010
+      new_value: CHANGEREQUESTS-0029
 - id: 055530de-326d-4362-aab1-639239f363e5
   spec_id: FR-0011
   title: Arrow keys should move between requirements in the list
@@ -224,8 +250,8 @@ requirements:
   dependencies: []
   tags: []
   relationships:
-  - rel_type: Child
-    target_id: d8fbfd6f-47a7-4f93-94d2-1dc3009e79b0
+  - rel_type: Parent
+    target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
   history:
   - id: 92a50b21-6053-4e7c-9919-0724aadbea36
     author: Unknown User
@@ -247,6 +273,9 @@ requirements:
   req_type: ChangeRequest
   dependencies: []
   tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
   comments:
   - id: 5c445d24-4481-45fe-a8ad-23a3e2eff543
     author: '@joe'
@@ -294,6 +323,9 @@ requirements:
   req_type: Functional
   dependencies: []
   tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
 - id: da7e6650-4dd3-43ac-8804-55dfb58f3cb5
   spec_id: FR-0014
   title: add a light theme
@@ -307,6 +339,9 @@ requirements:
   req_type: Functional
   dependencies: []
   tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
 - id: b9c26c5d-ab38-4e9b-a493-8f4a84f88019
   spec_id: CR-0015
   title: add created by
@@ -362,6 +397,8 @@ requirements:
     target_id: d0f16bc7-788b-4d6c-ac49-3a48fc678e50
   - rel_type: Child
     target_id: 0f47519b-83fa-4e45-9e64-44ae833033a8
+  - rel_type: Child
+    target_id: b8621169-8a34-4001-a2e8-936229497c62
   history:
   - id: bc863c32-e57c-469a-84d1-39b682469d24
     author: '@joe'
@@ -403,6 +440,9 @@ requirements:
   req_type: Functional
   dependencies: []
   tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
 - id: 02a28ce8-28aa-4e56-88e3-ae29813a3fe0
   spec_id: FR-0018
   title: Break link relationship
@@ -416,6 +456,9 @@ requirements:
   req_type: Functional
   dependencies: []
   tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 4c3bb89e-2d41-4841-b2ff-881bb67fee99
 - id: 2a82a590-b200-42ad-843a-456db9d55359
   spec_id: FR-0019
   title: Archive state
@@ -487,6 +530,9 @@ requirements:
   req_type: Functional
   dependencies: []
   tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
 - id: 967615c7-1128-4f6d-a02e-b13917942460
   spec_id: FR-0022
   title: search textbox should expand as panel is widened
@@ -500,6 +546,9 @@ requirements:
   req_type: Functional
   dependencies: []
   tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
 - id: d8fbfd6f-47a7-4f93-94d2-1dc3009e79b0
   spec_id: FR-0023
   title: describe default requirement types
@@ -515,7 +564,7 @@ requirements:
   tags: []
   relationships:
   - rel_type: Parent
-    target_id: 055530de-326d-4362-aab1-639239f363e5
+    target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
 - id: 61b19487-4000-4b67-87f0-5fd554bfebfa
   spec_id: FR-0024
   title: In Add or Edit, ESC should cancel
@@ -550,6 +599,122 @@ requirements:
   relationships:
   - rel_type: Parent
     target_id: 5a8cda55-badf-48c6-82c9-b9ea53f3f69f
+- id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
+  spec_id: LAYOUT-0028
+  prefix_override: LAYOUT
+  title: Appearance/Behavior
+  description: ''
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 18-Uncategorized
+  created_at: 2025-11-26T22:56:44.024845680Z
+  modified_at: 2025-11-26T22:59:52.027319658Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Child
+    target_id: f1a64c4d-3086-4010-be4e-3eaf6bc3df5d
+  - rel_type: Child
+    target_id: da7e6650-4dd3-43ac-8804-55dfb58f3cb5
+  - rel_type: Child
+    target_id: 87b1dacb-6c52-4f19-b6f8-a5bf41de3529
+  - rel_type: Child
+    target_id: 93c22e3a-bb6c-4933-9c35-d9b8fd9173c5
+  - rel_type: Child
+    target_id: 6da186f2-cae3-4b75-bc46-d487ced9e96b
+  - rel_type: Child
+    target_id: 967615c7-1128-4f6d-a02e-b13917942460
+  - rel_type: Child
+    target_id: 07f7e655-742d-44c9-ba9d-c77762ae7090
+  - rel_type: Child
+    target_id: 055530de-326d-4362-aab1-639239f363e5
+  - rel_type: Child
+    target_id: d8fbfd6f-47a7-4f93-94d2-1dc3009e79b0
+  history:
+  - id: e2ba3669-855e-4b99-9b7f-30300da178c5
+    author: '@joe'
+    timestamp: 2025-11-26T22:57:17.208458988Z
+    changes:
+    - field_name: title
+      old_value: 'Window Panels '
+      new_value: Appearance
+  - id: 266323d4-960a-42fd-9d69-7f996578554c
+    author: '@joe'
+    timestamp: 2025-11-26T22:59:52.027318678Z
+    changes:
+    - field_name: title
+      old_value: Appearance
+      new_value: Appearance/Behavior
+- id: 4c3bb89e-2d41-4841-b2ff-881bb67fee99
+  spec_id: RELATIONSHIPS-0030
+  prefix_override: RELATIONSHIPS
+  title: Links behvior
+  description: ''
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 19-Uncategorized
+  created_at: 2025-11-26T23:02:51.508668144Z
+  modified_at: 2025-11-26T23:02:51.508668144Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Child
+    target_id: 02a28ce8-28aa-4e56-88e3-ae29813a3fe0
+  - rel_type: Child
+    target_id: 043639ed-7c12-4d99-acc2-587a38b0d25d
+- id: 617353d0-7006-4a3c-92ba-49e5218386e2
+  spec_id: ADMIN-0031
+  prefix_override: ADMIN
+  title: Settings & Admin
+  description: ''
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 19-Uncategorized
+  created_at: 2025-11-26T23:04:21.820329556Z
+  modified_at: 2025-11-26T23:04:21.820329556Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Child
+    target_id: 2fd609e9-d194-47a3-adbd-417f6306190c
+- id: 2fd609e9-d194-47a3-adbd-417f6306190c
+  spec_id: USERS-0033
+  prefix_override: USERS
+  title: User Admin & Control
+  description: ''
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 19-Uncategorized
+  created_at: 2025-11-26T23:08:24.143381728Z
+  modified_at: 2025-11-26T23:08:34.439346889Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 617353d0-7006-4a3c-92ba-49e5218386e2
+  - rel_type: Child
+    target_id: eed922f2-03d7-49c6-9c13-31dda6880c27
+  - rel_type: Child
+    target_id: 37be9566-a051-430b-b47b-1890a395a524
+  history:
+  - id: 03c2768f-ba06-4cd3-b6f1-d3055c8d7b07
+    author: '@joe'
+    timestamp: 2025-11-26T23:08:34.439345422Z
+    changes:
+    - field_name: prefix_override
+      old_value: ''
+      new_value: USERS
+    - field_name: spec_id
+      old_value: FR-0032
+      new_value: USERS-0033
 id_config:
   format: SingleLevel
   numbering: Global
@@ -571,6 +736,128 @@ id_config:
     prefix: CR
     description: Change requests for modifications to existing functionality
 features: []
-next_feature_number: 18
-next_spec_number: 28
+next_feature_number: 20
+next_spec_number: 34
 prefix_counters: {}
+relationship_definitions:
+- name: parent
+  display_name: Parent
+  description: Hierarchical parent requirement
+  inverse: child
+  symmetric: false
+  cardinality: ManyToOne
+  source_types: []
+  target_types: []
+  built_in: true
+  color: null
+  icon: null
+- name: child
+  display_name: Child
+  description: Hierarchical child requirement
+  inverse: parent
+  symmetric: false
+  cardinality: OneToMany
+  source_types: []
+  target_types: []
+  built_in: true
+  color: null
+  icon: null
+- name: verifies
+  display_name: Verifies
+  description: Test or verification relationship
+  inverse: verified_by
+  symmetric: false
+  cardinality: ManyToMany
+  source_types: []
+  target_types: []
+  built_in: true
+  color: null
+  icon: null
+- name: verified_by
+  display_name: Verified By
+  description: Verified by a test requirement
+  inverse: verifies
+  symmetric: false
+  cardinality: ManyToMany
+  source_types: []
+  target_types: []
+  built_in: true
+  color: null
+  icon: null
+- name: duplicate
+  display_name: Duplicate
+  description: Marks requirements as duplicates
+  inverse: null
+  symmetric: true
+  cardinality: ManyToMany
+  source_types: []
+  target_types: []
+  built_in: true
+  color: null
+  icon: null
+- name: references
+  display_name: References
+  description: General reference link
+  inverse: null
+  symmetric: false
+  cardinality: ManyToMany
+  source_types: []
+  target_types: []
+  built_in: true
+  color: null
+  icon: null
+- name: depends_on
+  display_name: Depends On
+  description: Dependency relationship
+  inverse: dependency_of
+  symmetric: false
+  cardinality: ManyToMany
+  source_types: []
+  target_types: []
+  built_in: true
+  color: null
+  icon: null
+- name: dependency_of
+  display_name: Dependency Of
+  description: Inverse dependency relationship
+  inverse: depends_on
+  symmetric: false
+  cardinality: ManyToMany
+  source_types: []
+  target_types: []
+  built_in: true
+  color: null
+  icon: null
+- name: implements
+  display_name: Implements
+  description: Implementation relationship
+  inverse: implemented_by
+  symmetric: false
+  cardinality: ManyToMany
+  source_types: []
+  target_types: []
+  built_in: true
+  color: null
+  icon: null
+- name: implemented_by
+  display_name: Implemented By
+  description: Inverse implementation relationship
+  inverse: implements
+  symmetric: false
+  cardinality: ManyToMany
+  source_types: []
+  target_types: []
+  built_in: true
+  color: null
+  icon: null
+- name: blocks
+  display_name: Blocks
+  description: This requirement blocks progress on another
+  inverse: blocked_by
+  symmetric: false
+  cardinality: ManyToMany
+  source_types: []
+  target_types: []
+  built_in: false
+  color: '#ff6b6b'
+  icon: null

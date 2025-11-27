@@ -113,6 +113,40 @@ req rel add --from SPEC-001 --to SPEC-002 --type verifies -b
 req rel list SPEC-001
 ```
 
+### Relationship Definitions
+
+Manage custom relationship types with constraints:
+
+```bash
+# List all relationship definitions
+req rel-def list
+
+# Show details for a relationship definition
+req rel-def show parent
+
+# Add a custom relationship type
+req rel-def add --name "blocks" \
+    --display-name "Blocks" \
+    --description "This requirement blocks another" \
+    --inverse "blocked_by" \
+    --cardinality n:n \
+    --color "#ff6b6b"
+
+# Edit a relationship definition
+req rel-def edit parent --source-types "Functional,System"
+
+# Remove a custom relationship definition
+req rel-def remove blocks
+```
+
+**Built-in relationship types:**
+- `parent` / `child` - Hierarchical decomposition (N:1 / 1:N)
+- `verifies` / `verified_by` - Test relationships (N:N)
+- `depends_on` / `dependency_of` - Dependencies (N:N)
+- `implements` / `implemented_by` - Implementation links (N:N)
+- `references` - General reference (N:N, no inverse)
+- `duplicate` - Marks duplicates (symmetric)
+
 ### Feature Management
 
 ```bash
@@ -285,12 +319,32 @@ Draft -> Approved -> Completed
 
 ### Relationship Types
 
-| Type | Description |
-|------|-------------|
-| **Parent** | Hierarchical parent-child |
-| **Verifies** | Test/verification relationship |
-| **References** | General reference link |
-| **Custom** | User-defined relationship |
+The system includes built-in relationship types with configurable constraints:
+
+| Type | Inverse | Cardinality | Description |
+|------|---------|-------------|-------------|
+| **Parent** | Child | N:1 | Hierarchical decomposition |
+| **Child** | Parent | 1:N | Child of parent requirement |
+| **Verifies** | Verified By | N:N | Test/verification relationship |
+| **Verified By** | Verifies | N:N | Verified by test requirement |
+| **Depends On** | Dependency Of | N:N | Dependency relationship |
+| **Dependency Of** | Depends On | N:N | Inverse dependency |
+| **Implements** | Implemented By | N:N | Implementation relationship |
+| **Implemented By** | Implements | N:N | Inverse implementation |
+| **References** | - | N:N | General reference link |
+| **Duplicate** | (symmetric) | N:N | Marks as duplicate |
+
+**Cardinality meanings:**
+- **1:1** - One source to one target
+- **1:N** - One source to many targets
+- **N:1** - Many sources to one target
+- **N:N** - Many sources to many targets
+
+Custom relationship types can be created with:
+- Type constraints (limit which requirement types can participate)
+- Cardinality rules
+- Inverse relationship definitions
+- Visualization colors
 
 ---
 

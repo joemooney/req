@@ -156,6 +156,94 @@ pub enum TypeCommand {
     },
 }
 
+/// Commands for managing relationship type definitions
+#[derive(Subcommand, Debug)]
+pub enum RelDefCommand {
+    /// List all relationship definitions
+    List,
+
+    /// Show details for a specific relationship definition
+    Show {
+        /// Name of the relationship definition
+        name: String,
+    },
+
+    /// Add a new relationship definition
+    Add {
+        /// Unique name for the relationship (lowercase, no spaces)
+        #[clap(long)]
+        name: String,
+
+        /// Human-readable display name
+        #[clap(long)]
+        display_name: Option<String>,
+
+        /// Description of what this relationship means
+        #[clap(long)]
+        description: Option<String>,
+
+        /// Name of the inverse relationship (e.g., "child" for "parent")
+        #[clap(long)]
+        inverse: Option<String>,
+
+        /// Whether this relationship is symmetric (A->B implies B->A)
+        #[clap(long)]
+        symmetric: bool,
+
+        /// Cardinality: 1:1, 1:n, n:1, n:n (default: n:n)
+        #[clap(long, default_value = "n:n")]
+        cardinality: String,
+
+        /// Allowed source requirement types (comma-separated, empty = all)
+        #[clap(long)]
+        source_types: Option<String>,
+
+        /// Allowed target requirement types (comma-separated, empty = all)
+        #[clap(long)]
+        target_types: Option<String>,
+
+        /// Color for visualization (hex format, e.g., #ff6b6b)
+        #[clap(long)]
+        color: Option<String>,
+    },
+
+    /// Edit an existing relationship definition
+    Edit {
+        /// Name of the relationship definition to edit
+        name: String,
+
+        /// New display name
+        #[clap(long)]
+        display_name: Option<String>,
+
+        /// New description
+        #[clap(long)]
+        description: Option<String>,
+
+        /// New allowed source types (comma-separated)
+        #[clap(long)]
+        source_types: Option<String>,
+
+        /// New allowed target types (comma-separated)
+        #[clap(long)]
+        target_types: Option<String>,
+
+        /// New color
+        #[clap(long)]
+        color: Option<String>,
+    },
+
+    /// Remove a relationship definition (only custom ones)
+    Remove {
+        /// Name of the relationship definition to remove
+        name: String,
+
+        /// Skip confirmation prompt
+        #[clap(long, short = 'y')]
+        yes: bool,
+    },
+}
+
 #[derive(Subcommand, Debug)]
 pub enum RelationshipCommand {
     /// Add a relationship between requirements
@@ -366,6 +454,10 @@ pub enum Command {
     /// Relationship management commands
     #[clap(subcommand)]
     Rel(RelationshipCommand),
+
+    /// Relationship definition management commands
+    #[clap(subcommand)]
+    RelDef(RelDefCommand),
 
     /// Manage comments on requirements
     #[clap(subcommand)]

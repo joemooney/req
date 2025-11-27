@@ -124,6 +124,270 @@ impl RelationshipType {
             RelationshipType::Custom(_) => None,
         }
     }
+
+    /// Get the canonical name for this relationship type
+    pub fn name(&self) -> String {
+        match self {
+            RelationshipType::Parent => "parent".to_string(),
+            RelationshipType::Child => "child".to_string(),
+            RelationshipType::Duplicate => "duplicate".to_string(),
+            RelationshipType::Verifies => "verifies".to_string(),
+            RelationshipType::VerifiedBy => "verified_by".to_string(),
+            RelationshipType::References => "references".to_string(),
+            RelationshipType::Custom(name) => name.clone(),
+        }
+    }
+}
+
+// ============================================================================
+// Relationship Definition System
+// ============================================================================
+
+/// Cardinality constraints for relationships
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
+pub enum Cardinality {
+    /// One source to one target (1:1)
+    OneToOne,
+    /// One source to many targets (1:N)
+    OneToMany,
+    /// Many sources to one target (N:1)
+    ManyToOne,
+    /// Many sources to many targets (N:N) - default
+    #[default]
+    ManyToMany,
+}
+
+impl fmt::Display for Cardinality {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Cardinality::OneToOne => write!(f, "1:1"),
+            Cardinality::OneToMany => write!(f, "1:N"),
+            Cardinality::ManyToOne => write!(f, "N:1"),
+            Cardinality::ManyToMany => write!(f, "N:N"),
+        }
+    }
+}
+
+impl Cardinality {
+    /// Parse cardinality from string
+    pub fn from_str(s: &str) -> Self {
+        match s.to_lowercase().replace(" ", "").as_str() {
+            "1:1" | "one_to_one" | "onetoone" => Cardinality::OneToOne,
+            "1:n" | "one_to_many" | "onetomany" => Cardinality::OneToMany,
+            "n:1" | "many_to_one" | "manytoone" => Cardinality::ManyToOne,
+            _ => Cardinality::ManyToMany,
+        }
+    }
+}
+
+/// Defines a relationship type and its constraints
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct RelationshipDefinition {
+    /// Unique identifier for this relationship type (lowercase, no spaces)
+    pub name: String,
+
+    /// Human-readable display name
+    pub display_name: String,
+
+    /// Description of what this relationship means
+    #[serde(default)]
+    pub description: String,
+
+    /// The inverse relationship name (if any)
+    /// e.g., "parent" has inverse "child"
+    #[serde(default)]
+    pub inverse: Option<String>,
+
+    /// Whether this relationship is symmetric (A->B implies B->A with same type)
+    /// e.g., "duplicate" is symmetric
+    #[serde(default)]
+    pub symmetric: bool,
+
+    /// Cardinality constraints
+    #[serde(default)]
+    pub cardinality: Cardinality,
+
+    /// Source type constraints (which requirement types can be the source)
+    /// Empty means all types allowed
+    #[serde(default)]
+    pub source_types: Vec<String>,
+
+    /// Target type constraints (which requirement types can be the target)
+    /// Empty means all types allowed
+    #[serde(default)]
+    pub target_types: Vec<String>,
+
+    /// Whether this is a built-in relationship (cannot be deleted)
+    #[serde(default)]
+    pub built_in: bool,
+
+    /// Color for visualization (optional, hex format e.g., "#ff6b6b")
+    #[serde(default)]
+    pub color: Option<String>,
+
+    /// Icon/symbol for the relationship (optional)
+    #[serde(default)]
+    pub icon: Option<String>,
+}
+
+impl RelationshipDefinition {
+    /// Create a new relationship definition
+    pub fn new(name: &str, display_name: &str) -> Self {
+        Self {
+            name: name.to_lowercase(),
+            display_name: display_name.to_string(),
+            description: String::new(),
+            inverse: None,
+            symmetric: false,
+            cardinality: Cardinality::ManyToMany,
+            source_types: Vec::new(),
+            target_types: Vec::new(),
+            built_in: false,
+            color: None,
+            icon: None,
+        }
+    }
+
+    /// Create a built-in relationship definition
+    pub fn built_in(name: &str, display_name: &str, description: &str) -> Self {
+        Self {
+            name: name.to_lowercase(),
+            display_name: display_name.to_string(),
+            description: description.to_string(),
+            inverse: None,
+            symmetric: false,
+            cardinality: Cardinality::ManyToMany,
+            source_types: Vec::new(),
+            target_types: Vec::new(),
+            built_in: true,
+            color: None,
+            icon: None,
+        }
+    }
+
+    /// Set the inverse relationship
+    pub fn with_inverse(mut self, inverse: &str) -> Self {
+        self.inverse = Some(inverse.to_lowercase());
+        self
+    }
+
+    /// Set as symmetric
+    pub fn with_symmetric(mut self, symmetric: bool) -> Self {
+        self.symmetric = symmetric;
+        self
+    }
+
+    /// Set the cardinality
+    pub fn with_cardinality(mut self, cardinality: Cardinality) -> Self {
+        self.cardinality = cardinality;
+        self
+    }
+
+    /// Set source type constraints
+    pub fn with_source_types(mut self, types: Vec<String>) -> Self {
+        self.source_types = types;
+        self
+    }
+
+    /// Set target type constraints
+    pub fn with_target_types(mut self, types: Vec<String>) -> Self {
+        self.target_types = types;
+        self
+    }
+
+    /// Set the color
+    pub fn with_color(mut self, color: &str) -> Self {
+        self.color = Some(color.to_string());
+        self
+    }
+
+    /// Get the default built-in relationship definitions
+    pub fn defaults() -> Vec<RelationshipDefinition> {
+        vec![
+            RelationshipDefinition::built_in("parent", "Parent", "Hierarchical parent requirement")
+                .with_inverse("child")
+                .with_cardinality(Cardinality::ManyToOne),
+            RelationshipDefinition::built_in("child", "Child", "Hierarchical child requirement")
+                .with_inverse("parent")
+                .with_cardinality(Cardinality::OneToMany),
+            RelationshipDefinition::built_in("verifies", "Verifies", "Test or verification relationship")
+                .with_inverse("verified_by"),
+            RelationshipDefinition::built_in("verified_by", "Verified By", "Verified by a test requirement")
+                .with_inverse("verifies"),
+            RelationshipDefinition::built_in("duplicate", "Duplicate", "Marks requirements as duplicates")
+                .with_symmetric(true),
+            RelationshipDefinition::built_in("references", "References", "General reference link"),
+            RelationshipDefinition::built_in("depends_on", "Depends On", "Dependency relationship")
+                .with_inverse("dependency_of"),
+            RelationshipDefinition::built_in("dependency_of", "Dependency Of", "Inverse dependency relationship")
+                .with_inverse("depends_on"),
+            RelationshipDefinition::built_in("implements", "Implements", "Implementation relationship")
+                .with_inverse("implemented_by"),
+            RelationshipDefinition::built_in("implemented_by", "Implemented By", "Inverse implementation relationship")
+                .with_inverse("implements"),
+        ]
+    }
+
+    /// Check if a source requirement type is allowed
+    pub fn allows_source_type(&self, req_type: &RequirementType) -> bool {
+        if self.source_types.is_empty() {
+            return true;
+        }
+        let type_str = req_type.to_string();
+        self.source_types.iter().any(|t| t.eq_ignore_ascii_case(&type_str))
+    }
+
+    /// Check if a target requirement type is allowed
+    pub fn allows_target_type(&self, req_type: &RequirementType) -> bool {
+        if self.target_types.is_empty() {
+            return true;
+        }
+        let type_str = req_type.to_string();
+        self.target_types.iter().any(|t| t.eq_ignore_ascii_case(&type_str))
+    }
+}
+
+/// Result of validating a relationship
+#[derive(Debug, Clone)]
+pub struct RelationshipValidation {
+    /// Whether the relationship is valid
+    pub valid: bool,
+    /// Error messages (if invalid)
+    pub errors: Vec<String>,
+    /// Warning messages (valid but may have issues)
+    pub warnings: Vec<String>,
+}
+
+impl RelationshipValidation {
+    pub fn ok() -> Self {
+        Self {
+            valid: true,
+            errors: Vec::new(),
+            warnings: Vec::new(),
+        }
+    }
+
+    pub fn error(msg: &str) -> Self {
+        Self {
+            valid: false,
+            errors: vec![msg.to_string()],
+            warnings: Vec::new(),
+        }
+    }
+
+    pub fn with_warning(mut self, msg: &str) -> Self {
+        self.warnings.push(msg.to_string());
+        self
+    }
+
+    pub fn add_error(&mut self, msg: &str) {
+        self.valid = false;
+        self.errors.push(msg.to_string());
+    }
+
+    pub fn add_warning(&mut self, msg: &str) {
+        self.warnings.push(msg.to_string());
+    }
 }
 
 // ============================================================================
@@ -715,6 +979,10 @@ pub struct RequirementsStore {
     /// Key is the prefix (e.g., "FR", "AUTH"), value is the next number
     #[serde(default)]
     pub prefix_counters: std::collections::HashMap<String, u32>,
+
+    /// Relationship type definitions with constraints
+    #[serde(default = "RelationshipDefinition::defaults")]
+    pub relationship_definitions: Vec<RelationshipDefinition>,
 }
 
 /// Default value for next_feature_number
@@ -738,6 +1006,7 @@ impl RequirementsStore {
             next_feature_number: 1,
             next_spec_number: 1,
             prefix_counters: std::collections::HashMap::new(),
+            relationship_definitions: RelationshipDefinition::defaults(),
         }
     }
 
@@ -1577,6 +1846,293 @@ impl RequirementsStore {
                     .collect()
             })
             .unwrap_or_default()
+    }
+
+    // ========================================================================
+    // Relationship Definition Management
+    // ========================================================================
+
+    /// Get a relationship definition by name
+    pub fn get_relationship_definition(&self, name: &str) -> Option<&RelationshipDefinition> {
+        let name_lower = name.to_lowercase();
+        self.relationship_definitions.iter().find(|d| d.name == name_lower)
+    }
+
+    /// Get a relationship definition for a RelationshipType
+    pub fn get_definition_for_type(&self, rel_type: &RelationshipType) -> Option<&RelationshipDefinition> {
+        self.get_relationship_definition(&rel_type.name())
+    }
+
+    /// Get all relationship definitions
+    pub fn get_relationship_definitions(&self) -> &[RelationshipDefinition] {
+        &self.relationship_definitions
+    }
+
+    /// Add a new relationship definition
+    pub fn add_relationship_definition(&mut self, definition: RelationshipDefinition) -> anyhow::Result<()> {
+        let name_lower = definition.name.to_lowercase();
+
+        // Check if name already exists
+        if self.relationship_definitions.iter().any(|d| d.name == name_lower) {
+            anyhow::bail!("Relationship definition '{}' already exists", name_lower);
+        }
+
+        // If it has an inverse, verify the inverse exists or will be created
+        if let Some(ref inverse) = definition.inverse {
+            let inverse_lower = inverse.to_lowercase();
+            // Only warn if the inverse doesn't exist - it might be added later
+            if !self.relationship_definitions.iter().any(|d| d.name == inverse_lower) {
+                // This is okay - the inverse might be defined later
+            }
+        }
+
+        self.relationship_definitions.push(RelationshipDefinition {
+            name: name_lower,
+            ..definition
+        });
+        Ok(())
+    }
+
+    /// Update an existing relationship definition
+    pub fn update_relationship_definition(&mut self, name: &str, definition: RelationshipDefinition) -> anyhow::Result<()> {
+        let name_lower = name.to_lowercase();
+
+        let def = self.relationship_definitions
+            .iter_mut()
+            .find(|d| d.name == name_lower)
+            .ok_or_else(|| anyhow::anyhow!("Relationship definition '{}' not found", name_lower))?;
+
+        // Can't change built_in status
+        if def.built_in {
+            // Allow updates to non-critical fields for built-ins
+            def.display_name = definition.display_name;
+            def.description = definition.description;
+            def.color = definition.color;
+            def.icon = definition.icon;
+            def.source_types = definition.source_types;
+            def.target_types = definition.target_types;
+            // Don't change: name, inverse, symmetric, cardinality, built_in
+        } else {
+            *def = RelationshipDefinition {
+                name: name_lower,
+                built_in: false,
+                ..definition
+            };
+        }
+
+        Ok(())
+    }
+
+    /// Remove a relationship definition (only non-built-in)
+    pub fn remove_relationship_definition(&mut self, name: &str) -> anyhow::Result<()> {
+        let name_lower = name.to_lowercase();
+
+        let def = self.relationship_definitions
+            .iter()
+            .find(|d| d.name == name_lower)
+            .ok_or_else(|| anyhow::anyhow!("Relationship definition '{}' not found", name_lower))?;
+
+        if def.built_in {
+            anyhow::bail!("Cannot remove built-in relationship definition '{}'", name_lower);
+        }
+
+        self.relationship_definitions.retain(|d| d.name != name_lower);
+        Ok(())
+    }
+
+    /// Ensure built-in relationship definitions exist (call after loading)
+    pub fn ensure_builtin_relationships(&mut self) {
+        let defaults = RelationshipDefinition::defaults();
+        for default_def in defaults {
+            if !self.relationship_definitions.iter().any(|d| d.name == default_def.name) {
+                self.relationship_definitions.push(default_def);
+            }
+        }
+    }
+
+    /// Validate a proposed relationship
+    pub fn validate_relationship(
+        &self,
+        source_id: &Uuid,
+        rel_type: &RelationshipType,
+        target_id: &Uuid,
+    ) -> RelationshipValidation {
+        let mut validation = RelationshipValidation::ok();
+
+        // Check self-reference
+        if source_id == target_id {
+            return RelationshipValidation::error("Cannot create relationship to self");
+        }
+
+        // Get source and target requirements
+        let source = match self.get_requirement_by_id(source_id) {
+            Some(r) => r,
+            None => return RelationshipValidation::error("Source requirement not found"),
+        };
+        let target = match self.get_requirement_by_id(target_id) {
+            Some(r) => r,
+            None => return RelationshipValidation::error("Target requirement not found"),
+        };
+
+        // Check if relationship already exists
+        if source.relationships.iter().any(|r| r.target_id == *target_id && r.rel_type == *rel_type) {
+            return RelationshipValidation::error(&format!(
+                "Relationship '{}' to {} already exists",
+                rel_type, target_id
+            ));
+        }
+
+        // Get the relationship definition
+        let definition = match self.get_definition_for_type(rel_type) {
+            Some(d) => d,
+            None => {
+                // Custom relationship without definition - allow but warn
+                validation.add_warning(&format!(
+                    "No definition found for relationship type '{}'. Consider creating one.",
+                    rel_type.name()
+                ));
+                return validation;
+            }
+        };
+
+        // Check source type constraint
+        if !definition.allows_source_type(&source.req_type) {
+            validation.add_error(&format!(
+                "Source requirement type '{}' is not allowed for '{}' relationships. Allowed: {:?}",
+                source.req_type, definition.display_name, definition.source_types
+            ));
+        }
+
+        // Check target type constraint
+        if !definition.allows_target_type(&target.req_type) {
+            validation.add_error(&format!(
+                "Target requirement type '{}' is not allowed for '{}' relationships. Allowed: {:?}",
+                target.req_type, definition.display_name, definition.target_types
+            ));
+        }
+
+        // Check cardinality constraints
+        match definition.cardinality {
+            Cardinality::OneToOne => {
+                // Source can only have one outgoing relationship of this type
+                let existing_outgoing = source.relationships.iter()
+                    .filter(|r| r.rel_type == *rel_type)
+                    .count();
+                if existing_outgoing > 0 {
+                    validation.add_warning(&format!(
+                        "Source already has a '{}' relationship (cardinality is 1:1)",
+                        definition.display_name
+                    ));
+                }
+                // Target can only have one incoming relationship of this type
+                let existing_incoming = self.requirements.iter()
+                    .filter(|r| r.id != *source_id)
+                    .flat_map(|r| r.relationships.iter())
+                    .filter(|r| r.target_id == *target_id && r.rel_type == *rel_type)
+                    .count();
+                if existing_incoming > 0 {
+                    validation.add_warning(&format!(
+                        "Target already has an incoming '{}' relationship (cardinality is 1:1)",
+                        definition.display_name
+                    ));
+                }
+            }
+            Cardinality::ManyToOne => {
+                // Source can only have one outgoing relationship of this type
+                let existing_outgoing = source.relationships.iter()
+                    .filter(|r| r.rel_type == *rel_type)
+                    .count();
+                if existing_outgoing > 0 {
+                    validation.add_warning(&format!(
+                        "Source already has a '{}' relationship (cardinality is N:1, only one allowed per source)",
+                        definition.display_name
+                    ));
+                }
+            }
+            Cardinality::OneToMany => {
+                // Target can only have one incoming relationship of this type
+                let existing_incoming = self.requirements.iter()
+                    .filter(|r| r.id != *source_id)
+                    .flat_map(|r| r.relationships.iter())
+                    .filter(|r| r.target_id == *target_id && r.rel_type == *rel_type)
+                    .count();
+                if existing_incoming > 0 {
+                    validation.add_warning(&format!(
+                        "Target already has an incoming '{}' relationship (cardinality is 1:N)",
+                        definition.display_name
+                    ));
+                }
+            }
+            Cardinality::ManyToMany => {
+                // No cardinality constraints
+            }
+        }
+
+        // Check for cycles in hierarchical relationships (parent/child)
+        if rel_type.name() == "parent" || rel_type.name() == "child" {
+            if self.would_create_cycle(source_id, target_id, rel_type) {
+                validation.add_error("This relationship would create a cycle in the hierarchy");
+            }
+        }
+
+        validation
+    }
+
+    /// Check if adding a relationship would create a cycle
+    fn would_create_cycle(&self, source_id: &Uuid, target_id: &Uuid, rel_type: &RelationshipType) -> bool {
+        // For parent relationships, check if target is already an ancestor of source
+        // For child relationships, check if target is already a descendant of source
+        let check_type = if rel_type.name() == "parent" {
+            RelationshipType::Parent
+        } else if rel_type.name() == "child" {
+            RelationshipType::Child
+        } else {
+            return false;
+        };
+
+        let mut visited = std::collections::HashSet::new();
+        let mut stack = vec![*target_id];
+
+        while let Some(current) = stack.pop() {
+            if current == *source_id {
+                return true; // Found a cycle
+            }
+            if visited.contains(&current) {
+                continue;
+            }
+            visited.insert(current);
+
+            // Follow the relationship chain
+            if let Some(req) = self.get_requirement_by_id(&current) {
+                for rel in &req.relationships {
+                    if rel.rel_type == check_type {
+                        stack.push(rel.target_id);
+                    }
+                }
+            }
+        }
+
+        false
+    }
+
+    /// Get the inverse relationship type from definitions
+    pub fn get_inverse_type(&self, rel_type: &RelationshipType) -> Option<RelationshipType> {
+        // First check built-in inverse
+        if let Some(inverse) = rel_type.inverse() {
+            return Some(inverse);
+        }
+
+        // Then check definition
+        if let Some(def) = self.get_definition_for_type(rel_type) {
+            if let Some(ref inverse_name) = def.inverse {
+                return Some(RelationshipType::from_str(inverse_name));
+            }
+            if def.symmetric {
+                return Some(rel_type.clone());
+            }
+        }
+
+        None
     }
 }
 
