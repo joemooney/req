@@ -43,16 +43,22 @@ fn show_text_context_menu(
     id: egui::Id,
     stored_selection: &mut Option<TextSelection>,
 ) {
-    // Check for secondary click (right-click) to capture selection BEFORE menu opens
-    if response.hovered() && ui.input(|i| i.pointer.secondary_down()) {
-        // Capture the current selection before right-click clears it
+    // Continuously capture selection while TextEdit has focus and has a selection
+    // This way we have the selection stored BEFORE right-click clears it
+    if response.has_focus() {
         if let Some(selection) = capture_text_selection(ui.ctx(), text, id) {
-            *stored_selection = Some(selection);
+            // Only update if this is for the same widget and selection changed
+            let should_update = stored_selection.as_ref()
+                .map(|s| s.widget_id != Some(id) || s.text != selection.text)
+                .unwrap_or(true);
+            if should_update {
+                *stored_selection = Some(selection);
+            }
         }
     }
 
     response.context_menu(|ui| {
-        // Use stored selection (captured before right-click cleared it)
+        // Use stored selection (captured continuously while focused, before right-click cleared it)
         let selection = stored_selection.clone().filter(|s| s.widget_id == Some(id));
         let has_selection = selection.as_ref().map(|s| !s.text.is_empty()).unwrap_or(false);
 
