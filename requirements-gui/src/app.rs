@@ -1132,10 +1132,14 @@ pub struct RequirementsApp {
     filter_types: HashSet<RequirementType>, // Root filter: Empty = show all
     filter_features: HashSet<String>,       // Root filter: Empty = show all
     filter_prefixes: HashSet<String>,       // Root filter: Empty = show all
+    filter_statuses: HashSet<RequirementStatus>, // Root filter: Empty = show all
+    filter_priorities: HashSet<RequirementPriority>, // Root filter: Empty = show all
     // Child filters (when children_same_as_root is false)
     child_filter_types: HashSet<RequirementType>,
     child_filter_features: HashSet<String>,
     child_filter_prefixes: HashSet<String>,
+    child_filter_statuses: HashSet<RequirementStatus>,
+    child_filter_priorities: HashSet<RequirementPriority>,
     children_same_as_root: bool, // When true, children use same filters as root
     filter_tab: FilterTab,       // Which filter tab is active (Root or Children)
     tree_collapsed: HashMap<Uuid, bool>, // Track collapsed tree nodes
@@ -1322,9 +1326,13 @@ impl RequirementsApp {
             filter_types: HashSet::new(),
             filter_features: HashSet::new(),
             filter_prefixes: HashSet::new(),
+            filter_statuses: HashSet::new(),
+            filter_priorities: HashSet::new(),
             child_filter_types: HashSet::new(),
             child_filter_features: HashSet::new(),
             child_filter_prefixes: HashSet::new(),
+            child_filter_statuses: HashSet::new(),
+            child_filter_priorities: HashSet::new(),
             children_same_as_root: true,
             filter_tab: FilterTab::Root,
             tree_collapsed: HashMap::new(),
@@ -4409,13 +4417,15 @@ impl RequirementsApp {
         }
 
         // Determine which filters to use based on root vs child
-        let (filter_types, filter_features, filter_prefixes) =
+        let (filter_types, filter_features, filter_prefixes, filter_statuses, filter_priorities) =
             if is_root || self.children_same_as_root {
                 // Root requirements or "same as root" mode: use root filters
                 (
                     &self.filter_types,
                     &self.filter_features,
                     &self.filter_prefixes,
+                    &self.filter_statuses,
+                    &self.filter_priorities,
                 )
             } else {
                 // Child requirements with separate filters
@@ -4423,6 +4433,8 @@ impl RequirementsApp {
                     &self.child_filter_types,
                     &self.child_filter_features,
                     &self.child_filter_prefixes,
+                    &self.child_filter_statuses,
+                    &self.child_filter_priorities,
                 )
             };
 
@@ -4447,6 +4459,16 @@ impl RequirementsApp {
             if !filter_prefixes.contains(req_prefix) {
                 return false;
             }
+        }
+
+        // Status filter (empty = show all)
+        if !filter_statuses.is_empty() && !filter_statuses.contains(&req.status) {
+            return false;
+        }
+
+        // Priority filter (empty = show all)
+        if !filter_priorities.is_empty() && !filter_priorities.contains(&req.priority) {
+            return false;
         }
 
         // Archive filter (hide archived unless show_archived is true)
@@ -4988,6 +5010,59 @@ impl RequirementsApp {
                 }
             });
         }
+
+        // Status filters
+        ui.add_space(5.0);
+        ui.label("Status Filters:");
+        ui.horizontal_wrapped(|ui| {
+            let statuses = [
+                (RequirementStatus::Draft, "Draft"),
+                (RequirementStatus::Approved, "Approved"),
+                (RequirementStatus::Completed, "Completed"),
+                (RequirementStatus::Rejected, "Rejected"),
+            ];
+
+            for (status, label) in statuses {
+                let mut checked = self.filter_statuses.contains(&status);
+                if ui.checkbox(&mut checked, label).changed() {
+                    if checked {
+                        self.filter_statuses.insert(status);
+                    } else {
+                        self.filter_statuses.remove(&status);
+                    }
+                }
+            }
+
+            if ui.small_button("Clear").clicked() {
+                self.filter_statuses.clear();
+            }
+        });
+
+        // Priority filters
+        ui.add_space(5.0);
+        ui.label("Priority Filters:");
+        ui.horizontal_wrapped(|ui| {
+            let priorities = [
+                (RequirementPriority::High, "High"),
+                (RequirementPriority::Medium, "Medium"),
+                (RequirementPriority::Low, "Low"),
+            ];
+
+            for (priority, label) in priorities {
+                let mut checked = self.filter_priorities.contains(&priority);
+                if ui.checkbox(&mut checked, label).changed() {
+                    if checked {
+                        self.filter_priorities.insert(priority);
+                    } else {
+                        self.filter_priorities.remove(&priority);
+                    }
+                }
+            }
+
+            if ui.small_button("Clear").clicked() {
+                self.filter_priorities.clear();
+            }
+        });
     }
 
     fn show_children_filter_controls(&mut self, ui: &mut egui::Ui) {
@@ -5079,6 +5154,59 @@ impl RequirementsApp {
                     }
                 });
             }
+
+            // Status filters
+            ui.add_space(5.0);
+            ui.label("Status Filters:");
+            ui.horizontal_wrapped(|ui| {
+                let statuses = [
+                    (RequirementStatus::Draft, "Draft"),
+                    (RequirementStatus::Approved, "Approved"),
+                    (RequirementStatus::Completed, "Completed"),
+                    (RequirementStatus::Rejected, "Rejected"),
+                ];
+
+                for (status, label) in statuses {
+                    let mut checked = self.child_filter_statuses.contains(&status);
+                    if ui.checkbox(&mut checked, label).changed() {
+                        if checked {
+                            self.child_filter_statuses.insert(status);
+                        } else {
+                            self.child_filter_statuses.remove(&status);
+                        }
+                    }
+                }
+
+                if ui.small_button("Clear").clicked() {
+                    self.child_filter_statuses.clear();
+                }
+            });
+
+            // Priority filters
+            ui.add_space(5.0);
+            ui.label("Priority Filters:");
+            ui.horizontal_wrapped(|ui| {
+                let priorities = [
+                    (RequirementPriority::High, "High"),
+                    (RequirementPriority::Medium, "Medium"),
+                    (RequirementPriority::Low, "Low"),
+                ];
+
+                for (priority, label) in priorities {
+                    let mut checked = self.child_filter_priorities.contains(&priority);
+                    if ui.checkbox(&mut checked, label).changed() {
+                        if checked {
+                            self.child_filter_priorities.insert(priority);
+                        } else {
+                            self.child_filter_priorities.remove(&priority);
+                        }
+                    }
+                }
+
+                if ui.small_button("Clear").clicked() {
+                    self.child_filter_priorities.clear();
+                }
+            });
         });
     }
 

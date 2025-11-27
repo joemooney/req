@@ -6,7 +6,7 @@ use std::fmt;
 use uuid::Uuid;
 
 /// Represents the status of a requirement
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum RequirementStatus {
     Draft,
     Approved,
@@ -26,7 +26,7 @@ impl fmt::Display for RequirementStatus {
 }
 
 /// Represents the priority of a requirement
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum RequirementPriority {
     High,
     Medium,
