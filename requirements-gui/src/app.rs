@@ -11,6 +11,42 @@ use std::path::PathBuf;
 use uuid::Uuid;
 use serde::{Deserialize, Serialize};
 
+// =============================================================================
+// TEXT EDIT CONTEXT MENU IMPLEMENTATION
+// =============================================================================
+//
+// BACKGROUND:
+// egui's TextEdit widget clears the text selection when a right-click occurs,
+// before any user code can intercept it. This is a known limitation.
+// See: https://github.com/emilk/egui/issues/5852
+//
+// WORKAROUND:
+// We continuously capture the selection state while the TextEdit has focus.
+// This way, when the user right-clicks, we already have the selection stored
+// from the previous frame, before the right-click event cleared it.
+//
+// LIMITATIONS:
+// 1. The visual selection highlight disappears when the context menu opens
+//    (we show the selected text in the menu as a workaround)
+// 2. Selection is not preserved in the TextEdit after menu closes
+//
+// FUTURE IMPROVEMENTS (check these egui issues/features):
+// - Issue #5852: Add support for X11/Wayland PRIMARY clipboard
+//   https://github.com/emilk/egui/issues/5852
+// - Issue #7273: TextSelectionChanged events for all selectable text
+//   https://github.com/emilk/egui/issues/7273
+// - If egui adds a way to prevent right-click from clearing selection,
+//   or provides a "selection changed" callback, this code can be simplified
+// - If egui adds native context menu support for TextEdit with Copy/Paste,
+//   this entire workaround may become unnecessary
+//
+// TO UPDATE WHEN EGUI IMPROVES:
+// 1. If egui preserves selection on right-click: remove continuous capture,
+//    just read selection directly in context_menu callback
+// 2. If egui adds TextSelectionChanged event: use that instead of polling
+// 3. If egui adds native context menu: remove this entirely
+// =============================================================================
+
 /// Helper to get selection range from CCursorRange (handles primary/secondary ordering)
 fn get_sorted_range(range: &egui::text::CCursorRange) -> (usize, usize) {
     let start = range.primary.index.min(range.secondary.index);
@@ -18,7 +54,10 @@ fn get_sorted_range(range: &egui::text::CCursorRange) -> (usize, usize) {
     (start, end)
 }
 
-/// Capture current text selection from a TextEdit widget (call BEFORE showing context menu)
+/// Capture current text selection from a TextEdit widget.
+///
+/// This reads the TextEdit's internal state to get the current cursor/selection range.
+/// Returns None if there's no selection (cursor is just a point, not a range).
 fn capture_text_selection(ctx: &egui::Context, text: &str, id: egui::Id) -> Option<TextSelection> {
     let state = egui::TextEdit::load_state(ctx, id)?;
     let range = state.cursor.char_range()?;
@@ -35,7 +74,24 @@ fn capture_text_selection(ctx: &egui::Context, text: &str, id: egui::Id) -> Opti
     })
 }
 
-/// Show context menu for text edit - takes stored selection to avoid borrow issues
+/// Show context menu for TextEdit with Cut/Copy/Paste/Select All.
+///
+/// # Workaround for egui selection clearing
+///
+/// egui's TextEdit clears the selection when right-click occurs. To work around this,
+/// we continuously capture the selection while the TextEdit has focus. The selection
+/// is stored in `stored_selection` and used when the context menu opens.
+///
+/// # Arguments
+/// * `ui` - The egui UI context
+/// * `response` - The Response from the TextEdit widget
+/// * `text` - Mutable reference to the text buffer
+/// * `id` - The widget ID (use `response.id`)
+/// * `stored_selection` - Mutable reference to stored selection state (persists across frames)
+///
+/// # Linux Primary Selection
+/// On Linux, Copy and Cut also write to the X11/Wayland PRIMARY selection,
+/// enabling middle-click paste in other applications.
 fn show_text_context_menu(
     ui: &mut egui::Ui,
     response: &egui::Response,
@@ -43,8 +99,9 @@ fn show_text_context_menu(
     id: egui::Id,
     stored_selection: &mut Option<TextSelection>,
 ) {
-    // Continuously capture selection while TextEdit has focus and has a selection
-    // This way we have the selection stored BEFORE right-click clears it
+    // WORKAROUND: Continuously capture selection while TextEdit has focus.
+    // This ensures we have the selection stored BEFORE right-click clears it.
+    // See module-level documentation for details on this workaround.
     if response.has_focus() {
         if let Some(selection) = capture_text_selection(ui.ctx(), text, id) {
             // Only update if this is for the same widget and selection changed
@@ -62,7 +119,8 @@ fn show_text_context_menu(
         let selection = stored_selection.clone().filter(|s| s.widget_id == Some(id));
         let has_selection = selection.as_ref().map(|s| !s.text.is_empty()).unwrap_or(false);
 
-        // Show what's selected at the top of the menu
+        // WORKAROUND: Show selected text in menu since visual selection is cleared
+        // This lets users see what they're about to copy/cut
         if let Some(ref sel) = selection {
             let display_text = if sel.text.len() > 50 {
                 format!("\"{}...\"", &sel.text.chars().take(47).collect::<String>())
@@ -148,7 +206,17 @@ fn show_text_context_menu(
     });
 }
 
-/// Copy text to the X11/Wayland primary selection (middle-click paste buffer)
+/// Copy text to the X11/Wayland primary selection (middle-click paste buffer).
+///
+/// On Linux/X11, there are two clipboard mechanisms:
+/// 1. CLIPBOARD - Used by Ctrl+C/Ctrl+V (handled by egui's ctx.copy_text())
+/// 2. PRIMARY - Filled by selecting text, pasted with middle-click
+///
+/// egui only handles CLIPBOARD, so we use arboard to also copy to PRIMARY.
+/// This enables middle-click paste in other applications after copying from our app.
+///
+/// This is a workaround until egui adds native PRIMARY selection support.
+/// See: https://github.com/emilk/egui/issues/5852
 #[cfg(target_os = "linux")]
 fn copy_to_primary_selection(text: &str) {
     use arboard::SetExtLinux;
@@ -158,12 +226,11 @@ fn copy_to_primary_selection(text: &str) {
     }
 }
 
+/// No-op on non-Linux platforms (PRIMARY selection is X11/Wayland specific)
 #[cfg(not(target_os = "linux"))]
-fn copy_to_primary_selection(_text: &str) {
-    // Primary selection is Linux-specific, no-op on other platforms
-}
+fn copy_to_primary_selection(_text: &str) {}
 
-/// Get text from the system clipboard
+/// Get text from the system clipboard (CLIPBOARD, not PRIMARY)
 fn get_clipboard_text() -> Option<String> {
     arboard::Clipboard::new().ok().and_then(|mut c| c.get_text().ok())
 }
@@ -1077,12 +1144,23 @@ pub struct RequirementsApp {
     last_text_selection: Option<TextSelection>,
 }
 
-/// Stores text selection state for context menu operations
+/// Stores text selection state for context menu operations.
+///
+/// This is part of the workaround for egui clearing selection on right-click.
+/// See the TEXT EDIT CONTEXT MENU IMPLEMENTATION documentation at the top of this file.
+///
+/// The selection is captured continuously while a TextEdit has focus, and stored
+/// here so it's available when the context menu opens (after egui has cleared the
+/// actual selection).
 #[derive(Clone, Default)]
 struct TextSelection {
+    /// The selected text content
     text: String,
+    /// Start index (in chars, not bytes)
     start: usize,
+    /// End index (in chars, not bytes)
     end: usize,
+    /// Which widget this selection came from (to avoid using stale selections)
     widget_id: Option<egui::Id>,
 }
 
