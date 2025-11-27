@@ -439,6 +439,7 @@ req list --project backend
 | **Enter** | Edit selected requirement |
 | **Double-click** | Edit requirement |
 | **Space** | Expand/collapse tree node (in tree views) |
+| **Ctrl+S** | Save (in Add/Edit forms) |
 | **Ctrl+T** | Cycle through themes |
 | **Ctrl+MouseWheel** | Zoom in/out |
 | **Ctrl+Shift++** | Zoom in |
@@ -481,6 +482,7 @@ The Keybindings tab shows all customizable keyboard shortcuts. Click "Change" ne
 | Zoom Out | Ctrl+Minus | Global |
 | Reset Zoom | Ctrl+0 | Global |
 | Cycle Theme | Ctrl+T | Global |
+| Save | Ctrl+S | Form |
 
 **Context/Scope:**
 

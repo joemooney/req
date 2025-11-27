@@ -164,6 +164,7 @@ pub enum KeyAction {
     NavigateDown,
     Edit,
     ToggleExpand,
+    Save,
     ZoomIn,
     ZoomOut,
     ZoomReset,
@@ -177,6 +178,7 @@ impl KeyAction {
             KeyAction::NavigateDown => "Navigate Down",
             KeyAction::Edit => "Edit Requirement",
             KeyAction::ToggleExpand => "Toggle Expand/Collapse",
+            KeyAction::Save => "Save",
             KeyAction::ZoomIn => "Zoom In",
             KeyAction::ZoomOut => "Zoom Out",
             KeyAction::ZoomReset => "Reset Zoom",
@@ -191,6 +193,7 @@ impl KeyAction {
             KeyAction::NavigateDown => KeyContext::RequirementsList,
             KeyAction::Edit => KeyContext::RequirementsList,
             KeyAction::ToggleExpand => KeyContext::RequirementsList,
+            KeyAction::Save => KeyContext::Form,
             KeyAction::ZoomIn => KeyContext::Global,
             KeyAction::ZoomOut => KeyContext::Global,
             KeyAction::ZoomReset => KeyContext::Global,
@@ -204,6 +207,7 @@ impl KeyAction {
             KeyAction::NavigateDown,
             KeyAction::Edit,
             KeyAction::ToggleExpand,
+            KeyAction::Save,
             KeyAction::ZoomIn,
             KeyAction::ZoomOut,
             KeyAction::ZoomReset,
@@ -428,6 +432,7 @@ impl Default for KeyBindings {
         bindings.insert(KeyAction::NavigateDown, KeyBinding::new(egui::Key::ArrowDown, KeyAction::NavigateDown.default_context()));
         bindings.insert(KeyAction::Edit, KeyBinding::new(egui::Key::Enter, KeyAction::Edit.default_context()));
         bindings.insert(KeyAction::ToggleExpand, KeyBinding::new(egui::Key::Space, KeyAction::ToggleExpand.default_context()));
+        bindings.insert(KeyAction::Save, KeyBinding::new(egui::Key::S, KeyAction::Save.default_context()).with_ctrl());
         bindings.insert(KeyAction::ZoomIn, KeyBinding::new(egui::Key::Plus, KeyAction::ZoomIn.default_context()).with_ctrl().with_shift());
         bindings.insert(KeyAction::ZoomOut, KeyBinding::new(egui::Key::Minus, KeyAction::ZoomOut.default_context()).with_ctrl());
         bindings.insert(KeyAction::ZoomReset, KeyBinding::new(egui::Key::Num0, KeyAction::ZoomReset.default_context()).with_ctrl());
@@ -718,6 +723,7 @@ pub struct RequirementsApp {
     // Pending operations (to avoid borrow checker issues)
     pending_delete: Option<usize>,
     pending_view_change: Option<View>,
+    pending_save: bool,                  // Save triggered by keybinding
     pending_comment_add: Option<(String, String, Option<Uuid>)>, // (author, content, parent_id)
     pending_comment_delete: Option<Uuid>,
 
@@ -840,6 +846,7 @@ impl RequirementsApp {
             edit_comment_id: None,
             pending_delete: None,
             pending_view_change: None,
+            pending_save: false,
             pending_comment_add: None,
             pending_comment_delete: None,
             current_font_size: initial_font_size,
@@ -3739,8 +3746,15 @@ impl RequirementsApp {
 
         ui.add_space(8.0);
         ui.separator();
+
+        // Check for pending save (triggered by Ctrl+S keybinding)
+        let should_save = self.pending_save;
+        if should_save {
+            self.pending_save = false;
+        }
+
         ui.horizontal(|ui| {
-            if ui.button("💾 Save").clicked() {
+            if ui.button("💾 Save").clicked() || should_save {
                 if is_edit {
                     if let Some(idx) = self.selected_idx {
                         self.update_requirement(idx);
@@ -4215,6 +4229,11 @@ impl eframe::App for RequirementsApp {
                         }
                     }
                 }
+            }
+
+            // Save keybinding (context-aware - works in Form context)
+            if self.user_settings.keybindings.is_pressed(KeyAction::Save, ctx, self.current_key_context) {
+                self.pending_save = true;
             }
 
             if nav_delta != 0 {

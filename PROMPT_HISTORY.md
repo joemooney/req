@@ -392,6 +392,17 @@ A chronological record of development sessions and changes made to the Requireme
     - Preserved context when capturing new key
   - Updated user guide with context documentation
 
+### Save Keybinding (Ctrl+S)
+- **Prompt**: Ctrl-S for save in Edit/Add
+- **Actions**:
+  - Added `Save` action to `KeyAction` enum
+  - Added label "Save" and default context `KeyContext::Form`
+  - Added default keybinding: `Ctrl+S` with Form context
+  - Added `pending_save: bool` field to `RequirementsApp`
+  - Implemented keybinding handler in update() to set `pending_save = true`
+  - Updated `show_form()` to check `pending_save` flag and trigger save
+  - Keybinding only activates when in Add or Edit form (Form context)
+
 ---
 
 ## Git Operations Summary
