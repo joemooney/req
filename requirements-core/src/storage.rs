@@ -53,8 +53,12 @@ impl Storage {
         let had_missing_spec_ids = store.requirements.iter().any(|r| r.spec_id.is_none());
         store.assign_spec_ids();
 
+        // Migrate existing users to have $USER-XXX spec_ids
+        let had_missing_user_spec_ids = store.users.iter().any(|u| u.spec_id.is_none());
+        store.migrate_users_to_spec_ids();
+
         // Save back if we assigned any SPEC-IDs (migration)
-        if had_missing_spec_ids {
+        if had_missing_spec_ids || had_missing_user_spec_ids {
             self.save(&store)?;
         }
 

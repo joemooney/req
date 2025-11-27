@@ -3,7 +3,7 @@ use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
 use requirements_core::{
     Requirement, RequirementPriority, RequirementStatus, RequirementType,
     RequirementsStore, Storage, determine_requirements_path, Comment, FieldChange,
-    RelationshipType, User, IdFormat, NumberingStrategy, RelationshipDefinition, Cardinality,
+    RelationshipType, IdFormat, NumberingStrategy, RelationshipDefinition, Cardinality,
 };
 use std::collections::{HashSet, HashMap};
 use std::path::PathBuf;
@@ -2547,10 +2547,10 @@ impl RequirementsApp {
 
     fn show_users_table(&mut self, ui: &mut egui::Ui) {
         // Collect user data to avoid borrow issues
-        let users_data: Vec<(Uuid, String, String, String, bool)> = self.store.users
+        let users_data: Vec<(Uuid, Option<String>, String, String, String, bool)> = self.store.users
             .iter()
             .filter(|u| self.show_archived_users || !u.archived)
-            .map(|u| (u.id, u.name.clone(), u.email.clone(), u.handle.clone(), u.archived))
+            .map(|u| (u.id, u.spec_id.clone(), u.name.clone(), u.email.clone(), u.handle.clone(), u.archived))
             .collect();
 
         if users_data.is_empty() {
@@ -2559,11 +2559,12 @@ impl RequirementsApp {
         }
 
         egui::Grid::new("users_table")
-            .num_columns(5)
+            .num_columns(6)
             .striped(true)
             .spacing([10.0, 5.0])
             .show(ui, |ui| {
                 // Header
+                ui.strong("ID");
                 ui.strong("Name");
                 ui.strong("Email");
                 ui.strong("Handle");
@@ -2571,7 +2572,13 @@ impl RequirementsApp {
                 ui.strong("Actions");
                 ui.end_row();
 
-                for (id, name, email, handle, archived) in &users_data {
+                for (id, spec_id, name, email, handle, archived) in &users_data {
+                    // Show spec_id with special styling
+                    if let Some(sid) = spec_id {
+                        ui.colored_label(egui::Color32::from_rgb(74, 158, 255), sid);
+                    } else {
+                        ui.label("-");
+                    }
                     ui.label(name);
                     ui.label(email);
                     ui.label(format!("@{}", handle));
@@ -2613,19 +2620,19 @@ impl RequirementsApp {
             return;
         }
 
-        let user = User::new(
+        // Use add_user_with_id to auto-generate $USER-XXX spec_id
+        let spec_id = self.store.add_user_with_id(
             self.user_form_name.clone(),
             self.user_form_email.clone(),
             self.user_form_handle.clone(),
         );
-        self.store.add_user(user);
         self.save();
 
         self.show_user_form = false;
         self.user_form_name.clear();
         self.user_form_email.clear();
         self.user_form_handle.clear();
-        self.message = Some(("User added successfully".to_string(), false));
+        self.message = Some((format!("User {} added successfully", spec_id), false));
     }
 
     fn save_edited_user(&mut self) {

@@ -560,6 +560,37 @@ The migration dialog shows:
 - Any validation errors that prevent migration
 - Warnings about potential issues
 
+### User Management
+
+Users are managed in Settings > Admin. Each user gets a unique `$USER-XXX` identifier (e.g., `$USER-001`).
+
+**Adding Users:**
+1. Go to Settings > Admin
+2. Click "➕ Add User"
+3. Enter name, email, and handle
+4. The system automatically assigns a `$USER-XXX` ID
+
+**User Fields:**
+| Field | Description |
+|-------|-------------|
+| **ID** | Auto-generated `$USER-XXX` identifier |
+| **Name** | User's full name |
+| **Email** | User's email address |
+| **Handle** | Username for @mentions (without @) |
+| **Status** | Active or Archived |
+
+**User-Requirement Relationships:**
+Users can be linked to requirements through special relationship types:
+
+| Relationship | Description |
+|--------------|-------------|
+| **Created By** | User who created the requirement |
+| **Assigned To** | User responsible for implementing |
+| **Tested By** | User(s) who tested/verified the requirement |
+| **Closed By** | User who closed/completed the requirement |
+
+These relationships can be added through the Links tab when viewing a requirement.
+
 ### Environment Variables
 
 | Variable | Description |

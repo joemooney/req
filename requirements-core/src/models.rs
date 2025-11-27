@@ -304,6 +304,7 @@ impl RelationshipDefinition {
     /// Get the default built-in relationship definitions
     pub fn defaults() -> Vec<RelationshipDefinition> {
         vec![
+            // Requirement-to-requirement relationships
             RelationshipDefinition::built_in("parent", "Parent", "Hierarchical parent requirement")
                 .with_inverse("child")
                 .with_cardinality(Cardinality::ManyToOne),
@@ -325,6 +326,20 @@ impl RelationshipDefinition {
                 .with_inverse("implemented_by"),
             RelationshipDefinition::built_in("implemented_by", "Implemented By", "Inverse implementation relationship")
                 .with_inverse("implements"),
+
+            // User-to-requirement relationships
+            RelationshipDefinition::built_in("created_by", "Created By", "User who created the requirement")
+                .with_cardinality(Cardinality::ManyToOne)
+                .with_color("#4a9eff"),
+            RelationshipDefinition::built_in("assigned_to", "Assigned To", "User assigned to work on this requirement")
+                .with_cardinality(Cardinality::ManyToOne)
+                .with_color("#22c55e"),
+            RelationshipDefinition::built_in("tested_by", "Tested By", "User who tested/verified the requirement")
+                .with_cardinality(Cardinality::ManyToMany)
+                .with_color("#f59e0b"),
+            RelationshipDefinition::built_in("closed_by", "Closed By", "User who closed/completed the requirement")
+                .with_cardinality(Cardinality::ManyToOne)
+                .with_color("#ef4444"),
         ]
     }
 
@@ -846,6 +861,10 @@ pub struct User {
     /// Unique identifier for the user
     pub id: Uuid,
 
+    /// Human-friendly spec ID (e.g., "$USER-001")
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub spec_id: Option<String>,
+
     /// User's full name
     pub name: String,
 
@@ -864,16 +883,35 @@ pub struct User {
 }
 
 impl User {
-    /// Creates a new user
+    /// Creates a new user (without spec_id - use RequirementsStore::add_user for auto-generated ID)
     pub fn new(name: String, email: String, handle: String) -> Self {
         Self {
             id: Uuid::new_v4(),
+            spec_id: None,
             name,
             email,
             handle,
             created_at: Utc::now(),
             archived: false,
         }
+    }
+
+    /// Creates a new user with a spec_id
+    pub fn new_with_spec_id(name: String, email: String, handle: String, spec_id: String) -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            spec_id: Some(spec_id),
+            name,
+            email,
+            handle,
+            created_at: Utc::now(),
+            archived: false,
+        }
+    }
+
+    /// Returns display name: spec_id if available, otherwise name
+    pub fn display_id(&self) -> &str {
+        self.spec_id.as_deref().unwrap_or(&self.name)
     }
 }
 
@@ -1118,6 +1156,11 @@ pub struct RequirementsStore {
     /// Reaction definitions for comments
     #[serde(default = "default_reaction_definitions")]
     pub reaction_definitions: Vec<ReactionDefinition>,
+
+    /// Counter for meta-type IDs (users, views, etc.) - maps prefix to next number
+    /// e.g., "$USER" -> 1 means next user will be $USER-001
+    #[serde(default)]
+    pub meta_counters: std::collections::HashMap<String, u32>,
 }
 
 /// Default value for next_feature_number
@@ -1129,6 +1172,11 @@ fn default_next_feature_number() -> u32 {
 fn default_next_spec_number() -> u32 {
     1
 }
+
+/// Meta-type prefixes for special object types
+pub const META_PREFIX_USER: &str = "$USER";
+pub const META_PREFIX_VIEW: &str = "$VIEW";
+pub const META_PREFIX_FEATURE: &str = "$FEAT";
 
 impl RequirementsStore {
     /// Creates an empty requirements store
@@ -1143,7 +1191,16 @@ impl RequirementsStore {
             prefix_counters: std::collections::HashMap::new(),
             relationship_definitions: RelationshipDefinition::defaults(),
             reaction_definitions: default_reaction_definitions(),
+            meta_counters: std::collections::HashMap::new(),
         }
+    }
+
+    /// Generates the next meta-type ID for a given prefix (e.g., "$USER" -> "$USER-001")
+    pub fn next_meta_id(&mut self, prefix: &str) -> String {
+        let counter = self.meta_counters.entry(prefix.to_string()).or_insert(1);
+        let num = *counter;
+        *counter += 1;
+        format!("{}-{:03}", prefix, num)
     }
 
     /// Adds a requirement to the store
@@ -1151,9 +1208,44 @@ impl RequirementsStore {
         self.requirements.push(req);
     }
 
-    /// Adds a user to the store
+    /// Adds a user to the store (legacy - no spec_id)
     pub fn add_user(&mut self, user: User) {
         self.users.push(user);
+    }
+
+    /// Adds a user with auto-generated $USER-XXX spec_id
+    pub fn add_user_with_id(&mut self, name: String, email: String, handle: String) -> String {
+        let spec_id = self.next_meta_id(META_PREFIX_USER);
+        let user = User::new_with_spec_id(name, email, handle, spec_id.clone());
+        self.users.push(user);
+        spec_id
+    }
+
+    /// Finds a user by spec_id (e.g., "$USER-001")
+    pub fn find_user_by_spec_id(&self, spec_id: &str) -> Option<&User> {
+        self.users.iter().find(|u| u.spec_id.as_deref() == Some(spec_id))
+    }
+
+    /// Finds a user by spec_id (mutable)
+    pub fn find_user_by_spec_id_mut(&mut self, spec_id: &str) -> Option<&mut User> {
+        self.users.iter_mut().find(|u| u.spec_id.as_deref() == Some(spec_id))
+    }
+
+    /// Finds a user by UUID
+    pub fn find_user_by_id(&self, id: &Uuid) -> Option<&User> {
+        self.users.iter().find(|u| u.id == *id)
+    }
+
+    /// Migrates existing users without spec_id to have $USER-XXX IDs
+    pub fn migrate_users_to_spec_ids(&mut self) {
+        for user in &mut self.users {
+            if user.spec_id.is_none() {
+                let counter = self.meta_counters.entry(META_PREFIX_USER.to_string()).or_insert(1);
+                let spec_id = format!("{}-{:03}", META_PREFIX_USER, *counter);
+                *counter += 1;
+                user.spec_id = Some(spec_id);
+            }
+        }
     }
 
     /// Gets a mutable reference to a user by ID

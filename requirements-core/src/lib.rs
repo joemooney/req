@@ -16,6 +16,8 @@ pub use models::{
     RelationshipDefinition, Cardinality, RelationshipValidation,
     // Comment reaction types
     CommentReaction, ReactionDefinition, default_reaction_definitions,
+    // Meta-type prefixes
+    META_PREFIX_USER, META_PREFIX_VIEW, META_PREFIX_FEATURE,
 };
 pub use storage::Storage;
 pub use registry::{Registry, get_registry_path};

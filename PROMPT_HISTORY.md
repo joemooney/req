@@ -427,6 +427,28 @@ A chronological record of development sessions and changes made to the Requireme
     - Reset to Defaults button
   - Updated user guide with Comment Reactions documentation
 
+### User Meta-Type with $USER-XXX IDs
+- **Prompt**: I want a User object type to manage users. A user will have relationships with requirements. A requirement could be created-by, assigned-to, tested-by, closed-by. Since this is a special type, I propose having a prefix '$USER' and its own sequence number starting at one. We will have other special types that start with '$'. For example, Views, Features, and other metatypes can have their own id.
+- **Actions**:
+  - Added `spec_id: Option<String>` field to User struct for `$USER-XXX` format IDs
+  - Added `new_with_spec_id()` constructor and `display_id()` helper method
+  - Added meta-type prefix constants: `META_PREFIX_USER`, `META_PREFIX_VIEW`, `META_PREFIX_FEATURE`
+  - Added `meta_counters: HashMap<String, u32>` to RequirementsStore for per-prefix counters
+  - Added methods to RequirementsStore:
+    - `next_meta_id()` - generates next ID for a meta-type prefix
+    - `add_user_with_id()` - adds user with auto-generated $USER-XXX ID
+    - `find_user_by_spec_id()` / `find_user_by_spec_id_mut()` - lookup by spec_id
+    - `migrate_users_to_spec_ids()` - assigns IDs to existing users
+  - Added user relationship types to default RelationshipDefinitions:
+    - `created_by` - User who created the requirement (N:1, blue)
+    - `assigned_to` - User assigned to work on requirement (N:1, green)
+    - `tested_by` - User who tested/verified requirement (N:N, orange)
+    - `closed_by` - User who closed/completed requirement (N:1, red)
+  - Updated GUI users table to show spec_id column with blue highlighting
+  - Updated `add_new_user()` to use `add_user_with_id()` for auto-generated IDs
+  - Added automatic migration in storage.rs to assign $USER-XXX IDs on load
+  - Exported meta prefix constants from requirements-core lib.rs
+
 ---
 
 ## Git Operations Summary
