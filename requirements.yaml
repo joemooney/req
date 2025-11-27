@@ -712,6 +712,8 @@ requirements:
     target_id: 8f96fe19-5d26-4da7-9e39-8c8e7a184747
   - rel_type: Child
     target_id: ae4d77e5-55a4-4a56-97d1-a030d922a04d
+  - rel_type: Child
+    target_id: d51487eb-36a5-4266-9c79-29a7c5399849
   history:
   - id: e2ba3669-855e-4b99-9b7f-30300da178c5
     author: '@joe'
@@ -1813,13 +1815,25 @@ requirements:
 - id: f54c4d83-8073-49d1-9229-c712480a83e4
   spec_id: FR-0054
   title: Quick Action button
-  description: Instead of Archive and Delete have a single Quick Action button dropdown of actions that can be taken on requirement. Have  Priority (which will be a sub-dropdown of possible priorities for that requirement). Also have Status as a sub-dropdown  with possible priorities for that requirement then also in the Status sub-dropdown, a separator if possible, and Archive and Delete actions.
+  description: |
+    Instead of Archive and Delete have a single Quick Action button dropdown of actions that can be taken on requirement. Have  Priority (which will be a sub-dropdown of possible priorities for that requirement). Also have Status as a sub-dropdown  with possible priorities for that requirement then also in the Status sub-dropdown, a separator if possible, and Archive and Delete actions.
+
+    a single "⚡ Actions" dropdown menu that contains:
+
+      1. Priority submenu - shows High, Medium, Low options with a checkmark (✓) next to the current priority
+      2. Status submenu - contains:
+        - Status options: Draft, Approved, Completed, Rejected (with checkmark for current)
+        - A separator line
+        - Archive/Unarchive action (icon changes based on current state)
+        - Delete action
+
+      All changes to priority and status are tracked in the requirement's change history, so they appear in the History tab.
   status: Draft
   priority: Medium
   owner: ''
   feature: Uncategorized
   created_at: 2025-11-27T17:02:58.915305926Z
-  modified_at: 2025-11-27T17:15:06.371278906Z
+  modified_at: 2025-11-27T17:19:02.101175892Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -1834,6 +1848,25 @@ requirements:
     - field_name: description
       old_value: Instead of Archive and Delete have a single Quick Action button dropdown of actions that can be taken on requirement. Have Archive and Delete as actions, along with Priority (which will be a sub-dropdown of possible priorities for that requirement).
       new_value: Instead of Archive and Delete have a single Quick Action button dropdown of actions that can be taken on requirement. Have  Priority (which will be a sub-dropdown of possible priorities for that requirement). Also have Status as a sub-dropdown  with possible priorities for that requirement then also in the Status sub-dropdown, a separator if possible, and Archive and Delete actions.
+  - id: 3150ed0a-f8d1-43ca-918a-3b1613d73623
+    author: '@joe'
+    timestamp: 2025-11-27T17:19:02.101169550Z
+    changes:
+    - field_name: description
+      old_value: Instead of Archive and Delete have a single Quick Action button dropdown of actions that can be taken on requirement. Have  Priority (which will be a sub-dropdown of possible priorities for that requirement). Also have Status as a sub-dropdown  with possible priorities for that requirement then also in the Status sub-dropdown, a separator if possible, and Archive and Delete actions.
+      new_value: |
+        Instead of Archive and Delete have a single Quick Action button dropdown of actions that can be taken on requirement. Have  Priority (which will be a sub-dropdown of possible priorities for that requirement). Also have Status as a sub-dropdown  with possible priorities for that requirement then also in the Status sub-dropdown, a separator if possible, and Archive and Delete actions.
+
+        a single "⚡ Actions" dropdown menu that contains:
+
+          1. Priority submenu - shows High, Medium, Low options with a checkmark (✓) next to the current priority
+          2. Status submenu - contains:
+            - Status options: Draft, Approved, Completed, Rejected (with checkmark for current)
+            - A separator line
+            - Archive/Unarchive action (icon changes based on current state)
+            - Delete action
+
+          All changes to priority and status are tracked in the requirement's change history, so they appear in the History tab.
 - id: ae4d77e5-55a4-4a56-97d1-a030d922a04d
   spec_id: DETAILVIEW-0055
   prefix_override: DETAILVIEW
@@ -1853,6 +1886,22 @@ requirements:
     target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
   - rel_type: Child
     target_id: f54c4d83-8073-49d1-9229-c712480a83e4
+- id: d51487eb-36a5-4266-9c79-29a7c5399849
+  spec_id: FR-0056
+  title: Double cllick Description to enter Edit
+  description: Double click Description to enter Edit, and switch focus to the Description textbox.
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-27T17:21:11.683638399Z
+  modified_at: 2025-11-27T17:21:11.683638399Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
   spec_id: $USER-001
@@ -1882,7 +1931,7 @@ id_config:
     description: Change requests for modifications to existing functionality
 features: []
 next_feature_number: 27
-next_spec_number: 56
+next_spec_number: 57
 prefix_counters: {}
 relationship_definitions:
 - name: parent

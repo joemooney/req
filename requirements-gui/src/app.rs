@@ -1073,6 +1073,7 @@ pub struct RequirementsApp {
     form_tags: String,
     form_prefix: String, // Optional prefix override (uppercase letters only)
     form_parent_id: Option<Uuid>, // Parent to link new requirement to
+    focus_description: bool, // Request focus on description field when entering Edit view
 
     // Messages
     message: Option<(String, bool)>, // (message, is_error)
@@ -1284,6 +1285,7 @@ impl RequirementsApp {
             form_tags: String::new(),
             form_prefix: String::new(),
             form_parent_id: None,
+            focus_description: false,
             message: None,
             comment_author: String::new(),
             comment_content: String::new(),
@@ -5787,7 +5789,7 @@ impl RequirementsApp {
                 let req_id = req.id;
                 egui::ScrollArea::vertical().show(ui, |ui| match &self.active_tab {
                     DetailTab::Description => {
-                        self.show_description_tab(ui, &req);
+                        self.show_description_tab(ui, &req, idx);
                     }
                     DetailTab::Comments => {
                         self.show_comments_tab(ui, &req, idx);
@@ -5808,12 +5810,36 @@ impl RequirementsApp {
         }
     }
 
-    fn show_description_tab(&mut self, ui: &mut egui::Ui, req: &Requirement) {
-        ui.heading("Description");
+    fn show_description_tab(&mut self, ui: &mut egui::Ui, req: &Requirement, idx: usize) {
+        ui.horizontal(|ui| {
+            ui.heading("Description");
+            ui.label("(double-click to edit)")
+                .on_hover_text("Double-click anywhere on the description to edit it");
+        });
         ui.add_space(10.0);
 
-        // Render description as markdown
-        CommonMarkViewer::new().show(ui, &mut self.markdown_cache, &req.description);
+        // Wrap description in a frame that detects double-click
+        let frame_response = egui::Frame::none().show(ui, |ui| {
+            // Make the frame respond to clicks
+            let (rect, response) = ui.allocate_exact_size(
+                egui::vec2(ui.available_width(), ui.available_height()),
+                egui::Sense::click(),
+            );
+
+            // Render description as markdown inside the allocated area
+            ui.allocate_new_ui(egui::UiBuilder::new().max_rect(rect), |ui| {
+                CommonMarkViewer::new().show(ui, &mut self.markdown_cache, &req.description);
+            });
+
+            response
+        });
+
+        // Check for double-click on the description area
+        if frame_response.inner.double_clicked() {
+            self.load_form_from_requirement(idx);
+            self.focus_description = true;
+            self.pending_view_change = Some(View::Edit);
+        }
     }
 
     fn show_comments_tab(&mut self, ui: &mut egui::Ui, req: &Requirement, idx: usize) {
@@ -6885,6 +6911,13 @@ impl RequirementsApp {
                         .desired_rows(8)
                         .hint_text("Enter requirement description (Markdown supported)...")
                         .show(ui);
+
+                    // Request focus if we came here via double-click on description
+                    if self.focus_description {
+                        output.response.request_focus();
+                        self.focus_description = false;
+                    }
+
                     show_text_context_menu(
                         ui,
                         &output.response,
