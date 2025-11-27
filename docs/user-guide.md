@@ -471,16 +471,32 @@ Access settings via the gear icon (top-right) in the GUI.
 
 The Keybindings tab shows all customizable keyboard shortcuts. Click "Change" next to any action to set a new key combination. Press Escape to cancel. Click "Reset to Defaults" to restore default bindings.
 
-| Action | Default Key |
-|--------|-------------|
-| Navigate Up | Up Arrow |
-| Navigate Down | Down Arrow |
-| Edit Requirement | Enter |
-| Toggle Expand/Collapse | Space |
-| Zoom In | Ctrl+Shift+Plus |
-| Zoom Out | Ctrl+Minus |
-| Reset Zoom | Ctrl+0 |
-| Cycle Theme | Ctrl+T |
+| Action | Default Key | Default Context |
+|--------|-------------|-----------------|
+| Navigate Up | Up Arrow | Requirements List |
+| Navigate Down | Down Arrow | Requirements List |
+| Edit Requirement | Enter | Requirements List |
+| Toggle Expand/Collapse | Space | Requirements List |
+| Zoom In | Ctrl+Shift+Plus | Global |
+| Zoom Out | Ctrl+Minus | Global |
+| Reset Zoom | Ctrl+0 | Global |
+| Cycle Theme | Ctrl+T | Global |
+
+**Context/Scope:**
+
+Each keybinding has a context that determines where it is active:
+
+| Context | Description |
+|---------|-------------|
+| **Global** | Works anywhere in the application |
+| **Requirements List** | Only when focused on the requirements list (not when typing in text fields) |
+| **Detail View** | Only when viewing requirement details |
+| **Form** | Only when in add/edit form |
+
+You can change the context for any keybinding using the dropdown in the Settings > Keys tab. This allows you to, for example:
+- Make navigation keys work globally
+- Restrict certain shortcuts to specific views
+- Prevent shortcuts from interfering with text input
 
 User settings are stored in: `~/.requirements_gui_settings.yaml`
 

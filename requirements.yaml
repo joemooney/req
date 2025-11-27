@@ -399,6 +399,8 @@ requirements:
     target_id: 0f47519b-83fa-4e45-9e64-44ae833033a8
   - rel_type: Child
     target_id: b8621169-8a34-4001-a2e8-936229497c62
+  - rel_type: Child
+    target_id: 85868242-14f2-4e4a-beba-5103c271ce32
   history:
   - id: bc863c32-e57c-469a-84d1-39b682469d24
     author: '@joe'
@@ -715,6 +717,22 @@ requirements:
     - field_name: spec_id
       old_value: FR-0032
       new_value: USERS-0033
+- id: 85868242-14f2-4e4a-beba-5103c271ce32
+  spec_id: FR-0034
+  title: goggledigook
+  description: ''
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-27T00:54:01.866964924Z
+  modified_at: 2025-11-27T00:54:01.866964924Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 848840ae-7005-4fab-b478-163f9139359e
 id_config:
   format: SingleLevel
   numbering: Global
@@ -737,7 +755,7 @@ id_config:
     description: Change requests for modifications to existing functionality
 features: []
 next_feature_number: 20
-next_spec_number: 34
+next_spec_number: 35
 prefix_counters: {}
 relationship_definitions:
 - name: parent

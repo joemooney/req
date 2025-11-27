@@ -366,6 +366,32 @@ A chronological record of development sessions and changes made to the Requireme
   - Added `PerspectiveDirection` serialize/deserialize support
   - Updated user guide with View Presets documentation
 
+### Keybinding Context/Scope System
+- **Prompt**: Add when/where context for keybindings (e.g., Edit/Add, Requirements Panel)
+- **Actions**:
+  - Added `KeyContext` enum with four scopes:
+    - `Global` - Works anywhere in the application
+    - `RequirementsList` - Only in the requirements list panel
+    - `DetailView` - Only when viewing requirement details
+    - `Form` - Only when in add/edit form
+  - Added `context: KeyContext` field to `KeyBinding` struct with serde default
+  - Added `default_context()` method to `KeyAction` for appropriate defaults:
+    - NavigateUp/Down, Edit, ToggleExpand → RequirementsList
+    - ZoomIn/Out/Reset, CycleTheme → Global
+  - Updated `KeyBinding::matches()` to check context compatibility
+  - Added `current_key_context: KeyContext` field to `RequirementsApp`
+  - Context is determined in update() based on:
+    - `ctx.wants_keyboard_input()` → Global (text field focused)
+    - `View::List` → RequirementsList
+    - `View::Detail` → DetailView
+    - `View::Add/Edit` → Form
+  - Updated all `is_pressed()` calls to pass current context
+  - Updated Keybindings settings UI:
+    - Added Context column to keybindings table
+    - Added context dropdown for each action
+    - Preserved context when capturing new key
+  - Updated user guide with context documentation
+
 ---
 
 ## Git Operations Summary

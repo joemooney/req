@@ -123,6 +123,40 @@ impl Theme {
     }
 }
 
+/// Context/scope where a keybinding is active
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+pub enum KeyContext {
+    /// Works everywhere in the application
+    #[default]
+    Global,
+    /// Only in the requirements list panel (not when editing text)
+    RequirementsList,
+    /// Only when viewing requirement details
+    DetailView,
+    /// Only when in add/edit form
+    Form,
+}
+
+impl KeyContext {
+    fn label(&self) -> &'static str {
+        match self {
+            KeyContext::Global => "Global",
+            KeyContext::RequirementsList => "Requirements List",
+            KeyContext::DetailView => "Detail View",
+            KeyContext::Form => "Form",
+        }
+    }
+
+    fn all() -> &'static [KeyContext] {
+        &[
+            KeyContext::Global,
+            KeyContext::RequirementsList,
+            KeyContext::DetailView,
+            KeyContext::Form,
+        ]
+    }
+}
+
 /// Actions that can be bound to keys
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum KeyAction {
@@ -150,6 +184,20 @@ impl KeyAction {
         }
     }
 
+    /// Returns the default context for this action
+    fn default_context(&self) -> KeyContext {
+        match self {
+            KeyAction::NavigateUp => KeyContext::RequirementsList,
+            KeyAction::NavigateDown => KeyContext::RequirementsList,
+            KeyAction::Edit => KeyContext::RequirementsList,
+            KeyAction::ToggleExpand => KeyContext::RequirementsList,
+            KeyAction::ZoomIn => KeyContext::Global,
+            KeyAction::ZoomOut => KeyContext::Global,
+            KeyAction::ZoomReset => KeyContext::Global,
+            KeyAction::CycleTheme => KeyContext::Global,
+        }
+    }
+
     fn all() -> &'static [KeyAction] {
         &[
             KeyAction::NavigateUp,
@@ -164,18 +212,20 @@ impl KeyAction {
     }
 }
 
-/// A key binding with optional modifiers
+/// A key binding with optional modifiers and context
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct KeyBinding {
     pub key_name: String,  // Store as string for serialization
     pub ctrl: bool,
     pub shift: bool,
     pub alt: bool,
+    #[serde(default)]
+    pub context: KeyContext,
 }
 
 impl KeyBinding {
-    fn new(key: egui::Key) -> Self {
-        Self { key_name: key_to_string(key).to_string(), ctrl: false, shift: false, alt: false }
+    fn new(key: egui::Key, context: KeyContext) -> Self {
+        Self { key_name: key_to_string(key).to_string(), ctrl: false, shift: false, alt: false, context }
     }
 
     fn with_ctrl(mut self) -> Self {
@@ -201,7 +251,8 @@ impl KeyBinding {
         parts.join("+")
     }
 
-    fn matches(&self, ctx: &egui::Context) -> bool {
+    /// Check if the key combination is pressed (does not check context)
+    fn key_matches(&self, ctx: &egui::Context) -> bool {
         let Some(key) = self.key() else { return false };
         ctx.input(|i| {
             let modifiers_match =
@@ -210,6 +261,14 @@ impl KeyBinding {
                 i.modifiers.alt == self.alt;
             modifiers_match && i.key_pressed(key)
         })
+    }
+
+    /// Check if the binding matches given the current app context
+    fn matches(&self, egui_ctx: &egui::Context, current_context: KeyContext) -> bool {
+        // Global bindings work everywhere
+        // Otherwise, context must match
+        let context_matches = self.context == KeyContext::Global || self.context == current_context;
+        context_matches && self.key_matches(egui_ctx)
     }
 }
 
@@ -364,26 +423,37 @@ pub struct KeyBindings {
 impl Default for KeyBindings {
     fn default() -> Self {
         let mut bindings = HashMap::new();
-        bindings.insert(KeyAction::NavigateUp, KeyBinding::new(egui::Key::ArrowUp));
-        bindings.insert(KeyAction::NavigateDown, KeyBinding::new(egui::Key::ArrowDown));
-        bindings.insert(KeyAction::Edit, KeyBinding::new(egui::Key::Enter));
-        bindings.insert(KeyAction::ToggleExpand, KeyBinding::new(egui::Key::Space));
-        bindings.insert(KeyAction::ZoomIn, KeyBinding::new(egui::Key::Plus).with_ctrl().with_shift());
-        bindings.insert(KeyAction::ZoomOut, KeyBinding::new(egui::Key::Minus).with_ctrl());
-        bindings.insert(KeyAction::ZoomReset, KeyBinding::new(egui::Key::Num0).with_ctrl());
-        bindings.insert(KeyAction::CycleTheme, KeyBinding::new(egui::Key::T).with_ctrl());
+        // Use default_context() for each action
+        bindings.insert(KeyAction::NavigateUp, KeyBinding::new(egui::Key::ArrowUp, KeyAction::NavigateUp.default_context()));
+        bindings.insert(KeyAction::NavigateDown, KeyBinding::new(egui::Key::ArrowDown, KeyAction::NavigateDown.default_context()));
+        bindings.insert(KeyAction::Edit, KeyBinding::new(egui::Key::Enter, KeyAction::Edit.default_context()));
+        bindings.insert(KeyAction::ToggleExpand, KeyBinding::new(egui::Key::Space, KeyAction::ToggleExpand.default_context()));
+        bindings.insert(KeyAction::ZoomIn, KeyBinding::new(egui::Key::Plus, KeyAction::ZoomIn.default_context()).with_ctrl().with_shift());
+        bindings.insert(KeyAction::ZoomOut, KeyBinding::new(egui::Key::Minus, KeyAction::ZoomOut.default_context()).with_ctrl());
+        bindings.insert(KeyAction::ZoomReset, KeyBinding::new(egui::Key::Num0, KeyAction::ZoomReset.default_context()).with_ctrl());
+        bindings.insert(KeyAction::CycleTheme, KeyBinding::new(egui::Key::T, KeyAction::CycleTheme.default_context()).with_ctrl());
         Self { bindings }
     }
 }
 
 impl KeyBindings {
+    #[allow(dead_code)]
     fn get(&self, action: KeyAction) -> Option<&KeyBinding> {
         self.bindings.get(&action)
     }
 
-    fn is_pressed(&self, action: KeyAction, ctx: &egui::Context) -> bool {
+    /// Check if an action's keybinding is pressed in the given context
+    fn is_pressed(&self, action: KeyAction, egui_ctx: &egui::Context, current_context: KeyContext) -> bool {
         self.bindings.get(&action)
-            .map(|binding| binding.matches(ctx))
+            .map(|binding| binding.matches(egui_ctx, current_context))
+            .unwrap_or(false)
+    }
+
+    /// Check if an action's keybinding is pressed (ignores context - for key capture)
+    #[allow(dead_code)]
+    fn is_key_pressed(&self, action: KeyAction, egui_ctx: &egui::Context) -> bool {
+        self.bindings.get(&action)
+            .map(|binding| binding.key_matches(egui_ctx))
             .unwrap_or(false)
     }
 }
@@ -721,6 +791,9 @@ pub struct RequirementsApp {
     show_save_preset_dialog: bool,               // Show the save preset dialog
     preset_name_input: String,                   // Name input for new preset
     show_delete_preset_confirm: Option<String>,  // Name of preset to confirm deletion
+
+    // Keybinding context
+    current_key_context: KeyContext,             // Current context for keybinding checks
 }
 
 impl RequirementsApp {
@@ -820,6 +893,7 @@ impl RequirementsApp {
             show_save_preset_dialog: false,
             preset_name_input: String::new(),
             show_delete_preset_confirm: None,
+            current_key_context: KeyContext::RequirementsList,
         }
     }
 
@@ -1509,6 +1583,12 @@ impl RequirementsApp {
             ui.colored_label(egui::Color32::YELLOW, format!("Press a key for '{}' (Escape to cancel)", action.label()));
             ui.add_space(5.0);
 
+            // Get the current context for this action (to preserve it)
+            let current_context = self.settings_form_keybindings.bindings
+                .get(&action)
+                .map(|b| b.context)
+                .unwrap_or(action.default_context());
+
             // Check for key press
             let captured = ctx.input(|i| {
                 // Cancel with Escape
@@ -1537,6 +1617,7 @@ impl RequirementsApp {
                             ctrl: i.modifiers.ctrl,
                             shift: i.modifiers.shift,
                             alt: i.modifiers.alt,
+                            context: current_context,  // Preserve the context
                         };
                         return Some(Some(binding));
                     }
@@ -1556,34 +1637,61 @@ impl RequirementsApp {
         // Keybindings table
         egui::ScrollArea::vertical().show(ui, |ui| {
             egui::Grid::new("keybindings_grid")
-                .num_columns(3)
-                .spacing([20.0, 8.0])
+                .num_columns(4)
+                .spacing([15.0, 8.0])
                 .striped(true)
                 .show(ui, |ui| {
                     // Header
                     ui.strong("Action");
                     ui.strong("Key");
+                    ui.strong("Context");
                     ui.strong("");
                     ui.end_row();
 
-                    for action in KeyAction::all() {
+                    // Clone the actions to avoid borrow issues
+                    let actions: Vec<KeyAction> = KeyAction::all().to_vec();
+
+                    for action in actions {
                         ui.label(action.label());
 
                         let binding_display = self.settings_form_keybindings.bindings
-                            .get(action)
+                            .get(&action)
                             .map(|b| b.display())
                             .unwrap_or_else(|| "Unbound".to_string());
 
                         // Highlight if we're capturing for this action
-                        if self.capturing_key_for == Some(*action) {
+                        if self.capturing_key_for == Some(action) {
                             ui.colored_label(egui::Color32::YELLOW, "...");
                         } else {
                             ui.monospace(&binding_display);
                         }
 
+                        // Context selector
+                        let current_context = self.settings_form_keybindings.bindings
+                            .get(&action)
+                            .map(|b| b.context)
+                            .unwrap_or(action.default_context());
+
+                        let mut selected_context = current_context;
+                        egui::ComboBox::from_id_salt(format!("context_{:?}", action))
+                            .width(120.0)
+                            .selected_text(selected_context.label())
+                            .show_ui(ui, |ui| {
+                                for ctx in KeyContext::all() {
+                                    ui.selectable_value(&mut selected_context, *ctx, ctx.label());
+                                }
+                            });
+
+                        // Update context if changed
+                        if selected_context != current_context {
+                            if let Some(binding) = self.settings_form_keybindings.bindings.get_mut(&action) {
+                                binding.context = selected_context;
+                            }
+                        }
+
                         if self.capturing_key_for.is_none() {
                             if ui.button("Change").clicked() {
-                                self.capturing_key_for = Some(*action);
+                                self.capturing_key_for = Some(action);
                             }
                         } else {
                             ui.label("");
@@ -1595,9 +1703,14 @@ impl RequirementsApp {
 
         ui.add_space(10.0);
 
-        if ui.button("Reset to Defaults").clicked() {
-            self.settings_form_keybindings = KeyBindings::default();
-        }
+        ui.horizontal(|ui| {
+            if ui.button("Reset to Defaults").clicked() {
+                self.settings_form_keybindings = KeyBindings::default();
+            }
+
+            ui.add_space(20.0);
+            ui.label("Context: Where the shortcut is active");
+        });
     }
 
     fn show_settings_project_tab(&mut self, ui: &mut egui::Ui) {
@@ -3993,23 +4106,37 @@ impl eframe::App for RequirementsApp {
         }
         ctx.set_style(style);
 
-        // Handle keyboard shortcuts for zoom
+        // Determine current keybinding context based on view state
+        // If a text field has focus, we don't want to trigger navigation keys
+        let text_input_focused = ctx.wants_keyboard_input();
+        self.current_key_context = if text_input_focused {
+            // When typing in a text field, only global shortcuts should work
+            KeyContext::Global
+        } else {
+            match self.current_view {
+                View::List => KeyContext::RequirementsList,
+                View::Detail => KeyContext::DetailView,
+                View::Add | View::Edit => KeyContext::Form,
+            }
+        };
+
+        // Handle keyboard shortcuts for zoom (global context)
         let mut zoom_delta: f32 = 0.0;
         let mut zoom_reset = false;
 
         // Check for zoom keybindings
-        if self.user_settings.keybindings.is_pressed(KeyAction::ZoomIn, ctx) {
+        if self.user_settings.keybindings.is_pressed(KeyAction::ZoomIn, ctx, self.current_key_context) {
             zoom_delta = 1.0;
         }
-        if self.user_settings.keybindings.is_pressed(KeyAction::ZoomOut, ctx) {
+        if self.user_settings.keybindings.is_pressed(KeyAction::ZoomOut, ctx, self.current_key_context) {
             zoom_delta = -1.0;
         }
-        if self.user_settings.keybindings.is_pressed(KeyAction::ZoomReset, ctx) {
+        if self.user_settings.keybindings.is_pressed(KeyAction::ZoomReset, ctx, self.current_key_context) {
             zoom_reset = true;
         }
 
-        // Check for theme cycling keybinding
-        if self.user_settings.keybindings.is_pressed(KeyAction::CycleTheme, ctx) {
+        // Check for theme cycling keybinding (global context)
+        if self.user_settings.keybindings.is_pressed(KeyAction::CycleTheme, ctx, self.current_key_context) {
             self.user_settings.theme = self.user_settings.theme.next();
             self.user_settings.theme.apply(ctx);
             let _ = self.user_settings.save();
@@ -4058,29 +4185,27 @@ impl eframe::App for RequirementsApp {
         }
 
         // Handle keyboard navigation in the requirements list
-        // Only when in List or Detail view and no text field has focus
-        if (self.current_view == View::List || self.current_view == View::Detail)
-            && !ctx.wants_keyboard_input()
+        // Context checking is now handled by the keybinding system
         {
             let mut nav_delta: i32 = 0;
 
-            // Check navigation keybindings
-            if self.user_settings.keybindings.is_pressed(KeyAction::NavigateDown, ctx) {
+            // Check navigation keybindings (context-aware)
+            if self.user_settings.keybindings.is_pressed(KeyAction::NavigateDown, ctx, self.current_key_context) {
                 nav_delta = 1;
-            } else if self.user_settings.keybindings.is_pressed(KeyAction::NavigateUp, ctx) {
+            } else if self.user_settings.keybindings.is_pressed(KeyAction::NavigateUp, ctx, self.current_key_context) {
                 nav_delta = -1;
             }
 
-            // Edit keybinding
-            if self.user_settings.keybindings.is_pressed(KeyAction::Edit, ctx) {
+            // Edit keybinding (context-aware)
+            if self.user_settings.keybindings.is_pressed(KeyAction::Edit, ctx, self.current_key_context) {
                 if let Some(idx) = self.selected_idx {
                     self.load_form_from_requirement(idx);
                     self.pending_view_change = Some(View::Edit);
                 }
             }
 
-            // Toggle expand/collapse in tree views
-            if self.user_settings.keybindings.is_pressed(KeyAction::ToggleExpand, ctx) {
+            // Toggle expand/collapse in tree views (context-aware)
+            if self.user_settings.keybindings.is_pressed(KeyAction::ToggleExpand, ctx, self.current_key_context) {
                 if self.perspective != Perspective::Flat {
                     if let Some(idx) = self.selected_idx {
                         if let Some(req) = self.store.requirements.get(idx) {
