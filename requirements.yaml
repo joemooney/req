@@ -700,6 +700,10 @@ requirements:
     target_id: fa1eaffc-7c05-4d09-95a0-d5e61e9b8529
   - rel_type: Child
     target_id: 05a9d563-dc72-4bcd-b69c-6095fd396c28
+  - rel_type: Child
+    target_id: 0aefc969-49e7-4825-9118-ba20f778636c
+  - rel_type: Child
+    target_id: baf7ce9a-b022-41d6-9781-c8b5d1c32acd
   history:
   - id: e2ba3669-855e-4b99-9b7f-30300da178c5
     author: '@joe'
@@ -1077,13 +1081,38 @@ requirements:
 - id: 9238ec28-2a11-4d0b-90df-f78861f49d72
   spec_id: FR-0043
   title: URL link support
-  description: When you click on Links tab, show a button to enter a URL, perhaps a button to verify that it is a valid link.
+  description: |
+    When you click on Links tab, show a button to enter a URL, perhaps a button to verify that it is a valid link.
+
+      External URL Links Feature:
+
+      1. UrlLink Model (requirements-core/src/models.rs):
+        - New UrlLink struct with fields: id, url, title, description, added_at, added_by, last_verified, last_verified_ok
+        - Added urls: Vec<UrlLink> field to Requirement struct
+      2. GUI Integration (requirements-gui/src/app.rs):
+        - Updated Links tab to show "External Links" section with "➕ New URL" button
+        - URL list displays with:
+            - Verification status indicators (✅ valid, ❌ failed)
+          - Clickable links that open in browser
+          - Edit (✏) and remove (x) buttons
+        - URL form modal with:
+            - URL input field
+          - Optional title and description
+          - "🔍 Verify" button to validate URL format
+          - Colored status messages for validation results
+        - Links tab count now shows total of relationships + URLs
+      3. Dependencies:
+        - Added url = "2" for URL parsing/validation
+        - Added open = "5" for opening URLs in browser
+      4. Documentation:
+        - Updated docs/user-guide.md with Links Tab section
+        - Updated PROMPT_HISTORY.md with feature details
   status: Draft
   priority: Medium
   owner: ''
   feature: 23-Uncategorized
   created_at: 2025-11-27T04:27:55.860215514Z
-  modified_at: 2025-11-27T06:00:28.184946761Z
+  modified_at: 2025-11-27T06:10:37.379910156Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -1098,6 +1127,45 @@ requirements:
     - field_name: description
       old_value: Button to enter a URL, perhaps a button to verify that it is a valid link.
       new_value: When you click on Links tab, show a button to enter a URL, perhaps a button to verify that it is a valid link.
+  - id: cd5aa577-5788-424a-b1de-21627072cc3c
+    author: '@joe'
+    timestamp: 2025-11-27T06:10:37.379903695Z
+    changes:
+    - field_name: description
+      old_value: When you click on Links tab, show a button to enter a URL, perhaps a button to verify that it is a valid link.
+      new_value: |
+        When you click on Links tab, show a button to enter a URL, perhaps a button to verify that it is a valid link.
+
+          External URL Links Feature:
+
+          1. UrlLink Model (requirements-core/src/models.rs):
+            - New UrlLink struct with fields: id, url, title, description, added_at, added_by, last_verified, last_verified_ok
+            - Added urls: Vec<UrlLink> field to Requirement struct
+          2. GUI Integration (requirements-gui/src/app.rs):
+            - Updated Links tab to show "External Links" section with "➕ New URL" button
+            - URL list displays with:
+                - Verification status indicators (✅ valid, ❌ failed)
+              - Clickable links that open in browser
+              - Edit (✏) and remove (x) buttons
+            - URL form modal with:
+                - URL input field
+              - Optional title and description
+              - "🔍 Verify" button to validate URL format
+              - Colored status messages for validation results
+            - Links tab count now shows total of relationships + URLs
+          3. Dependencies:
+            - Added url = "2" for URL parsing/validation
+            - Added open = "5" for opening URLs in browser
+          4. Documentation:
+            - Updated docs/user-guide.md with Links Tab section
+            - Updated PROMPT_HISTORY.md with feature details
+  urls:
+  - id: f6a655a0-3ccd-4945-8300-4417ca6fc8c3
+    url: file:///home/joe/ai/req/docs/user-guide-dark.html
+    title: User Guide
+    description: Quick Link to Aida User's Guide
+    added_at: 2025-11-27T06:12:47.083608620Z
+    added_by: Joe Mooney
 - id: 04c92aa7-e9fb-49a9-a528-590a446f8819
   spec_id: FR-0044
   title: Type Definition Editor
@@ -1167,6 +1235,40 @@ requirements:
     - field_name: description
       old_value: " When I am add/edit and I start editing the desription and I press the up arrow, I think the global key binding is being invoked to move to \nthe previous requirement \nFixed! The issue was that the navigation keybindings (Up/Down arrows) were being processed even when in Add/Edit form view. The fix adds\n  explicit checks for:\n\n  1. in_form_view - when the current view is Add or Edit\n  2. in_settings - when the settings dialog is open\n\n  When any of these conditions are true (or text_input_focused), the keybinding context is set to KeyContext::Global, which prevents the\n  navigation bindings (which have KeyContext::RequirementsList) from being triggered.\n\n  Committed as 0bfa17c and pushed to GitHub.\n"
       new_value: " When I am add/edit and I start editing the desription and I press the up arrow, I think the global key binding is being invoked to move to \nthe previous requirement \nFixed! The issue was that the navigation keybindings (Up/Down arrows) were being processed even when in Add/Edit form view. The fix adds\n  explicit checks for:\n\n\n\n  1. in_form_view - when the current view is Add or Edit\n  2. in_settings - when the settings dialog is open\n\n  When any of these conditions are true (or text_input_focused), the keybinding context is set to KeyContext::Global, which prevents the\n  navigation bindings (which have KeyContext::RequirementsList) from being triggered.\n\n  Committed as 0bfa17c and pushed to GitHub.\n"
+- id: 0aefc969-49e7-4825-9118-ba20f778636c
+  spec_id: FR-0046
+  title: Width of Requirements View Panel
+  description: 'Width of Requirements View Panel will not allow resizing to less than the widest requirement title. We need to be able to resize it to a narrower width and show a horizontal scrollbar when narrower. '
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 24-Uncategorized
+  created_at: 2025-11-27T06:10:17.050094053Z
+  modified_at: 2025-11-27T06:10:17.050094053Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
+- id: baf7ce9a-b022-41d6-9781-c8b5d1c32acd
+  spec_id: FR-0047
+  title: Markdown help
+  description: |-
+    The "Supports Markdown" when clicked should show a modal of help or open a browswer page with help on what markdown is supported with
+      examples.
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-27T06:16:17.007809398Z
+  modified_at: 2025-11-27T06:16:17.007809398Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
 id_config:
   format: SingleLevel
   numbering: Global
@@ -1188,8 +1290,8 @@ id_config:
     prefix: CR
     description: Change requests for modifications to existing functionality
 features: []
-next_feature_number: 24
-next_spec_number: 46
+next_feature_number: 25
+next_spec_number: 48
 prefix_counters: {}
 relationship_definitions:
 - name: parent

@@ -912,6 +912,9 @@ pub struct RequirementsApp {
     url_form_description: String,
     url_verification_status: Option<(bool, String)>, // (success, message)
     url_verification_in_progress: bool,
+
+    // Markdown help modal
+    show_markdown_help: bool,
 }
 
 impl RequirementsApp {
@@ -1056,6 +1059,8 @@ impl RequirementsApp {
             url_form_description: String::new(),
             url_verification_status: None,
             url_verification_in_progress: false,
+            // Markdown help
+            show_markdown_help: false,
         }
     }
 
@@ -5041,6 +5046,126 @@ impl RequirementsApp {
         self.show_url_form = false;
     }
 
+    fn show_markdown_help_modal(&mut self, ctx: &egui::Context) {
+        egui::Window::new("Markdown Help")
+            .collapsible(false)
+            .resizable(true)
+            .default_width(600.0)
+            .default_height(500.0)
+            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+            .show(ctx, |ui| {
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    ui.heading("Supported Markdown Syntax");
+                    ui.add_space(10.0);
+
+                    // Headers
+                    ui.group(|ui| {
+                        ui.strong("Headers");
+                        ui.code("# Heading 1\n## Heading 2\n### Heading 3");
+                    });
+
+                    ui.add_space(8.0);
+
+                    // Text formatting
+                    ui.group(|ui| {
+                        ui.strong("Text Formatting");
+                        ui.horizontal_wrapped(|ui| {
+                            ui.code("**bold**");
+                            ui.label("→");
+                            ui.label(egui::RichText::new("bold").strong());
+                        });
+                        ui.horizontal_wrapped(|ui| {
+                            ui.code("*italic*");
+                            ui.label("→");
+                            ui.label(egui::RichText::new("italic").italics());
+                        });
+                        ui.horizontal_wrapped(|ui| {
+                            ui.code("~~strikethrough~~");
+                            ui.label("→");
+                            ui.label(egui::RichText::new("strikethrough").strikethrough());
+                        });
+                        ui.horizontal_wrapped(|ui| {
+                            ui.code("`inline code`");
+                            ui.label("→");
+                            ui.code("inline code");
+                        });
+                    });
+
+                    ui.add_space(8.0);
+
+                    // Lists
+                    ui.group(|ui| {
+                        ui.strong("Lists");
+                        ui.label("Unordered:");
+                        ui.code("- Item 1\n- Item 2\n  - Nested item");
+                        ui.add_space(4.0);
+                        ui.label("Ordered:");
+                        ui.code("1. First\n2. Second\n3. Third");
+                    });
+
+                    ui.add_space(8.0);
+
+                    // Links
+                    ui.group(|ui| {
+                        ui.strong("Links");
+                        ui.code("[Link text](https://example.com)");
+                    });
+
+                    ui.add_space(8.0);
+
+                    // Code blocks
+                    ui.group(|ui| {
+                        ui.strong("Code Blocks");
+                        ui.code("```\ncode block\nmultiple lines\n```");
+                        ui.add_space(4.0);
+                        ui.label("With language:");
+                        ui.code("```rust\nfn main() {\n    println!(\"Hello\");\n}\n```");
+                    });
+
+                    ui.add_space(8.0);
+
+                    // Blockquotes
+                    ui.group(|ui| {
+                        ui.strong("Blockquotes");
+                        ui.code("> This is a quote\n> Multiple lines");
+                    });
+
+                    ui.add_space(8.0);
+
+                    // Horizontal rule
+                    ui.group(|ui| {
+                        ui.strong("Horizontal Rule");
+                        ui.code("---");
+                    });
+
+                    ui.add_space(8.0);
+
+                    // Tables
+                    ui.group(|ui| {
+                        ui.strong("Tables");
+                        ui.code("| Header 1 | Header 2 |\n|----------|----------|\n| Cell 1   | Cell 2   |");
+                    });
+
+                    ui.add_space(8.0);
+
+                    // Task lists
+                    ui.group(|ui| {
+                        ui.strong("Task Lists");
+                        ui.code("- [ ] Unchecked task\n- [x] Completed task");
+                    });
+
+                    ui.add_space(15.0);
+                });
+
+                ui.separator();
+                ui.horizontal(|ui| {
+                    if ui.button("Close").clicked() {
+                        self.show_markdown_help = false;
+                    }
+                });
+            });
+    }
+
     fn show_history_tab(&self, ui: &mut egui::Ui, req: &Requirement) {
         ui.heading("Change History");
         ui.add_space(10.0);
@@ -5400,7 +5525,9 @@ impl RequirementsApp {
                 if ui.button(preview_label).clicked() {
                     self.show_description_preview = !self.show_description_preview;
                 }
-                ui.label("Supports Markdown");
+                if ui.link("Supports Markdown").on_hover_text("Click for Markdown help").clicked() {
+                    self.show_markdown_help = true;
+                }
             });
         });
 
@@ -6148,6 +6275,11 @@ impl eframe::App for RequirementsApp {
 
         // Show delete preset confirmation dialog
         self.show_delete_preset_confirmation_dialog(ctx);
+
+        // Show markdown help modal
+        if self.show_markdown_help {
+            self.show_markdown_help_modal(ctx);
+        }
     }
 }
 
