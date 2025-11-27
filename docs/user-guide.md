@@ -315,13 +315,14 @@ You can add emoji reactions to comments to quickly indicate your response:
 | **SPEC-ID** | Auto-generated identifier (e.g., SPEC-001) |
 | **Title** | Short descriptive name |
 | **Description** | Detailed explanation (supports Markdown) |
-| **Status** | Draft, Approved, Completed, or Rejected |
+| **Status** | Type-specific status (see Type Definitions below) |
 | **Priority** | High, Medium, or Low |
-| **Type** | Functional, NonFunctional, System, or User |
+| **Type** | Functional, NonFunctional, System, User, or ChangeRequest |
 | **Feature** | Grouping category |
 | **Owner** | Person responsible |
 | **Tags** | Comma-separated labels |
 | **ID Prefix** | Optional custom prefix override (uppercase letters only) |
+| **Custom Fields** | Type-specific additional fields (e.g., Impact, Requested By) |
 
 ### Custom ID Prefixes
 
@@ -355,6 +356,8 @@ When editing a requirement, click the **👁 Preview** button to see how your Ma
 
 ### Status Workflow
 
+Default statuses for standard requirement types:
+
 ```
 Draft -> Approved -> Completed
               |
@@ -366,6 +369,48 @@ Draft -> Approved -> Completed
 - **Approved**: Reviewed and accepted
 - **Completed**: Implementation finished
 - **Rejected**: Not accepted or deprecated
+
+**Note:** Some types (like Change Request) have their own custom status workflows. See Type Definitions below.
+
+### Type Definitions
+
+The system supports configurable requirement types with type-specific statuses and custom fields.
+
+**Built-in Types:**
+
+| Type | Prefix | Statuses | Custom Fields |
+|------|--------|----------|---------------|
+| **Functional** | FUNC | Draft, Approved, Completed, Rejected | - |
+| **NonFunctional** | NFUNC | Draft, Approved, Completed, Rejected | - |
+| **System** | SYS | Draft, Approved, Completed, Rejected | - |
+| **User** | USER | Draft, Approved, Completed, Rejected | - |
+| **ChangeRequest** | CR | Draft, Submitted, Under Review, Approved, Rejected, In Progress, Implemented, Verified, Closed | Impact, Requested By, Target Release, Justification |
+
+**Change Request Workflow:**
+
+```
+Draft -> Submitted -> Under Review -> Approved -> In Progress -> Implemented -> Verified -> Closed
+                            |
+                            v
+                        Rejected
+```
+
+**Custom Fields:**
+
+When creating or editing a requirement with custom fields, additional form fields appear below the standard fields. Field types include:
+
+- **Text**: Single-line text input
+- **Text Area**: Multi-line text input
+- **Select**: Dropdown with predefined options
+- **Boolean**: Checkbox
+- **Date**: Date input (YYYY-MM-DD format)
+- **User Reference**: Dropdown to select a user from the system
+- **Requirement Reference**: Dropdown to select another requirement
+- **Number**: Numeric input
+
+**Managing Type Definitions:**
+
+In the GUI, go to **Settings** > **Types** tab to view all configured type definitions, their statuses, and custom fields. Built-in types can be viewed but not modified directly.
 
 ### Relationship Types
 

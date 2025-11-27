@@ -4,6 +4,7 @@ use requirements_core::{
     Requirement, RequirementPriority, RequirementStatus, RequirementType,
     RequirementsStore, Storage, determine_requirements_path, Comment, FieldChange,
     RelationshipType, IdFormat, NumberingStrategy, RelationshipDefinition, Cardinality,
+    CustomFieldType,
 };
 use std::collections::{HashSet, HashMap};
 use std::path::PathBuf;
@@ -570,6 +571,7 @@ enum SettingsTab {
     Project,
     Relationships,
     Reactions,
+    TypeDefinitions,
     Administration,
 }
 
@@ -701,6 +703,8 @@ pub struct RequirementsApp {
     form_title: String,
     form_description: String,
     form_status: RequirementStatus,
+    form_status_string: String,    // Status as string (for custom type statuses)
+    form_custom_fields: HashMap<String, String>, // Custom field values
     form_priority: RequirementPriority,
     form_type: RequirementType,
     form_owner: String,
@@ -841,6 +845,8 @@ impl RequirementsApp {
             form_title: String::new(),
             form_description: String::new(),
             form_status: RequirementStatus::Draft,
+            form_status_string: String::from("Draft"),
+            form_custom_fields: HashMap::new(),
             form_priority: RequirementPriority::Medium,
             form_type: RequirementType::Functional,
             form_owner: String::new(),
@@ -1111,6 +1117,8 @@ impl RequirementsApp {
         self.form_title.clear();
         self.form_description.clear();
         self.form_status = RequirementStatus::Draft;
+        self.form_status_string = String::from("Draft");
+        self.form_custom_fields.clear();
         self.form_priority = RequirementPriority::Medium;
         self.form_type = RequirementType::Functional;
         self.form_owner.clear();
@@ -1130,6 +1138,8 @@ impl RequirementsApp {
             self.form_title = req.title.clone();
             self.form_description = req.description.clone();
             self.form_status = req.status.clone();
+            self.form_status_string = req.effective_status();
+            self.form_custom_fields = req.custom_fields.clone();
             self.form_priority = req.priority.clone();
             self.form_type = req.req_type.clone();
             self.form_owner = req.owner.clone();
@@ -1152,12 +1162,15 @@ impl RequirementsApp {
             self.form_title.clone(),
             self.form_description.clone(),
         );
-        req.status = self.form_status.clone();
+        // Set status from string (handles both standard and custom statuses)
+        req.set_status_from_str(&self.form_status_string);
         req.priority = self.form_priority.clone();
         req.req_type = self.form_type.clone();
         req.owner = self.form_owner.clone();
         req.feature = self.form_feature.clone();
         req.tags = tags;
+        // Copy custom field values
+        req.custom_fields = self.form_custom_fields.clone();
 
         // Set prefix override if specified
         let prefix_trimmed = self.form_prefix.trim();
@@ -1265,11 +1278,21 @@ impl RequirementsApp {
                 req.description = self.form_description.clone();
             }
 
-            // Track status change
-            if self.form_status != req.status {
-                changes.push(Requirement::field_change("status", format!("{:?}", req.status), format!("{:?}", self.form_status)));
-                req.status = self.form_status.clone();
+            // Track status change (use effective_status for comparison)
+            let old_status = req.effective_status();
+            if self.form_status_string != old_status {
+                changes.push(Requirement::field_change("status", old_status, self.form_status_string.clone()));
+                req.set_status_from_str(&self.form_status_string);
             }
+
+            // Track custom fields changes
+            for (key, new_value) in &self.form_custom_fields {
+                let old_value = req.custom_fields.get(key).cloned().unwrap_or_default();
+                if *new_value != old_value {
+                    changes.push(Requirement::field_change(key, old_value, new_value.clone()));
+                }
+            }
+            req.custom_fields = self.form_custom_fields.clone();
 
             // Track priority change
             if self.form_priority != req.priority {
@@ -1442,6 +1465,7 @@ impl RequirementsApp {
                     ui.selectable_value(&mut self.settings_tab, SettingsTab::Project, "📋 Project");
                     ui.selectable_value(&mut self.settings_tab, SettingsTab::Relationships, "🔗 Relations");
                     ui.selectable_value(&mut self.settings_tab, SettingsTab::Reactions, "😊 Reactions");
+                    ui.selectable_value(&mut self.settings_tab, SettingsTab::TypeDefinitions, "📝 Types");
                     ui.selectable_value(&mut self.settings_tab, SettingsTab::Administration, "🔧 Admin");
                 });
 
@@ -1467,6 +1491,9 @@ impl RequirementsApp {
                     }
                     SettingsTab::Reactions => {
                         self.show_settings_reactions_tab(ui);
+                    }
+                    SettingsTab::TypeDefinitions => {
+                        self.show_settings_type_definitions_tab(ui);
                     }
                     SettingsTab::Administration => {
                         self.show_settings_admin_tab(ui);
@@ -2422,6 +2449,123 @@ impl RequirementsApp {
                 self.store.reaction_definitions = requirements_core::default_reaction_definitions();
                 self.save();
             }
+        });
+    }
+
+    fn show_settings_type_definitions_tab(&mut self, ui: &mut egui::Ui) {
+        use requirements_core::CustomFieldType;
+
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            ui.heading("Requirement Type Definitions");
+            ui.add_space(5.0);
+            ui.label("Configure requirement types, their available statuses, and custom fields.");
+            ui.add_space(10.0);
+
+            // Clone type definitions to avoid borrow issues
+            let type_defs = self.store.type_definitions.clone();
+
+            if type_defs.is_empty() {
+                ui.label("No type definitions configured.");
+            } else {
+                for type_def in &type_defs {
+                    ui.collapsing(format!("{} {}",
+                        if type_def.built_in { "📦" } else { "📝" },
+                        &type_def.display_name
+                    ), |ui| {
+                        egui::Grid::new(format!("type_def_grid_{}", type_def.name))
+                            .num_columns(2)
+                            .spacing([10.0, 5.0])
+                            .show(ui, |ui| {
+                                ui.label("Name:");
+                                ui.label(&type_def.name);
+                                ui.end_row();
+
+                                if let Some(ref prefix) = type_def.prefix {
+                                    ui.label("ID Prefix:");
+                                    ui.label(prefix);
+                                    ui.end_row();
+                                }
+
+                                if let Some(ref desc) = type_def.description {
+                                    ui.label("Description:");
+                                    ui.label(desc);
+                                    ui.end_row();
+                                }
+
+                                if type_def.built_in {
+                                    ui.label("");
+                                    ui.small("[Built-in type]");
+                                    ui.end_row();
+                                }
+                            });
+
+                        // Statuses section
+                        if !type_def.statuses.is_empty() {
+                            ui.add_space(5.0);
+                            ui.label("Available Statuses:");
+                            ui.horizontal_wrapped(|ui| {
+                                for status in &type_def.statuses {
+                                    ui.label(format!("• {}", status));
+                                }
+                            });
+                        }
+
+                        // Custom fields section
+                        if !type_def.custom_fields.is_empty() {
+                            ui.add_space(5.0);
+                            ui.label("Custom Fields:");
+                            egui::Grid::new(format!("custom_fields_grid_{}", type_def.name))
+                                .num_columns(4)
+                                .striped(true)
+                                .spacing([10.0, 3.0])
+                                .show(ui, |ui| {
+                                    ui.strong("Field");
+                                    ui.strong("Type");
+                                    ui.strong("Required");
+                                    ui.strong("Options/Default");
+                                    ui.end_row();
+
+                                    for field in &type_def.custom_fields {
+                                        ui.label(&field.label);
+                                        ui.label(match field.field_type {
+                                            CustomFieldType::Text => "Text",
+                                            CustomFieldType::TextArea => "Text Area",
+                                            CustomFieldType::Select => "Select",
+                                            CustomFieldType::Boolean => "Boolean",
+                                            CustomFieldType::Date => "Date",
+                                            CustomFieldType::User => "User Reference",
+                                            CustomFieldType::Requirement => "Requirement Reference",
+                                            CustomFieldType::Number => "Number",
+                                        });
+                                        ui.label(if field.required { "Yes" } else { "No" });
+                                        // Show options or default
+                                        let extra_info = if !field.options.is_empty() {
+                                            field.options.join(", ")
+                                        } else if let Some(ref def) = field.default_value {
+                                            format!("Default: {}", def)
+                                        } else {
+                                            "-".to_string()
+                                        };
+                                        ui.label(extra_info);
+                                        ui.end_row();
+                                    }
+                                });
+                        }
+                    });
+                    ui.add_space(5.0);
+                }
+            }
+
+            ui.add_space(15.0);
+
+            // Reset to defaults button
+            if ui.button("↺ Reset to Defaults").on_hover_text("Restore built-in type definitions").clicked() {
+                self.store.type_definitions = requirements_core::default_type_definitions();
+                self.save();
+            }
+
+            ui.add_space(10.0);
+            ui.label("Note: Custom type editing will be available in a future release.");
         });
     }
 
@@ -3822,16 +3966,34 @@ impl RequirementsApp {
             .desired_width(available_width));
         ui.add_space(8.0);
 
-        // Metadata row - Status, Priority, Type, Owner, Feature, Tags
+        // Metadata row - Type first (affects available statuses), then Status, Priority
+        let mut type_changed = false;
         ui.horizontal_wrapped(|ui| {
-            ui.label("Status:");
-            egui::ComboBox::new("status_combo", "")
-                .selected_text(format!("{:?}", self.form_status))
+            ui.label("Type:");
+            let old_type = self.form_type.clone();
+            egui::ComboBox::new("type_combo", "")
+                .selected_text(format!("{:?}", self.form_type))
                 .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut self.form_status, RequirementStatus::Draft, "Draft");
-                    ui.selectable_value(&mut self.form_status, RequirementStatus::Approved, "Approved");
-                    ui.selectable_value(&mut self.form_status, RequirementStatus::Completed, "Completed");
-                    ui.selectable_value(&mut self.form_status, RequirementStatus::Rejected, "Rejected");
+                    ui.selectable_value(&mut self.form_type, RequirementType::Functional, "Functional");
+                    ui.selectable_value(&mut self.form_type, RequirementType::NonFunctional, "NonFunctional");
+                    ui.selectable_value(&mut self.form_type, RequirementType::System, "System");
+                    ui.selectable_value(&mut self.form_type, RequirementType::User, "User");
+                    ui.selectable_value(&mut self.form_type, RequirementType::ChangeRequest, "Change Request");
+                });
+            type_changed = old_type != self.form_type;
+
+            ui.add_space(16.0);
+            ui.label("Status:");
+            // Get statuses for current type
+            let statuses = self.store.get_statuses_for_type(&self.form_type);
+            egui::ComboBox::new("status_combo", "")
+                .selected_text(&self.form_status_string)
+                .show_ui(ui, |ui| {
+                    for status in &statuses {
+                        if ui.selectable_label(self.form_status_string == *status, status).clicked() {
+                            self.form_status_string = status.clone();
+                        }
+                    }
                 });
 
             ui.add_space(16.0);
@@ -3843,19 +4005,18 @@ impl RequirementsApp {
                     ui.selectable_value(&mut self.form_priority, RequirementPriority::Medium, "Medium");
                     ui.selectable_value(&mut self.form_priority, RequirementPriority::Low, "Low");
                 });
-
-            ui.add_space(16.0);
-            ui.label("Type:");
-            egui::ComboBox::new("type_combo", "")
-                .selected_text(format!("{:?}", self.form_type))
-                .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut self.form_type, RequirementType::Functional, "Functional");
-                    ui.selectable_value(&mut self.form_type, RequirementType::NonFunctional, "NonFunctional");
-                    ui.selectable_value(&mut self.form_type, RequirementType::System, "System");
-                    ui.selectable_value(&mut self.form_type, RequirementType::User, "User");
-                    ui.selectable_value(&mut self.form_type, RequirementType::ChangeRequest, "Change Request");
-                });
         });
+
+        // If type changed, check if current status is valid for new type
+        if type_changed {
+            let statuses = self.store.get_statuses_for_type(&self.form_type);
+            if !statuses.contains(&self.form_status_string) {
+                // Reset to first available status for new type
+                self.form_status_string = statuses.first().cloned().unwrap_or_else(|| "Draft".to_string());
+            }
+            // Clear custom fields when type changes (they may not be relevant)
+            self.form_custom_fields.clear();
+        }
         ui.add_space(4.0);
 
         ui.horizontal_wrapped(|ui| {
@@ -3915,6 +4076,150 @@ impl RequirementsApp {
                         }
                     });
                 }
+            }
+        }
+
+        // Show custom fields for the current type
+        let custom_fields = self.store.get_custom_fields_for_type(&self.form_type);
+        if !custom_fields.is_empty() {
+            ui.add_space(8.0);
+            ui.separator();
+            ui.label("Type-specific Fields:");
+            ui.add_space(4.0);
+
+            // Sort fields by order
+            let mut sorted_fields = custom_fields;
+            sorted_fields.sort_by_key(|f| f.order);
+
+            for field in sorted_fields {
+                ui.horizontal(|ui| {
+                    let label = if field.required {
+                        format!("{}*:", field.label)
+                    } else {
+                        format!("{}:", field.label)
+                    };
+                    ui.label(&label);
+
+                    // Get current value or default
+                    let current_value = self.form_custom_fields
+                        .get(&field.name)
+                        .cloned()
+                        .or_else(|| field.default_value.clone())
+                        .unwrap_or_default();
+
+                    match field.field_type {
+                        CustomFieldType::Text => {
+                            let mut value = current_value;
+                            if ui.add(egui::TextEdit::singleline(&mut value)
+                                .desired_width(200.0)).changed() {
+                                self.form_custom_fields.insert(field.name.clone(), value);
+                            }
+                        }
+                        CustomFieldType::TextArea => {
+                            let mut value = current_value;
+                            if ui.add(egui::TextEdit::multiline(&mut value)
+                                .desired_width(300.0)
+                                .desired_rows(3)).changed() {
+                                self.form_custom_fields.insert(field.name.clone(), value);
+                            }
+                        }
+                        CustomFieldType::Select => {
+                            egui::ComboBox::new(&field.name, "")
+                                .selected_text(&current_value)
+                                .show_ui(ui, |ui| {
+                                    for option in &field.options {
+                                        if ui.selectable_label(current_value == *option, option).clicked() {
+                                            self.form_custom_fields.insert(field.name.clone(), option.clone());
+                                        }
+                                    }
+                                });
+                        }
+                        CustomFieldType::Boolean => {
+                            let mut checked = current_value == "true";
+                            if ui.checkbox(&mut checked, "").changed() {
+                                self.form_custom_fields.insert(field.name.clone(), checked.to_string());
+                            }
+                        }
+                        CustomFieldType::Number => {
+                            let mut value = current_value;
+                            if ui.add(egui::TextEdit::singleline(&mut value)
+                                .desired_width(80.0)).changed() {
+                                // Basic numeric validation
+                                if value.is_empty() || value.parse::<f64>().is_ok() {
+                                    self.form_custom_fields.insert(field.name.clone(), value);
+                                }
+                            }
+                        }
+                        CustomFieldType::Date => {
+                            let mut value = current_value;
+                            if ui.add(egui::TextEdit::singleline(&mut value)
+                                .desired_width(120.0)
+                                .hint_text("YYYY-MM-DD")).changed() {
+                                self.form_custom_fields.insert(field.name.clone(), value);
+                            }
+                        }
+                        CustomFieldType::User => {
+                            // Show a dropdown of available users
+                            let active_users: Vec<_> = self.store.users.iter()
+                                .filter(|u| !u.archived)
+                                .collect();
+                            let display_text = if current_value.is_empty() {
+                                "(select user)".to_string()
+                            } else {
+                                active_users.iter()
+                                    .find(|u| u.id.to_string() == current_value || u.spec_id.as_deref() == Some(&current_value))
+                                    .map(|u| u.name.clone())
+                                    .unwrap_or_else(|| current_value.clone())
+                            };
+                            egui::ComboBox::new(format!("{}_user", field.name), "")
+                                .selected_text(&display_text)
+                                .show_ui(ui, |ui| {
+                                    if ui.selectable_label(current_value.is_empty(), "(none)").clicked() {
+                                        self.form_custom_fields.insert(field.name.clone(), String::new());
+                                    }
+                                    for user in &active_users {
+                                        let user_id = user.spec_id.clone().unwrap_or_else(|| user.id.to_string());
+                                        if ui.selectable_label(current_value == user_id, &user.name).clicked() {
+                                            self.form_custom_fields.insert(field.name.clone(), user_id);
+                                        }
+                                    }
+                                });
+                        }
+                        CustomFieldType::Requirement => {
+                            // Show a dropdown of requirements
+                            let display_name = if current_value.is_empty() {
+                                "(select requirement)".to_string()
+                            } else {
+                                self.store.requirements.iter()
+                                    .find(|r| r.id.to_string() == current_value || r.spec_id.as_deref() == Some(&current_value))
+                                    .map(|r| {
+                                        let spec = r.spec_id.as_deref().unwrap_or("N/A");
+                                        format!("{} - {}", spec, r.title)
+                                    })
+                                    .unwrap_or_else(|| current_value.clone())
+                            };
+                            egui::ComboBox::new(format!("{}_req", field.name), "")
+                                .selected_text(&display_name)
+                                .show_ui(ui, |ui| {
+                                    if ui.selectable_label(current_value.is_empty(), "(none)").clicked() {
+                                        self.form_custom_fields.insert(field.name.clone(), String::new());
+                                    }
+                                    for req in self.store.requirements.iter().take(50) { // Limit to prevent huge lists
+                                        let req_id = req.spec_id.clone().unwrap_or_else(|| req.id.to_string());
+                                        let label = format!("{} - {}", req.spec_id.as_deref().unwrap_or("N/A"), req.title);
+                                        if ui.selectable_label(current_value == req_id, label).clicked() {
+                                            self.form_custom_fields.insert(field.name.clone(), req_id);
+                                        }
+                                    }
+                                });
+                        }
+                    }
+
+                    // Show description tooltip if available
+                    if let Some(desc) = &field.description {
+                        ui.label("ⓘ").on_hover_text(desc);
+                    }
+                });
             }
         }
 

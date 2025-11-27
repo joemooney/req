@@ -34,11 +34,12 @@ Human-friendly identifiers (SPEC-001, SPEC-002) alongside internal UUIDs. Config
 
 ### Requirement Management
 - Full CRUD operations (Create, Read, Update, Delete)
-- Multiple status states: Draft, Approved, Completed, Rejected
+- Type-specific status states (e.g., Draft, Approved, Completed, Rejected for standard types)
 - Priority levels: High, Medium, Low
-- Types: Functional, Non-Functional, System, User, Change Request
+- Types: Functional, Non-Functional, System, User, Change Request (with type-specific workflows)
 - Feature-based organization with numbered prefixes
 - Tag support for flexible categorization
+- Custom fields support for type-specific data (e.g., Impact, Requested By for Change Requests)
 
 ### Relationships
 Define connections between requirements:
@@ -50,8 +51,15 @@ Define connections between requirements:
 
 ### Comments & History
 - Threaded comment system with replies
+- Configurable emoji reactions on comments
 - Full change history tracking for requirements
 - User attribution with handles for @mentions
+
+### Custom Type Definitions
+- Type-specific status workflows (e.g., Change Request has: Draft → Submitted → Under Review → Approved → In Progress → Implemented → Verified → Closed)
+- Custom fields per type with multiple field types (Text, TextArea, Select, Boolean, Date, User, Requirement, Number)
+- Built-in type definitions for Functional, NonFunctional, System, User, and ChangeRequest types
+- Settings UI for viewing type definitions
 
 ### Multi-Project Support
 - Central registry (~/.requirements.config) for managing multiple projects

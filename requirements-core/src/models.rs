@@ -140,6 +140,327 @@ impl RelationshipType {
 }
 
 // ============================================================================
+// Custom Type Definition System
+// ============================================================================
+
+/// Field type for custom fields
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum CustomFieldType {
+    /// Single-line text input
+    Text,
+    /// Multi-line text input
+    TextArea,
+    /// Selection from predefined options
+    Select,
+    /// Boolean checkbox
+    Boolean,
+    /// Date value
+    Date,
+    /// Reference to a user ($USER-XXX)
+    User,
+    /// Reference to another requirement (SPEC-XXX)
+    Requirement,
+    /// Numeric value
+    Number,
+}
+
+impl Default for CustomFieldType {
+    fn default() -> Self {
+        CustomFieldType::Text
+    }
+}
+
+impl fmt::Display for CustomFieldType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            CustomFieldType::Text => write!(f, "Text"),
+            CustomFieldType::TextArea => write!(f, "Text Area"),
+            CustomFieldType::Select => write!(f, "Select"),
+            CustomFieldType::Boolean => write!(f, "Boolean"),
+            CustomFieldType::Date => write!(f, "Date"),
+            CustomFieldType::User => write!(f, "User Reference"),
+            CustomFieldType::Requirement => write!(f, "Requirement Reference"),
+            CustomFieldType::Number => write!(f, "Number"),
+        }
+    }
+}
+
+/// Definition of a custom field for a requirement type
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CustomFieldDefinition {
+    /// Field name (used as key in custom_fields map)
+    pub name: String,
+
+    /// Display label for the field
+    pub label: String,
+
+    /// Field type
+    #[serde(default)]
+    pub field_type: CustomFieldType,
+
+    /// Whether this field is required
+    #[serde(default)]
+    pub required: bool,
+
+    /// Options for Select field type
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub options: Vec<String>,
+
+    /// Default value (as string, converted based on field_type)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default_value: Option<String>,
+
+    /// Help text / description
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+
+    /// Display order (lower = first)
+    #[serde(default)]
+    pub order: i32,
+}
+
+impl CustomFieldDefinition {
+    /// Creates a new text field definition
+    pub fn text(name: impl Into<String>, label: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            label: label.into(),
+            field_type: CustomFieldType::Text,
+            required: false,
+            options: Vec::new(),
+            default_value: None,
+            description: None,
+            order: 0,
+        }
+    }
+
+    /// Creates a new select field definition
+    pub fn select(name: impl Into<String>, label: impl Into<String>, options: Vec<String>) -> Self {
+        Self {
+            name: name.into(),
+            label: label.into(),
+            field_type: CustomFieldType::Select,
+            required: false,
+            options,
+            default_value: None,
+            description: None,
+            order: 0,
+        }
+    }
+
+    /// Creates a new user reference field definition
+    pub fn user_ref(name: impl Into<String>, label: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            label: label.into(),
+            field_type: CustomFieldType::User,
+            required: false,
+            options: Vec::new(),
+            default_value: None,
+            description: None,
+            order: 0,
+        }
+    }
+
+    /// Sets the field as required
+    pub fn required(mut self) -> Self {
+        self.required = true;
+        self
+    }
+
+    /// Sets the description
+    pub fn with_description(mut self, desc: impl Into<String>) -> Self {
+        self.description = Some(desc.into());
+        self
+    }
+
+    /// Sets the display order
+    pub fn with_order(mut self, order: i32) -> Self {
+        self.order = order;
+        self
+    }
+
+    /// Sets a default value
+    pub fn with_default(mut self, value: impl Into<String>) -> Self {
+        self.default_value = Some(value.into());
+        self
+    }
+}
+
+/// Definition of a custom requirement type with its specific statuses and fields
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CustomTypeDefinition {
+    /// Internal name/key for the type (e.g., "ChangeRequest")
+    pub name: String,
+
+    /// Display label (e.g., "Change Request")
+    pub display_name: String,
+
+    /// Description of this type
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+
+    /// Preferred ID prefix for this type (e.g., "CR")
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prefix: Option<String>,
+
+    /// Custom statuses for this type (if empty, uses default statuses)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub statuses: Vec<String>,
+
+    /// Additional custom fields for this type
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub custom_fields: Vec<CustomFieldDefinition>,
+
+    /// Whether this is a built-in type (cannot be deleted)
+    #[serde(default)]
+    pub built_in: bool,
+
+    /// Color for visual distinction (hex color code)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub color: Option<String>,
+}
+
+impl CustomTypeDefinition {
+    /// Creates a new custom type definition
+    pub fn new(name: impl Into<String>, display_name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            display_name: display_name.into(),
+            description: None,
+            prefix: None,
+            statuses: Vec::new(),
+            custom_fields: Vec::new(),
+            built_in: false,
+            color: None,
+        }
+    }
+
+    /// Creates a built-in type definition
+    pub fn built_in(name: impl Into<String>, display_name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            display_name: display_name.into(),
+            description: None,
+            prefix: None,
+            statuses: Vec::new(),
+            custom_fields: Vec::new(),
+            built_in: true,
+            color: None,
+        }
+    }
+
+    /// Sets the prefix
+    pub fn with_prefix(mut self, prefix: impl Into<String>) -> Self {
+        self.prefix = Some(prefix.into());
+        self
+    }
+
+    /// Sets custom statuses
+    pub fn with_statuses(mut self, statuses: Vec<&str>) -> Self {
+        self.statuses = statuses.into_iter().map(String::from).collect();
+        self
+    }
+
+    /// Adds a custom field
+    pub fn with_field(mut self, field: CustomFieldDefinition) -> Self {
+        self.custom_fields.push(field);
+        self
+    }
+
+    /// Sets the description
+    pub fn with_description(mut self, desc: impl Into<String>) -> Self {
+        self.description = Some(desc.into());
+        self
+    }
+
+    /// Sets the color
+    pub fn with_color(mut self, color: impl Into<String>) -> Self {
+        self.color = Some(color.into());
+        self
+    }
+
+    /// Gets the statuses for this type, falling back to defaults if none specified
+    pub fn get_statuses(&self) -> Vec<String> {
+        if self.statuses.is_empty() {
+            // Default statuses
+            vec![
+                "Draft".to_string(),
+                "Approved".to_string(),
+                "Completed".to_string(),
+                "Rejected".to_string(),
+            ]
+        } else {
+            self.statuses.clone()
+        }
+    }
+}
+
+/// Returns the default type definitions
+pub fn default_type_definitions() -> Vec<CustomTypeDefinition> {
+    vec![
+        CustomTypeDefinition::built_in("Functional", "Functional")
+            .with_prefix("FR")
+            .with_description("Functional requirements describing system behavior"),
+
+        CustomTypeDefinition::built_in("NonFunctional", "Non-Functional")
+            .with_prefix("NFR")
+            .with_description("Non-functional requirements (performance, security, etc.)"),
+
+        CustomTypeDefinition::built_in("System", "System")
+            .with_prefix("SYS")
+            .with_description("System-level requirements"),
+
+        CustomTypeDefinition::built_in("User", "User Story")
+            .with_prefix("US")
+            .with_description("User stories and user requirements"),
+
+        CustomTypeDefinition::built_in("ChangeRequest", "Change Request")
+            .with_prefix("CR")
+            .with_description("Change requests for existing functionality")
+            .with_statuses(vec![
+                "Draft",
+                "Submitted",
+                "Under Review",
+                "Approved",
+                "Rejected",
+                "In Progress",
+                "Implemented",
+                "Verified",
+                "Closed",
+            ])
+            .with_color("#9333ea")
+            .with_field(
+                CustomFieldDefinition::select("impact", "Impact Level", vec![
+                    "Low".to_string(),
+                    "Medium".to_string(),
+                    "High".to_string(),
+                    "Critical".to_string(),
+                ])
+                .with_description("Impact of this change on the system")
+                .with_order(1)
+            )
+            .with_field(
+                CustomFieldDefinition::user_ref("requested_by", "Requested By")
+                    .with_description("User who requested this change")
+                    .with_order(2)
+            )
+            .with_field(
+                CustomFieldDefinition::text("target_release", "Target Release")
+                    .with_description("Target release version for this change")
+                    .with_order(3)
+            )
+            .with_field(
+                CustomFieldDefinition::text("justification", "Justification")
+                    .required()
+                    .with_description("Business justification for the change")
+                    .with_order(4)
+            ),
+    ]
+}
+
+// ============================================================================
 // Relationship Definition System
 // ============================================================================
 
@@ -979,6 +1300,15 @@ pub struct Requirement {
     /// Whether this requirement is archived
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub archived: bool,
+
+    /// Custom status string (for types with custom statuses)
+    /// If set, this takes precedence over the `status` enum field
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub custom_status: Option<String>,
+
+    /// Custom field values (key = field name, value = field value as string)
+    #[serde(default, skip_serializing_if = "std::collections::HashMap::is_empty")]
+    pub custom_fields: std::collections::HashMap<String, String>,
 }
 
 impl Requirement {
@@ -1008,7 +1338,55 @@ impl Requirement {
             comments: Vec::new(),
             history: Vec::new(),
             archived: false,
+            custom_status: None,
+            custom_fields: std::collections::HashMap::new(),
         }
+    }
+
+    /// Gets the effective status string, preferring custom_status if set
+    pub fn effective_status(&self) -> String {
+        self.custom_status.clone().unwrap_or_else(|| self.status.to_string())
+    }
+
+    /// Sets the status from a string, using custom_status for non-standard values
+    pub fn set_status_from_str(&mut self, status_str: &str) {
+        match status_str {
+            "Draft" => {
+                self.status = RequirementStatus::Draft;
+                self.custom_status = None;
+            }
+            "Approved" => {
+                self.status = RequirementStatus::Approved;
+                self.custom_status = None;
+            }
+            "Completed" => {
+                self.status = RequirementStatus::Completed;
+                self.custom_status = None;
+            }
+            "Rejected" => {
+                self.status = RequirementStatus::Rejected;
+                self.custom_status = None;
+            }
+            other => {
+                // Custom status - keep enum at Draft but store custom value
+                self.custom_status = Some(other.to_string());
+            }
+        }
+    }
+
+    /// Gets a custom field value
+    pub fn get_custom_field(&self, name: &str) -> Option<&String> {
+        self.custom_fields.get(name)
+    }
+
+    /// Sets a custom field value
+    pub fn set_custom_field(&mut self, name: impl Into<String>, value: impl Into<String>) {
+        self.custom_fields.insert(name.into(), value.into());
+    }
+
+    /// Removes a custom field
+    pub fn remove_custom_field(&mut self, name: &str) -> Option<String> {
+        self.custom_fields.remove(name)
     }
 
     /// Validates and normalizes a prefix string
@@ -1161,6 +1539,10 @@ pub struct RequirementsStore {
     /// e.g., "$USER" -> 1 means next user will be $USER-001
     #[serde(default)]
     pub meta_counters: std::collections::HashMap<String, u32>,
+
+    /// Custom type definitions with their statuses and fields
+    #[serde(default = "default_type_definitions")]
+    pub type_definitions: Vec<CustomTypeDefinition>,
 }
 
 /// Default value for next_feature_number
@@ -1192,7 +1574,43 @@ impl RequirementsStore {
             relationship_definitions: RelationshipDefinition::defaults(),
             reaction_definitions: default_reaction_definitions(),
             meta_counters: std::collections::HashMap::new(),
+            type_definitions: default_type_definitions(),
         }
+    }
+
+    /// Gets the type definition for a requirement type
+    pub fn get_type_definition(&self, req_type: &RequirementType) -> Option<&CustomTypeDefinition> {
+        let type_name = match req_type {
+            RequirementType::Functional => "Functional",
+            RequirementType::NonFunctional => "NonFunctional",
+            RequirementType::System => "System",
+            RequirementType::User => "User",
+            RequirementType::ChangeRequest => "ChangeRequest",
+        };
+        self.type_definitions.iter().find(|td| td.name == type_name)
+    }
+
+    /// Gets the available statuses for a requirement type
+    pub fn get_statuses_for_type(&self, req_type: &RequirementType) -> Vec<String> {
+        self.get_type_definition(req_type)
+            .map(|td| td.get_statuses())
+            .unwrap_or_else(|| vec![
+                "Draft".to_string(),
+                "Approved".to_string(),
+                "Completed".to_string(),
+                "Rejected".to_string(),
+            ])
+    }
+
+    /// Gets the custom field definitions for a requirement type
+    pub fn get_custom_fields_for_type(&self, req_type: &RequirementType) -> Vec<CustomFieldDefinition> {
+        self.get_type_definition(req_type)
+            .map(|td| {
+                let mut fields = td.custom_fields.clone();
+                fields.sort_by_key(|f| f.order);
+                fields
+            })
+            .unwrap_or_default()
     }
 
     /// Generates the next meta-type ID for a given prefix (e.g., "$USER" -> "$USER-001")

@@ -18,6 +18,8 @@ pub use models::{
     CommentReaction, ReactionDefinition, default_reaction_definitions,
     // Meta-type prefixes
     META_PREFIX_USER, META_PREFIX_VIEW, META_PREFIX_FEATURE,
+    // Custom type definition types
+    CustomFieldType, CustomFieldDefinition, CustomTypeDefinition, default_type_definitions,
 };
 pub use storage::Storage;
 pub use registry::{Registry, get_registry_path};

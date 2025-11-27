@@ -491,3 +491,55 @@ A chronological record of development sessions and changes made to the Requireme
 - Workspace structure to share code between CLI and GUI
 - Core library contains all business logic
 - CLI and GUI are thin wrappers around core
+
+---
+
+## Session 7: Custom Type Definitions (2025-11-26)
+
+### Custom Type Definitions System
+- **Prompt**: Add support for different requirement types with type-specific statuses and custom fields
+- **Problem**: Change Requests need different statuses (Submitted, Under Review, In Progress, etc.) than standard requirements. May also need additional fields specific to the type.
+- **Solution**: Implemented a hybrid approach with configurable type definitions stored in requirements.yaml
+- **Actions**:
+  - Added `CustomFieldType` enum (Text, TextArea, Select, Boolean, Date, User, Requirement, Number)
+  - Added `CustomFieldDefinition` struct with name, label, type, required, options, default value
+  - Added `CustomTypeDefinition` struct with name, display_name, prefix, statuses, custom_fields
+  - Added `default_type_definitions()` function with built-in types
+  - Added `type_definitions: Vec<CustomTypeDefinition>` to RequirementsStore
+  - Added `custom_status: Option<String>` to Requirement for non-enum statuses
+  - Added `custom_fields: HashMap<String, String>` to Requirement for type-specific fields
+  - Added helper methods: `effective_status()`, `set_status_from_str()`, `get_type_definition()`, `get_statuses_for_type()`, `get_custom_fields_for_type()`
+  - ChangeRequest type now has custom statuses: Draft, Submitted, Under Review, Approved, Rejected, In Progress, Implemented, Verified, Closed
+  - ChangeRequest type has custom fields: impact (select), requested_by (user ref), target_release (text), justification (textarea)
+
+### GUI Updates for Custom Types
+- **Actions**:
+  - Updated form to use type-specific status dropdown
+  - Added `form_status_string` and `form_custom_fields` to track form state
+  - When type changes, status dropdown updates to show type-specific statuses
+  - Custom fields section appears when type has custom fields defined
+  - Supports all field types with appropriate UI controls
+  - User reference fields show dropdown of active users
+  - Requirement reference fields show dropdown of requirements
+  - Select fields show dropdown of predefined options
+
+### Type Definitions Settings Tab
+- **Actions**:
+  - Added `TypeDefinitions` variant to SettingsTab enum
+  - Added "📝 Types" tab to Settings dialog
+  - Added `show_settings_type_definitions_tab()` function
+  - Displays all type definitions in collapsible sections
+  - Shows type info: name, prefix, description, built-in status
+  - Shows available statuses for each type
+  - Shows custom field definitions with type, required, options
+  - Added "Reset to Defaults" button
+
+### Documentation Updates
+- Updated user-guide.md with:
+  - Updated Type field to include ChangeRequest
+  - Added Custom Fields to Requirement Fields table
+  - Updated Status Workflow section to mention type-specific statuses
+  - Added Type Definitions section with built-in types table
+  - Documented Change Request workflow
+  - Documented custom field types
+  - Added instructions for managing type definitions in GUI

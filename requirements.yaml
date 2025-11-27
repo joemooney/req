@@ -766,6 +766,8 @@ requirements:
     target_id: eed922f2-03d7-49c6-9c13-31dda6880c27
   - rel_type: Child
     target_id: 37be9566-a051-430b-b47b-1890a395a524
+  - rel_type: Child
+    target_id: 5752a059-7bdc-4320-8b01-74b8cb11ad77
   history:
   - id: 03c2768f-ba06-4cd3-b6f1-d3055c8d7b07
     author: '@joe'
@@ -825,6 +827,47 @@ requirements:
   relationships:
   - rel_type: Parent
     target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
+- id: 5752a059-7bdc-4320-8b01-74b8cb11ad77
+  spec_id: FR-0036
+  title: User meta type
+  description: |2
+
+
+      1. User spec_id with $USER-XXX format:
+        - Users now get auto-generated IDs like $USER-001, $USER-002, etc.
+        - Existing users are automatically migrated on load
+      2. Meta-type infrastructure:
+        - Added meta_counters HashMap for per-prefix ID generation
+        - Defined prefix constants: META_PREFIX_USER, META_PREFIX_VIEW, META_PREFIX_FEATURE
+        - Ready for future meta-types like $VIEW-XXX, $FEAT-XXX
+      3. User-to-Requirement relationship types:
+        - created_by - User who created the requirement (blue)
+        - assigned_to - User assigned to work on it (green)
+        - tested_by - User(s) who tested it (orange)
+        - closed_by - User who closed/completed it (red)
+      4. GUI updates:
+        - Users table now shows the $USER-XXX ID column
+        - New users get auto-generated IDs
+      5. Documentation:
+        - Added User Management section to user guide
+        - Updated PROMPT_HISTORY.md
+
+      Future considerations for Phase 2:
+      - Add a filter toggle in the list view to show/hide meta-types
+      - Implement the user relationship assignment UI (dropdown to select $USER-XXX when creating relationships)
+      - Consider promoting Features to $FEAT-XXX and Views to $VIEW-XXX
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-27T01:40:55.651758804Z
+  modified_at: 2025-11-27T01:40:55.651758804Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 2fd609e9-d194-47a3-adbd-417f6306190c
 id_config:
   format: SingleLevel
   numbering: Global
@@ -847,7 +890,7 @@ id_config:
     description: Change requests for modifications to existing functionality
 features: []
 next_feature_number: 21
-next_spec_number: 36
+next_spec_number: 37
 prefix_counters: {}
 relationship_definitions:
 - name: parent
