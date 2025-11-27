@@ -5593,6 +5593,12 @@ impl RequirementsApp {
                 let mut toggle_archive = false;
                 let is_archived = req.archived;
 
+                // Track actions from Quick Actions menu
+                let mut new_priority: Option<RequirementPriority> = None;
+                let mut new_status: Option<RequirementStatus> = None;
+                let current_priority = req.priority.clone();
+                let current_status = req.status.clone();
+
                 ui.horizontal(|ui| {
                     ui.heading(&req.title);
                     if is_archived {
@@ -5602,13 +5608,69 @@ impl RequirementsApp {
                         if ui.button("✏ Edit").clicked() {
                             load_edit = true;
                         }
-                        if ui.button("🗑 Delete").clicked() {
-                            delete_req = true;
-                        }
-                        let archive_label = if is_archived { "Unarchive" } else { "Archive" };
-                        if ui.button(archive_label).clicked() {
-                            toggle_archive = true;
-                        }
+
+                        // Quick Actions dropdown menu
+                        ui.menu_button("⚡ Actions", |ui| {
+                            // Priority submenu
+                            ui.menu_button("Priority", |ui| {
+                                let priorities = [
+                                    RequirementPriority::High,
+                                    RequirementPriority::Medium,
+                                    RequirementPriority::Low,
+                                ];
+                                for priority in priorities {
+                                    let label = if priority == current_priority {
+                                        format!("✓ {}", priority)
+                                    } else {
+                                        format!("  {}", priority)
+                                    };
+                                    if ui.button(label).clicked() {
+                                        new_priority = Some(priority);
+                                        ui.close_menu();
+                                    }
+                                }
+                            });
+
+                            // Status submenu
+                            ui.menu_button("Status", |ui| {
+                                let statuses = [
+                                    RequirementStatus::Draft,
+                                    RequirementStatus::Approved,
+                                    RequirementStatus::Completed,
+                                    RequirementStatus::Rejected,
+                                ];
+                                for status in statuses {
+                                    let label = if status == current_status {
+                                        format!("✓ {}", status)
+                                    } else {
+                                        format!("  {}", status)
+                                    };
+                                    if ui.button(label).clicked() {
+                                        new_status = Some(status);
+                                        ui.close_menu();
+                                    }
+                                }
+
+                                ui.separator();
+
+                                // Archive/Unarchive action
+                                let archive_label = if is_archived {
+                                    "↩ Unarchive"
+                                } else {
+                                    "📁 Archive"
+                                };
+                                if ui.button(archive_label).clicked() {
+                                    toggle_archive = true;
+                                    ui.close_menu();
+                                }
+
+                                // Delete action
+                                if ui.button("🗑 Delete").clicked() {
+                                    delete_req = true;
+                                    ui.close_menu();
+                                }
+                            });
+                        });
                     });
                 });
 
@@ -5621,6 +5683,36 @@ impl RequirementsApp {
                 }
                 if toggle_archive {
                     self.toggle_archive(idx);
+                }
+
+                // Apply priority change
+                if let Some(priority) = new_priority {
+                    if let Some(req) = self.store.requirements.get_mut(idx) {
+                        let old_priority = req.priority.clone();
+                        req.priority = priority.clone();
+                        let change = Requirement::field_change(
+                            "priority",
+                            old_priority.to_string(),
+                            priority.to_string(),
+                        );
+                        req.record_change(self.user_settings.display_name(), vec![change]);
+                        self.save();
+                    }
+                }
+
+                // Apply status change
+                if let Some(status) = new_status {
+                    if let Some(req) = self.store.requirements.get_mut(idx) {
+                        let old_status = req.status.clone();
+                        req.status = status.clone();
+                        let change = Requirement::field_change(
+                            "status",
+                            old_status.to_string(),
+                            status.to_string(),
+                        );
+                        req.record_change(self.user_settings.display_name(), vec![change]);
+                        self.save();
+                    }
                 }
 
                 ui.separator();
