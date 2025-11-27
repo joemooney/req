@@ -638,3 +638,46 @@ A chronological record of development sessions and changes made to the Requireme
   - Added individual type reset (restore single built-in type to defaults)
   - Added type deletion with validation (cannot delete if in use)
   - Updated user-guide.md with detailed type management documentation
+
+### Navigation Keybindings Bug Fix
+- **Prompt**: "When I am add/edit and I start editing the description and I press the up arrow, I think the global key binding is being invoked to move to the previous requirement"
+- **Root Cause**: User's saved settings (`~/.requirements_gui_settings.yaml`) had NavigateUp/NavigateDown keybindings with `Global` context instead of `RequirementsList`
+- **Solution**: Fixed context determination in keybinding evaluation; user should delete saved settings to reset keybindings
+- **Actions**:
+  - Changed keybinding context to `KeyContext::Form` when in form view or settings
+  - Added debug prints to diagnose the issue
+  - Confirmed the bug was due to persisted settings with wrong context values
+
+### External URL Links Feature
+- **Prompt**: "When you click on Links tab, beside Relationships show a New URL button, in the modal perhaps a button to verify that it is a valid link."
+- **Solution**: Added external URL links to requirements with validation support
+- **Actions**:
+  - Added `UrlLink` struct to requirements-core/src/models.rs:
+    - Fields: id, url, title, description, added_at, added_by, last_verified, last_verified_ok
+    - Builder pattern with `new()` constructor
+  - Added `urls: Vec<UrlLink>` field to Requirement struct
+  - Exported `UrlLink` from requirements-core/src/lib.rs
+  - Added dependencies to requirements-gui/Cargo.toml:
+    - `url = "2"` for URL parsing/validation
+    - `open = "5"` for opening URLs in browser
+  - Added URL form state fields to RequirementsApp:
+    - `show_url_form`, `editing_url_id`, `url_form_url`, `url_form_title`, `url_form_description`
+    - `url_verification_status`, `url_verification_in_progress`
+  - Updated `show_links_tab()`:
+    - Added "External Links" section with "➕ New URL" button
+    - Display list of URL links with verification status indicators (✅/❌)
+    - Clickable links that open in browser via `open::that()`
+    - Edit (✏) and remove (x) buttons per link
+  - Added `show_url_form_modal()`:
+    - Form fields for URL, title (optional), description (optional)
+    - "🔍 Verify" button to validate URL format
+    - Shows verification status with colored messages
+  - Added `verify_url()` function:
+    - Validates URL starts with http:// or https://
+    - Uses `url::Url::parse()` for format validation
+    - Checks URL has valid host
+  - Added `save_url_link()` function:
+    - Creates new or updates existing URL links
+    - Sets verification timestamp if URL was verified
+  - Updated Links tab count to show total of relationships + URLs
+  - Updated user-guide.md with Links Tab documentation

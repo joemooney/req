@@ -4,7 +4,7 @@ use requirements_core::{
     Requirement, RequirementPriority, RequirementStatus, RequirementType,
     RequirementsStore, Storage, determine_requirements_path, Comment, FieldChange,
     RelationshipType, IdFormat, NumberingStrategy, RelationshipDefinition, Cardinality,
-    CustomFieldType, CustomFieldDefinition,
+    CustomFieldType, CustomFieldDefinition, UrlLink,
 };
 use std::collections::{HashSet, HashMap};
 use std::path::PathBuf;
@@ -903,6 +903,15 @@ pub struct RequirementsApp {
     field_form_options: String,                  // Comma-separated for Select type
     field_form_default: String,
     show_field_form: bool,
+
+    // URL link editing
+    show_url_form: bool,
+    editing_url_id: Option<Uuid>,                // None = adding new, Some = editing existing
+    url_form_url: String,
+    url_form_title: String,
+    url_form_description: String,
+    url_verification_status: Option<(bool, String)>, // (success, message)
+    url_verification_in_progress: bool,
 }
 
 impl RequirementsApp {
@@ -1039,6 +1048,14 @@ impl RequirementsApp {
             field_form_options: String::new(),
             field_form_default: String::new(),
             show_field_form: false,
+            // URL form
+            show_url_form: false,
+            editing_url_id: None,
+            url_form_url: String::new(),
+            url_form_title: String::new(),
+            url_form_description: String::new(),
+            url_verification_status: None,
+            url_verification_in_progress: false,
         }
     }
 
@@ -4603,7 +4620,7 @@ impl RequirementsApp {
                 ui.horizontal(|ui| {
                     ui.selectable_value(&mut self.active_tab, DetailTab::Description, "📄 Description");
                     ui.selectable_value(&mut self.active_tab, DetailTab::Comments, format!("💬 Comments ({})", req.comments.len()));
-                    ui.selectable_value(&mut self.active_tab, DetailTab::Links, format!("🔗 Links ({})", req.relationships.len()));
+                    ui.selectable_value(&mut self.active_tab, DetailTab::Links, format!("🔗 Links ({})", req.relationships.len() + req.urls.len()));
                     ui.selectable_value(&mut self.active_tab, DetailTab::History, format!("📜 History ({})", req.history.len()));
                 });
 
@@ -4673,6 +4690,106 @@ impl RequirementsApp {
     }
 
     fn show_links_tab(&mut self, ui: &mut egui::Ui, req: &Requirement, req_id: Uuid) {
+        // Show URL form modal if active
+        if self.show_url_form {
+            self.show_url_form_modal(ui, req_id);
+            return;
+        }
+
+        // URLs section
+        ui.horizontal(|ui| {
+            ui.heading("External Links");
+            if ui.button("➕ New URL").clicked() {
+                self.editing_url_id = None;
+                self.url_form_url.clear();
+                self.url_form_title.clear();
+                self.url_form_description.clear();
+                self.url_verification_status = None;
+                self.url_verification_in_progress = false;
+                self.show_url_form = true;
+            }
+        });
+        ui.add_space(5.0);
+
+        if req.urls.is_empty() {
+            ui.label("No external links");
+        } else {
+            let urls = req.urls.clone();
+            let mut url_to_remove: Option<Uuid> = None;
+            let mut url_to_edit: Option<Uuid> = None;
+
+            for url_link in &urls {
+                ui.horizontal(|ui| {
+                    // Remove button
+                    if ui.small_button("x").on_hover_text("Remove link").clicked() {
+                        url_to_remove = Some(url_link.id);
+                    }
+
+                    // Edit button
+                    if ui.small_button("✏").on_hover_text("Edit link").clicked() {
+                        url_to_edit = Some(url_link.id);
+                    }
+
+                    // Verification status indicator
+                    if let Some(ok) = url_link.last_verified_ok {
+                        if ok {
+                            ui.label("✅").on_hover_text(format!("Verified: {}",
+                                url_link.last_verified.map(|d| d.format("%Y-%m-%d %H:%M").to_string()).unwrap_or_default()));
+                        } else {
+                            ui.label("❌").on_hover_text("Last verification failed");
+                        }
+                    }
+
+                    // Clickable link
+                    let link_text = if url_link.title.is_empty() {
+                        &url_link.url
+                    } else {
+                        &url_link.title
+                    };
+
+                    if ui.link(link_text).on_hover_text(&url_link.url).clicked() {
+                        if let Err(e) = open::that(&url_link.url) {
+                            self.message = Some((format!("Failed to open URL: {}", e), true));
+                        }
+                    }
+
+                    // Show description if present
+                    if let Some(ref desc) = url_link.description {
+                        ui.label(format!("- {}", desc));
+                    }
+                });
+            }
+
+            // Handle edit
+            if let Some(id) = url_to_edit {
+                if let Some(url_link) = urls.iter().find(|u| u.id == id) {
+                    self.editing_url_id = Some(id);
+                    self.url_form_url = url_link.url.clone();
+                    self.url_form_title = url_link.title.clone();
+                    self.url_form_description = url_link.description.clone().unwrap_or_default();
+                    self.url_verification_status = None;
+                    self.url_verification_in_progress = false;
+                    self.show_url_form = true;
+                }
+            }
+
+            // Handle remove
+            if let Some(id) = url_to_remove {
+                if let Some(idx) = self.selected_idx {
+                    if let Some(req) = self.store.requirements.get_mut(idx) {
+                        req.urls.retain(|u| u.id != id);
+                        self.save();
+                        self.message = Some(("URL removed".to_string(), false));
+                    }
+                }
+            }
+        }
+
+        ui.add_space(15.0);
+        ui.separator();
+        ui.add_space(10.0);
+
+        // Relationships section
         ui.heading("Relationships");
         ui.add_space(10.0);
 
@@ -4757,6 +4874,171 @@ impl RequirementsApp {
                 }
             }
         }
+    }
+
+    fn show_url_form_modal(&mut self, ui: &mut egui::Ui, req_id: Uuid) {
+        let is_editing = self.editing_url_id.is_some();
+        let title = if is_editing { "Edit URL Link" } else { "Add URL Link" };
+
+        ui.heading(title);
+        ui.add_space(10.0);
+
+        egui::Grid::new("url_form_grid")
+            .num_columns(2)
+            .spacing([10.0, 8.0])
+            .show(ui, |ui| {
+                ui.label("URL:");
+                ui.horizontal(|ui| {
+                    ui.add(egui::TextEdit::singleline(&mut self.url_form_url)
+                        .hint_text("https://example.com/...")
+                        .desired_width(350.0));
+
+                    // Verify button
+                    let verify_enabled = !self.url_form_url.is_empty() && !self.url_verification_in_progress;
+                    if ui.add_enabled(verify_enabled, egui::Button::new("🔍 Verify")).clicked() {
+                        self.verify_url();
+                    }
+                });
+                ui.end_row();
+
+                // Show verification status
+                if let Some((success, ref msg)) = self.url_verification_status {
+                    ui.label("");
+                    if success {
+                        ui.colored_label(egui::Color32::from_rgb(100, 200, 100), format!("✅ {}", msg));
+                    } else {
+                        ui.colored_label(egui::Color32::from_rgb(200, 100, 100), format!("❌ {}", msg));
+                    }
+                    ui.end_row();
+                }
+
+                if self.url_verification_in_progress {
+                    ui.label("");
+                    ui.label("⏳ Verifying...");
+                    ui.end_row();
+                }
+
+                ui.label("Title:");
+                ui.add(egui::TextEdit::singleline(&mut self.url_form_title)
+                    .hint_text("Display title (optional)")
+                    .desired_width(350.0));
+                ui.end_row();
+
+                ui.label("Description:");
+                ui.add(egui::TextEdit::singleline(&mut self.url_form_description)
+                    .hint_text("Brief description (optional)")
+                    .desired_width(350.0));
+                ui.end_row();
+            });
+
+        ui.add_space(15.0);
+
+        // Save/Cancel buttons
+        ui.horizontal(|ui| {
+            let can_save = !self.url_form_url.is_empty();
+
+            if ui.add_enabled(can_save, egui::Button::new("💾 Save")).clicked() {
+                self.save_url_link(req_id);
+            }
+
+            if ui.button("Cancel").clicked() {
+                self.show_url_form = false;
+            }
+        });
+
+        if self.url_form_url.is_empty() {
+            ui.small("URL is required.");
+        }
+    }
+
+    fn verify_url(&mut self) {
+        let url = self.url_form_url.trim();
+
+        // Basic URL validation
+        if url.is_empty() {
+            self.url_verification_status = Some((false, "URL is empty".to_string()));
+            return;
+        }
+
+        // Check if it looks like a valid URL
+        if !url.starts_with("http://") && !url.starts_with("https://") {
+            self.url_verification_status = Some((false, "URL must start with http:// or https://".to_string()));
+            return;
+        }
+
+        // Try to parse URL
+        match url::Url::parse(url) {
+            Ok(parsed) => {
+                // Perform a HEAD request to verify the URL is accessible
+                // For now, just do basic validation since we don't have async HTTP in egui easily
+                // In a real app, you'd use reqwest or similar
+
+                // Check that it has a host
+                if parsed.host().is_none() {
+                    self.url_verification_status = Some((false, "Invalid URL: no host".to_string()));
+                    return;
+                }
+
+                // For now, mark as "valid format" - actual HTTP check would need async
+                self.url_verification_status = Some((true, format!("Valid URL format (host: {})", parsed.host_str().unwrap_or("unknown"))));
+            }
+            Err(e) => {
+                self.url_verification_status = Some((false, format!("Invalid URL: {}", e)));
+            }
+        }
+    }
+
+    fn save_url_link(&mut self, req_id: Uuid) {
+        let author = if self.user_settings.name.is_empty() {
+            "Unknown".to_string()
+        } else {
+            self.user_settings.name.clone()
+        };
+
+        if let Some(idx) = self.selected_idx {
+            if let Some(req) = self.store.requirements.get_mut(idx) {
+                if req.id == req_id {
+                    if let Some(editing_id) = self.editing_url_id {
+                        // Update existing URL
+                        if let Some(url_link) = req.urls.iter_mut().find(|u| u.id == editing_id) {
+                            url_link.url = self.url_form_url.clone();
+                            url_link.title = self.url_form_title.clone();
+                            url_link.description = if self.url_form_description.is_empty() {
+                                None
+                            } else {
+                                Some(self.url_form_description.clone())
+                            };
+                            // Update verification status if we just verified
+                            if let Some((success, _)) = &self.url_verification_status {
+                                url_link.last_verified = Some(chrono::Utc::now());
+                                url_link.last_verified_ok = Some(*success);
+                            }
+                        }
+                    } else {
+                        // Add new URL
+                        let mut url_link = UrlLink::new(
+                            self.url_form_url.clone(),
+                            self.url_form_title.clone(),
+                            author,
+                        );
+                        if !self.url_form_description.is_empty() {
+                            url_link.description = Some(self.url_form_description.clone());
+                        }
+                        // Set verification status if we just verified
+                        if let Some((success, _)) = &self.url_verification_status {
+                            url_link.last_verified = Some(chrono::Utc::now());
+                            url_link.last_verified_ok = Some(*success);
+                        }
+                        req.urls.push(url_link);
+                    }
+
+                    self.save();
+                    self.message = Some(("URL saved".to_string(), false));
+                }
+            }
+        }
+
+        self.show_url_form = false;
     }
 
     fn show_history_tab(&self, ui: &mut egui::Ui, req: &Requirement) {

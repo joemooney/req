@@ -1032,6 +1032,59 @@ impl CommentReaction {
     }
 }
 
+/// Represents an external URL link attached to a requirement
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct UrlLink {
+    /// Unique identifier for the link
+    pub id: Uuid,
+
+    /// The URL
+    pub url: String,
+
+    /// Display title/label for the link
+    pub title: String,
+
+    /// Optional description
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+
+    /// When the link was added
+    pub added_at: DateTime<Utc>,
+
+    /// Who added the link
+    pub added_by: String,
+
+    /// Last time the URL was verified as accessible
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_verified: Option<DateTime<Utc>>,
+
+    /// Whether the last verification succeeded
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_verified_ok: Option<bool>,
+}
+
+impl UrlLink {
+    /// Creates a new URL link
+    pub fn new(url: impl Into<String>, title: impl Into<String>, added_by: impl Into<String>) -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            url: url.into(),
+            title: title.into(),
+            description: None,
+            added_at: Utc::now(),
+            added_by: added_by.into(),
+            last_verified: None,
+            last_verified_ok: None,
+        }
+    }
+
+    /// Creates a new URL link with description
+    pub fn with_description(mut self, description: impl Into<String>) -> Self {
+        self.description = Some(description.into());
+        self
+    }
+}
+
 /// Represents a comment on a requirement with threading support
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Comment {
@@ -1309,6 +1362,10 @@ pub struct Requirement {
     /// Custom field values (key = field name, value = field value as string)
     #[serde(default, skip_serializing_if = "std::collections::HashMap::is_empty")]
     pub custom_fields: std::collections::HashMap<String, String>,
+
+    /// External URL links attached to this requirement
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub urls: Vec<UrlLink>,
 }
 
 impl Requirement {
@@ -1340,6 +1397,7 @@ impl Requirement {
             archived: false,
             custom_status: None,
             custom_fields: std::collections::HashMap::new(),
+            urls: Vec::new(),
         }
     }
 

@@ -99,6 +99,10 @@ requirements:
     content: This is a 2nd comment
     created_at: 2025-11-26T06:25:11.332356938Z
     modified_at: 2025-11-26T06:25:11.332356938Z
+    reactions:
+    - reaction: resolved
+      author: '@joe'
+      added_at: 2025-11-27T03:42:53.718947646Z
   history:
   - id: b7f3da72-a3b3-4317-8848-50f50c65a2c4
     author: Unknown User
@@ -694,6 +698,8 @@ requirements:
     target_id: d8fbfd6f-47a7-4f93-94d2-1dc3009e79b0
   - rel_type: Child
     target_id: fa1eaffc-7c05-4d09-95a0-d5e61e9b8529
+  - rel_type: Child
+    target_id: 05a9d563-dc72-4bcd-b69c-6095fd396c28
   history:
   - id: e2ba3669-855e-4b99-9b7f-30300da178c5
     author: '@joe'
@@ -728,6 +734,8 @@ requirements:
     target_id: 02a28ce8-28aa-4e56-88e3-ae29813a3fe0
   - rel_type: Child
     target_id: 043639ed-7c12-4d99-acc2-587a38b0d25d
+  - rel_type: Child
+    target_id: 9238ec28-2a11-4d0b-90df-f78861f49d72
 - id: 617353d0-7006-4a3c-92ba-49e5218386e2
   spec_id: ADMIN-0031
   prefix_override: ADMIN
@@ -910,6 +918,8 @@ requirements:
   relationships:
   - rel_type: Parent
     target_id: bb81e51e-dd32-48ef-9806-cf26a09643f5
+  - rel_type: Child
+    target_id: 04c92aa7-e9fb-49a9-a528-590a446f8819
   history:
   - id: 7a54b68f-3f94-491b-a820-c0631dfd2bcd
     author: '@joe'
@@ -934,19 +944,27 @@ requirements:
 - id: 5a9b7e50-4678-4c85-bb69-6ac380ac985e
   spec_id: FR-0039
   title: filtering custom prefixes
-  description: "Filters should also include custom PREFIXes. All of the unique ID Prefix that are entered can be stored in a list. These can also be used to\n filter which requirements are shown. This should be listed in the project administration as well. Possibly, this could be a project admin \nrestricted capability (boolean) whereby the ID Prefix would only from a set of prefixes that the project admin controls and it would be a \ndropdown in the edit/add requirement. But by default a regular user should be able to enter a new one. "
+  description: "Filters should also include custom PREFIXes. All of the unique ID Prefix that are entered can be stored in a list. These can also be used to\n filter which requirements are shown. This should be listed in the project administration as well. Possibly, this could be a project admin \nrestricted capability (boolean) whereby the ID Prefix would only from a set of prefixes that the project admin controls and it would be a \ndropdown in the edit/add requirement. But by default a regular user should be able to enter a new one. \n  ID Prefix Filtering and Management:\n\n  1. Core Model Updates (requirements-core/src/models.rs):\n    - Added allowed_prefixes: Vec<String> - list of allowed/known prefixes\n    - Added restrict_prefixes: bool - when true, users must select from allowed list\n    - Added helper methods:\n        - get_used_prefixes() - gets all unique prefixes from existing requirements\n      - get_all_prefixes() - combines allowed + used prefixes\n      - add_allowed_prefix(), remove_allowed_prefix(), is_prefix_allowed()\n  2. GUI Filter Panel:\n    - Added filter_prefixes: HashSet<String> for prefix-based filtering\n    - Updated passes_filters() to check prefix filter\n    - Added \"ID Prefix Filters\" section with checkboxes for each unique prefix\n    - Updated ViewPreset to save/restore prefix filters\n  3. Admin Settings (Settings > Admin > ID Prefix Management):\n    - Toggle to restrict prefixes to allowed list\n    - Shows prefixes currently in use\n    - Add new allowed prefixes with validation (uppercase letters only)\n    - Remove prefixes from allowed list (shows if in use)\n  4. Add/Edit Form:\n    - When restrict_prefixes is enabled: shows dropdown with only allowed prefixes\n    - When unrestricted: shows combo box with existing prefixes + text input for new ones\n    - Auto-adds new prefixes to allowed list when used (unless restricted)\n"
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 22-Uncategorized
   created_at: 2025-11-27T03:34:26.856630403Z
-  modified_at: 2025-11-27T03:34:26.856630403Z
+  modified_at: 2025-11-27T03:43:57.001206332Z
   req_type: Functional
   dependencies: []
   tags: []
   relationships:
   - rel_type: Parent
     target_id: bb81e51e-dd32-48ef-9806-cf26a09643f5
+  history:
+  - id: ed8ff836-dab3-4908-8a27-522a937f2e8b
+    author: '@joe'
+    timestamp: 2025-11-27T03:43:57.001204987Z
+    changes:
+    - field_name: description
+      old_value: "Filters should also include custom PREFIXes. All of the unique ID Prefix that are entered can be stored in a list. These can also be used to\n filter which requirements are shown. This should be listed in the project administration as well. Possibly, this could be a project admin \nrestricted capability (boolean) whereby the ID Prefix would only from a set of prefixes that the project admin controls and it would be a \ndropdown in the edit/add requirement. But by default a regular user should be able to enter a new one. "
+      new_value: "Filters should also include custom PREFIXes. All of the unique ID Prefix that are entered can be stored in a list. These can also be used to\n filter which requirements are shown. This should be listed in the project administration as well. Possibly, this could be a project admin \nrestricted capability (boolean) whereby the ID Prefix would only from a set of prefixes that the project admin controls and it would be a \ndropdown in the edit/add requirement. But by default a regular user should be able to enter a new one. \n  ID Prefix Filtering and Management:\n\n  1. Core Model Updates (requirements-core/src/models.rs):\n    - Added allowed_prefixes: Vec<String> - list of allowed/known prefixes\n    - Added restrict_prefixes: bool - when true, users must select from allowed list\n    - Added helper methods:\n        - get_used_prefixes() - gets all unique prefixes from existing requirements\n      - get_all_prefixes() - combines allowed + used prefixes\n      - add_allowed_prefix(), remove_allowed_prefix(), is_prefix_allowed()\n  2. GUI Filter Panel:\n    - Added filter_prefixes: HashSet<String> for prefix-based filtering\n    - Updated passes_filters() to check prefix filter\n    - Added \"ID Prefix Filters\" section with checkboxes for each unique prefix\n    - Updated ViewPreset to save/restore prefix filters\n  3. Admin Settings (Settings > Admin > ID Prefix Management):\n    - Toggle to restrict prefixes to allowed list\n    - Shows prefixes currently in use\n    - Add new allowed prefixes with validation (uppercase letters only)\n    - Remove prefixes from allowed list (shows if in use)\n  4. Add/Edit Form:\n    - When restrict_prefixes is enabled: shows dropdown with only allowed prefixes\n    - When unrestricted: shows combo box with existing prefixes + text input for new ones\n    - Auto-adds new prefixes to allowed list when used (unless restricted)\n"
 - id: bb81e51e-dd32-48ef-9806-cf26a09643f5
   spec_id: SCHEMA-0040
   prefix_override: SCHEMA
@@ -955,7 +973,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 22-Uncategorized
   created_at: 2025-11-27T03:36:41.058576375Z
   modified_at: 2025-11-27T03:36:41.058576375Z
   req_type: Functional
@@ -966,6 +984,189 @@ requirements:
     target_id: 67a6162d-a44c-4cf5-8756-6b6cb8808928
   - rel_type: Child
     target_id: 5a9b7e50-4678-4c85-bb69-6ac380ac985e
+- id: 5738b675-4fa8-4f10-94a8-e6d16c418c35
+  spec_id: FILTER-0042
+  prefix_override: FILTER
+  title: Filtering view of requirements
+  description: |
+    I think in filtering it may be worth having two levels. So when you click Filters you get two tabs, one for root and one for children. The
+      root option filters the first level of requirements that are selected, and the children applies to which children are shown recursively. In
+      children there is a checkbox, <same as root> which greys out everthing or hides them (that would be the same as what we currently have, one
+      set of filters across all requirements). The purpose of this is to limit the scope of the top level requirements that we want to drill down
+      into.
+    Two-Level Filter System (Root/Children)
+
+      The filter panel now has two tabs:
+      - Root tab: Filters for top-level requirements in tree views
+      - Children tab: Filters for nested requirements with a "Same as root" checkbox
+
+      Key changes:
+      1. Added FilterTab enum and child filter fields (child_filter_types, child_filter_features, child_filter_prefixes, children_same_as_root)
+      2. Updated show_filter_controls() to display tabbed UI with Root/Children selection
+      3. Created show_root_filter_controls() and show_children_filter_controls() functions
+      4. Updated passes_filters() to accept an is_root parameter that determines which filter set to use
+      5. Updated all callers to pass appropriate is_root values:
+        - Root-level items (find_tree_roots, find_tree_leaves, flat lists): is_root=true
+        - Child items (get_children, get_parents): is_root=false
+      6. Updated ViewPreset to persist child filter settings
+      7. Updated documentation (user-guide.md, OVERVIEW.md, PROMPT_HISTORY.md)
+
+      Usage:
+      - By default, "Same as root" is checked, so all requirements use the same filters (existing behavior)
+      - Uncheck "Same as root" in the Children tab to set independent filters for children
+      - This allows scenarios like "show only Functional Requirements at root, but display all their children"
+
+      Committed as 24e6b37 and pushed to GitHub.
+  status: Approved
+  priority: Medium
+  owner: ''
+  feature: 23-Uncategorized
+  created_at: 2025-11-27T04:10:22.591989434Z
+  modified_at: 2025-11-27T04:22:15.626866171Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  history:
+  - id: 423d977b-a09b-4151-9a1e-23209c3110ed
+    author: '@joe'
+    timestamp: 2025-11-27T04:21:51.749301119Z
+    changes:
+    - field_name: description
+      old_value: |-
+        I think in filtering it may be worth having two levels. So when you click Filters you get two tabs, one for root and one for children. The
+          root option filters the first level of requirements that are selected, and the children applies to which children are shown recursively. In
+          children there is a checkbox, <same as root> which greys out everthing or hides them (that would be the same as what we currently have, one
+          set of filters across all requirements). The purpose of this is to limit the scope of the top level requirements that we want to drill down
+          into.
+      new_value: |
+        I think in filtering it may be worth having two levels. So when you click Filters you get two tabs, one for root and one for children. The
+          root option filters the first level of requirements that are selected, and the children applies to which children are shown recursively. In
+          children there is a checkbox, <same as root> which greys out everthing or hides them (that would be the same as what we currently have, one
+          set of filters across all requirements). The purpose of this is to limit the scope of the top level requirements that we want to drill down
+          into.
+        Two-Level Filter System (Root/Children)
+
+          The filter panel now has two tabs:
+          - Root tab: Filters for top-level requirements in tree views
+          - Children tab: Filters for nested requirements with a "Same as root" checkbox
+
+          Key changes:
+          1. Added FilterTab enum and child filter fields (child_filter_types, child_filter_features, child_filter_prefixes, children_same_as_root)
+          2. Updated show_filter_controls() to display tabbed UI with Root/Children selection
+          3. Created show_root_filter_controls() and show_children_filter_controls() functions
+          4. Updated passes_filters() to accept an is_root parameter that determines which filter set to use
+          5. Updated all callers to pass appropriate is_root values:
+            - Root-level items (find_tree_roots, find_tree_leaves, flat lists): is_root=true
+            - Child items (get_children, get_parents): is_root=false
+          6. Updated ViewPreset to persist child filter settings
+          7. Updated documentation (user-guide.md, OVERVIEW.md, PROMPT_HISTORY.md)
+
+          Usage:
+          - By default, "Same as root" is checked, so all requirements use the same filters (existing behavior)
+          - Uncheck "Same as root" in the Children tab to set independent filters for children
+          - This allows scenarios like "show only Functional Requirements at root, but display all their children"
+
+          Committed as 24e6b37 and pushed to GitHub.
+  - id: 4c8c1915-b7d7-447a-b957-8393755cf4c8
+    author: '@joe'
+    timestamp: 2025-11-27T04:22:15.626865242Z
+    changes:
+    - field_name: status
+      old_value: Draft
+      new_value: Approved
+- id: 9238ec28-2a11-4d0b-90df-f78861f49d72
+  spec_id: FR-0043
+  title: URL link support
+  description: When you click on Links tab, show a button to enter a URL, perhaps a button to verify that it is a valid link.
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 23-Uncategorized
+  created_at: 2025-11-27T04:27:55.860215514Z
+  modified_at: 2025-11-27T06:00:28.184946761Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 4c3bb89e-2d41-4841-b2ff-881bb67fee99
+  history:
+  - id: cd821662-23ab-4664-9962-8fefd48e8403
+    author: '@joe'
+    timestamp: 2025-11-27T06:00:28.184939789Z
+    changes:
+    - field_name: description
+      old_value: Button to enter a URL, perhaps a button to verify that it is a valid link.
+      new_value: When you click on Links tab, show a button to enter a URL, perhaps a button to verify that it is a valid link.
+- id: 04c92aa7-e9fb-49a9-a528-590a446f8819
+  spec_id: FR-0044
+  title: Type Definition Editor
+  description: "For the Types in the Settings, does it make sense to have an editor so that we can add/remove/update fields? \n\n● Yes, that makes sense. Currently the Type Definitions tab in Settings is read-only - it just displays the built-in types. Adding an editor\n  would allow users to:\n\n  1. Add new custom types - Define entirely new requirement types with custom prefixes, statuses, and fields\n  2. Modify existing types - Add/remove statuses, add/remove custom fields, change descriptions\n  3. Remove custom types - Delete user-defined types (though built-in types could be protected or just resettable)\n\n  Before I implement this, I have a few questions to clarify the design:\n                                                                                                                                             \n● User answered Claude's questions:\n  ⎿  · Should users be able to modify the built-in types (Functional, NonFunctional, System, User, ChangeRequest), or only create new custom \n     types? → Modify built-ins\n     · What happens to existing requirements when a type definition is changed? → Validate on save\n  Type Definition Editor Features:\n\n  1. View Types: Each type is shown in a collapsible section with icons (📦 built-in, 📝 custom)\n  2. Edit Types (✏ button):\n    - Modify display name, description, and ID prefix\n    - Add/remove statuses (with validation - can't remove statuses in use)\n    - Add/edit/remove custom fields (with validation - can't remove fields in use)\n  3. Add New Types (➕ Add New Type):\n    - Define internal name, display name, description, prefix\n    - Configure statuses (starts with default Draft/Approved/Completed/Rejected)\n    - Add custom fields of any type (Text, TextArea, Select, Boolean, Date, Number, User Reference, Requirement Reference)\n  4. Reset Built-in Types (↺ button):\n    - Reset individual built-in type to its default configuration\n    - \"Reset All to Defaults\" to restore all built-in types\n  5. Delete Custom Types (🗑 button):\n    - Only available for custom types (not built-in)\n    - Validation prevents deleting types that are in use by existing requirements\n\n  Committed as 42ab12a and pushed to GitHub.\n\n"
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 23-Uncategorized
+  created_at: 2025-11-27T04:32:01.625353327Z
+  modified_at: 2025-11-27T05:34:48.047724849Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 67a6162d-a44c-4cf5-8756-6b6cb8808928
+  history:
+  - id: fe47ebaf-4067-4914-bdf2-15d14616d631
+    author: '@joe'
+    timestamp: 2025-11-27T04:32:17.234786051Z
+    changes:
+    - field_name: description
+      old_value: "For the Types in the Settings, does it make sense to have an editor so that we can add/remove/update fields? \n\n● Yes, that makes sense. Currently the Type Definitions tab in Settings is read-only - it just displays the built-in types. Adding an editor\n  would allow users to:\n\n  1. Add new custom types - Define entirely new requirement types with custom prefixes, statuses, and fields\n  2. Modify existing types - Add/remove statuses, add/remove custom fields, change descriptions\n  3. Remove custom types - Delete user-defined types (though built-in types could be protected or just resettable)\n\n  Before I implement this, I have a few questions to clarify the design:\n                                                                                                                                             \n● User answered Claude's questions:\n  ⎿  · Should users be able to modify the built-in types (Functional, NonFunctional, System, User, ChangeRequest), or only create new custom \n     types? → Modify built-ins\n     · What happens to existing requirements when a type definition is changed? → Validate on save\n"
+      new_value: "For the Types in the Settings, does it make sense to have an editor so that we can add/remove/update fields? \n\n● Yes, that makes sense. Currently the Type Definitions tab in Settings is read-only - it just displays the built-in types. Adding an editor\n  would allow users to:\n\n  1. Add new custom types - Define entirely new requirement types with custom prefixes, statuses, and fields\n  2. Modify existing types - Add/remove statuses, add/remove custom fields, change descriptions\n  3. Remove custom types - Delete user-defined types (though built-in types could be protected or just resettable)\n\n  Before I implement this, I have a few questions to clarify the design:\n                                                                                                                                             \n● User answered Claude's questions:\n  ⎿  · Should users be able to modify the built-in types (Functional, NonFunctional, System, User, ChangeRequest), or only create new custom \n     types? → Modify built-ins\n     · What happens to existing requirements when a type definition is changed? → Validate on save\n  Type Definition Editor Features:\n\n  1. View Types: Each type is shown in a collapsible section with icons (📦 built-in, 📝 custom)\n  2. Edit Types (✏ button):\n    - Modify display name, description, and ID prefix\n    - Add/remove statuses (with validation - can't remove statuses in use)\n    - Add/edit/remove custom fields (with validation - can't remove fields in use)\n  3. Add New Types (➕ Add New Type):\n    - Define internal name, display name, description, prefix\n    - Configure statuses (starts with default Draft/Approved/Completed/Rejected)\n    - Add custom fields of any type (Text, TextArea, Select, Boolean, Date, Number, User Reference, Requirement Reference)\n  4. Reset Built-in Types (↺ button):\n    - Reset individual built-in type to its default configuration\n    - \"Reset All to Defaults\" to restore all built-in types\n  5. Delete Custom Types (🗑 button):\n    - Only available for custom types (not built-in)\n    - Validation prevents deleting types that are in use by existing requirements\n\n  Committed as 42ab12a and pushed to GitHub.\n\n"
+  - id: c579490e-2d1c-4333-bf37-d922a83a30c6
+    author: '@joe'
+    timestamp: 2025-11-27T05:34:48.047724057Z
+    changes:
+    - field_name: title
+      old_value: ''
+      new_value: Type Definition Editor
+- id: 05a9d563-dc72-4bcd-b69c-6095fd396c28
+  spec_id: CR-0045
+  title: Arrow keys bad behavior in edit mode
+  description: " When I am add/edit and I start editing the desription and I press the up arrow, I think the global key binding is being invoked to move to \nthe previous requirement \nFixed! The issue was that the navigation keybindings (Up/Down arrows) were being processed even when in Add/Edit form view. The fix adds\n  explicit checks for:\n\n\n\n  1. in_form_view - when the current view is Add or Edit\n  2. in_settings - when the settings dialog is open\n\n  When any of these conditions are true (or text_input_focused), the keybinding context is set to KeyContext::Global, which prevents the\n  navigation bindings (which have KeyContext::RequirementsList) from being triggered.\n\n  Committed as 0bfa17c and pushed to GitHub.\n"
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 23-Uncategorized
+  created_at: 2025-11-27T05:38:12.026793995Z
+  modified_at: 2025-11-27T05:57:10.790551730Z
+  req_type: ChangeRequest
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
+  history:
+  - id: 6e5ecb12-fd1d-4d84-a08b-6d94c8b592a7
+    author: '@joe'
+    timestamp: 2025-11-27T05:39:42.951259627Z
+    changes:
+    - field_name: description
+      old_value: " When I am add/edit and I start editing the desription and I press the up arrow, I think the global key binding is being invoked to move to \nthe previous requirement "
+      new_value: " When I am add/edit and I start editing the desription and I press the up arrow, I think the global key binding is being invoked to move to \nthe previous requirement \nFixed! The issue was that the navigation keybindings (Up/Down arrows) were being processed even when in Add/Edit form view. The fix adds\n  explicit checks for:\n\n  1. in_form_view - when the current view is Add or Edit\n  2. in_settings - when the settings dialog is open\n\n  When any of these conditions are true (or text_input_focused), the keybinding context is set to KeyContext::Global, which prevents the\n  navigation bindings (which have KeyContext::RequirementsList) from being triggered.\n\n  Committed as 0bfa17c and pushed to GitHub.\n"
+  - id: 7b7839e3-6622-41d6-a63e-c001b5140747
+    author: '@joe'
+    timestamp: 2025-11-27T05:53:16.167399560Z
+    changes:
+    - field_name: title
+      old_value: ''
+      new_value: Arrow keys bad behavior in edit mode
+  - id: ead5c35a-d083-4eea-853c-2921523d0c3f
+    author: '@joe'
+    timestamp: 2025-11-27T05:57:10.790549293Z
+    changes:
+    - field_name: description
+      old_value: " When I am add/edit and I start editing the desription and I press the up arrow, I think the global key binding is being invoked to move to \nthe previous requirement \nFixed! The issue was that the navigation keybindings (Up/Down arrows) were being processed even when in Add/Edit form view. The fix adds\n  explicit checks for:\n\n  1. in_form_view - when the current view is Add or Edit\n  2. in_settings - when the settings dialog is open\n\n  When any of these conditions are true (or text_input_focused), the keybinding context is set to KeyContext::Global, which prevents the\n  navigation bindings (which have KeyContext::RequirementsList) from being triggered.\n\n  Committed as 0bfa17c and pushed to GitHub.\n"
+      new_value: " When I am add/edit and I start editing the desription and I press the up arrow, I think the global key binding is being invoked to move to \nthe previous requirement \nFixed! The issue was that the navigation keybindings (Up/Down arrows) were being processed even when in Add/Edit form view. The fix adds\n  explicit checks for:\n\n\n\n  1. in_form_view - when the current view is Add or Edit\n  2. in_settings - when the settings dialog is open\n\n  When any of these conditions are true (or text_input_focused), the keybinding context is set to KeyContext::Global, which prevents the\n  navigation bindings (which have KeyContext::RequirementsList) from being triggered.\n\n  Committed as 0bfa17c and pushed to GitHub.\n"
 id_config:
   format: SingleLevel
   numbering: Global
@@ -987,8 +1188,8 @@ id_config:
     prefix: CR
     description: Change requests for modifications to existing functionality
 features: []
-next_feature_number: 22
-next_spec_number: 42
+next_feature_number: 24
+next_spec_number: 46
 prefix_counters: {}
 relationship_definitions:
 - name: parent
@@ -1211,3 +1412,6 @@ type_definitions:
     order: 4
   built_in: true
   color: '#9333ea'
+allowed_prefixes:
+- FILTER
+restrict_prefixes: false

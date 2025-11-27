@@ -333,6 +333,24 @@ You can add emoji reactions to comments to quickly indicate your response:
 - Delete custom reactions (built-in reactions cannot be deleted)
 - Reset to defaults to restore the standard reaction set
 
+### Links Tab
+
+The Links tab provides two sections for connecting requirements to other resources:
+
+**External Links:**
+- Click "+ New URL" to add an external URL link
+- Enter the URL, optional title, and description
+- Click "Verify" to validate the URL format
+- Links show verification status (✅ valid, ❌ invalid)
+- Click a link to open it in your browser
+- Edit or remove links using the ✏ and x buttons
+
+**Relationships:**
+- View and manage relationships to other requirements
+- Double-click a related requirement to navigate to it
+- Remove relationships using the x button
+- See relationship types with color indicators
+
 ---
 
 ## Working with Requirements

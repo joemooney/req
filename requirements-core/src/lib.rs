@@ -20,6 +20,8 @@ pub use models::{
     META_PREFIX_USER, META_PREFIX_VIEW, META_PREFIX_FEATURE,
     // Custom type definition types
     CustomFieldType, CustomFieldDefinition, CustomTypeDefinition, default_type_definitions,
+    // URL link type
+    UrlLink,
 };
 pub use storage::Storage;
 pub use registry::{Registry, get_registry_path};
