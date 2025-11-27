@@ -3,7 +3,7 @@ use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
 use requirements_core::{
     Requirement, RequirementPriority, RequirementStatus, RequirementType,
     RequirementsStore, Storage, determine_requirements_path, Comment, FieldChange,
-    RelationshipType, User, IdFormat, NumberingStrategy,
+    RelationshipType, User, IdFormat, NumberingStrategy, RelationshipDefinition, Cardinality,
 };
 use std::collections::{HashSet, HashMap};
 use std::path::PathBuf;
@@ -489,6 +489,7 @@ enum SettingsTab {
     Appearance,
     Keybindings,
     Project,
+    Relationships,
     Administration,
 }
 
@@ -644,6 +645,19 @@ pub struct RequirementsApp {
 
     // Left panel state
     left_panel_collapsed: bool,                  // Whether left panel is manually collapsed
+
+    // Relationship definition editing
+    editing_rel_def: Option<String>,             // Name of relationship def being edited (None = adding new)
+    rel_def_form_name: String,
+    rel_def_form_display_name: String,
+    rel_def_form_description: String,
+    rel_def_form_inverse: String,
+    rel_def_form_symmetric: bool,
+    rel_def_form_cardinality: Cardinality,
+    rel_def_form_source_types: String,           // Comma-separated
+    rel_def_form_target_types: String,           // Comma-separated
+    rel_def_form_color: String,
+    show_rel_def_form: bool,
 }
 
 impl RequirementsApp {
@@ -728,6 +742,17 @@ impl RequirementsApp {
             markdown_cache: CommonMarkCache::default(),
             show_description_preview: false,
             left_panel_collapsed: false,
+            editing_rel_def: None,
+            rel_def_form_name: String::new(),
+            rel_def_form_display_name: String::new(),
+            rel_def_form_description: String::new(),
+            rel_def_form_inverse: String::new(),
+            rel_def_form_symmetric: false,
+            rel_def_form_cardinality: Cardinality::default(),
+            rel_def_form_source_types: String::new(),
+            rel_def_form_target_types: String::new(),
+            rel_def_form_color: String::new(),
+            show_rel_def_form: false,
         }
     }
 
@@ -1157,6 +1182,7 @@ impl RequirementsApp {
                     ui.selectable_value(&mut self.settings_tab, SettingsTab::Appearance, "🎨 Appearance");
                     ui.selectable_value(&mut self.settings_tab, SettingsTab::Keybindings, "⌨ Keys");
                     ui.selectable_value(&mut self.settings_tab, SettingsTab::Project, "📋 Project");
+                    ui.selectable_value(&mut self.settings_tab, SettingsTab::Relationships, "🔗 Relations");
                     ui.selectable_value(&mut self.settings_tab, SettingsTab::Administration, "🔧 Admin");
                 });
 
@@ -1176,6 +1202,9 @@ impl RequirementsApp {
                     }
                     SettingsTab::Project => {
                         self.show_settings_project_tab(ui);
+                    }
+                    SettingsTab::Relationships => {
+                        self.show_settings_relationships_tab(ui);
                     }
                     SettingsTab::Administration => {
                         self.show_settings_admin_tab(ui);
@@ -1553,6 +1582,366 @@ impl RequirementsApp {
                 egui::Color32::from_rgb(180, 180, 100),
                 "Note: Changes will apply to new requirements only."
             );
+        }
+    }
+
+    fn show_settings_relationships_tab(&mut self, ui: &mut egui::Ui) {
+        ui.heading("Relationship Definitions");
+        ui.add_space(5.0);
+        ui.label("Configure relationship types and their constraints.");
+        ui.add_space(10.0);
+
+        // Add new relationship button
+        if !self.show_rel_def_form {
+            if ui.button("➕ Add Relationship Type").clicked() {
+                self.show_rel_def_form = true;
+                self.editing_rel_def = None;
+                self.clear_rel_def_form();
+            }
+        }
+
+        // Show form if active
+        if self.show_rel_def_form {
+            ui.add_space(10.0);
+            self.show_rel_def_form_ui(ui);
+            ui.add_space(10.0);
+        }
+
+        ui.separator();
+        ui.add_space(10.0);
+
+        // List existing relationship definitions
+        egui::ScrollArea::vertical()
+            .max_height(300.0)
+            .show(ui, |ui| {
+                // Collect definitions to avoid borrow issues
+                let definitions: Vec<_> = self.store.get_relationship_definitions().to_vec();
+
+                for def in definitions {
+                    ui.group(|ui| {
+                        ui.horizontal(|ui| {
+                            // Display name and built-in badge
+                            ui.strong(&def.display_name);
+                            if def.built_in {
+                                ui.label(
+                                    egui::RichText::new("[built-in]")
+                                        .small()
+                                        .color(egui::Color32::GRAY)
+                                );
+                            }
+                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                // Delete button (only for non-built-in)
+                                if !def.built_in {
+                                    if ui.small_button("🗑").on_hover_text("Delete").clicked() {
+                                        if let Err(e) = self.store.remove_relationship_definition(&def.name) {
+                                            self.message = Some((format!("Failed to remove: {}", e), true));
+                                        } else {
+                                            self.save();
+                                            self.message = Some(("Relationship definition removed".to_string(), false));
+                                        }
+                                    }
+                                }
+                                // Edit button
+                                if ui.small_button("✏").on_hover_text("Edit").clicked() {
+                                    self.editing_rel_def = Some(def.name.clone());
+                                    self.load_rel_def_form(&def);
+                                    self.show_rel_def_form = true;
+                                }
+                            });
+                        });
+
+                        // Details
+                        ui.horizontal(|ui| {
+                            ui.label(egui::RichText::new(&def.name).small().monospace());
+                            ui.label("|");
+                            if def.symmetric {
+                                ui.label("↔ symmetric");
+                            } else if let Some(ref inv) = def.inverse {
+                                ui.label(format!("↔ {}", inv));
+                            }
+                            ui.label("|");
+                            ui.label(format!("{}", def.cardinality));
+                        });
+
+                        if !def.description.is_empty() {
+                            ui.label(
+                                egui::RichText::new(&def.description)
+                                    .small()
+                                    .color(egui::Color32::GRAY)
+                            );
+                        }
+
+                        // Show type constraints if any
+                        if !def.source_types.is_empty() || !def.target_types.is_empty() {
+                            ui.horizontal(|ui| {
+                                if !def.source_types.is_empty() {
+                                    ui.label(
+                                        egui::RichText::new(format!("From: {}", def.source_types.join(", ")))
+                                            .small()
+                                    );
+                                }
+                                if !def.target_types.is_empty() {
+                                    ui.label(
+                                        egui::RichText::new(format!("To: {}", def.target_types.join(", ")))
+                                            .small()
+                                    );
+                                }
+                            });
+                        }
+
+                        // Show color if set
+                        if let Some(ref color) = def.color {
+                            ui.horizontal(|ui| {
+                                // Try to parse and display color swatch
+                                if let Some(c) = parse_hex_color(color) {
+                                    let (rect, _) = ui.allocate_exact_size(
+                                        egui::vec2(16.0, 16.0),
+                                        egui::Sense::hover()
+                                    );
+                                    ui.painter().rect_filled(rect, 2.0, c);
+                                }
+                                ui.label(egui::RichText::new(color).small());
+                            });
+                        }
+                    });
+                    ui.add_space(5.0);
+                }
+            });
+    }
+
+    fn clear_rel_def_form(&mut self) {
+        self.rel_def_form_name.clear();
+        self.rel_def_form_display_name.clear();
+        self.rel_def_form_description.clear();
+        self.rel_def_form_inverse.clear();
+        self.rel_def_form_symmetric = false;
+        self.rel_def_form_cardinality = Cardinality::default();
+        self.rel_def_form_source_types.clear();
+        self.rel_def_form_target_types.clear();
+        self.rel_def_form_color.clear();
+    }
+
+    fn load_rel_def_form(&mut self, def: &RelationshipDefinition) {
+        self.rel_def_form_name = def.name.clone();
+        self.rel_def_form_display_name = def.display_name.clone();
+        self.rel_def_form_description = def.description.clone();
+        self.rel_def_form_inverse = def.inverse.clone().unwrap_or_default();
+        self.rel_def_form_symmetric = def.symmetric;
+        self.rel_def_form_cardinality = def.cardinality.clone();
+        self.rel_def_form_source_types = def.source_types.join(", ");
+        self.rel_def_form_target_types = def.target_types.join(", ");
+        self.rel_def_form_color = def.color.clone().unwrap_or_default();
+    }
+
+    fn show_rel_def_form_ui(&mut self, ui: &mut egui::Ui) {
+        let is_editing = self.editing_rel_def.is_some();
+        let is_built_in = if let Some(ref name) = self.editing_rel_def {
+            self.store.get_relationship_definition(name)
+                .map(|d| d.built_in)
+                .unwrap_or(false)
+        } else {
+            false
+        };
+
+        ui.group(|ui| {
+            let title = if is_editing {
+                if is_built_in { "Edit Built-in Relationship (limited)" } else { "Edit Relationship" }
+            } else {
+                "Add Relationship Type"
+            };
+            ui.heading(title);
+            ui.add_space(5.0);
+
+            egui::Grid::new("rel_def_form_grid")
+                .num_columns(2)
+                .spacing([10.0, 8.0])
+                .show(ui, |ui| {
+                    // Name (readonly for built-in)
+                    ui.label("Name:");
+                    if is_editing {
+                        ui.label(&self.rel_def_form_name);
+                    } else {
+                        ui.add(egui::TextEdit::singleline(&mut self.rel_def_form_name)
+                            .hint_text("e.g., blocks"));
+                    }
+                    ui.end_row();
+
+                    // Display name (editable)
+                    ui.label("Display Name:");
+                    ui.add(egui::TextEdit::singleline(&mut self.rel_def_form_display_name)
+                        .hint_text("e.g., Blocks"));
+                    ui.end_row();
+
+                    // Description (editable)
+                    ui.label("Description:");
+                    ui.add(egui::TextEdit::singleline(&mut self.rel_def_form_description)
+                        .hint_text("What this relationship means"));
+                    ui.end_row();
+
+                    // For non-built-in: inverse, symmetric, cardinality
+                    if !is_built_in {
+                        ui.label("Inverse:");
+                        ui.horizontal(|ui| {
+                            ui.add(egui::TextEdit::singleline(&mut self.rel_def_form_inverse)
+                                .hint_text("e.g., blocked_by")
+                                .desired_width(120.0));
+                            ui.checkbox(&mut self.rel_def_form_symmetric, "Symmetric");
+                        });
+                        ui.end_row();
+
+                        ui.label("Cardinality:");
+                        egui::ComboBox::from_id_salt("cardinality_combo")
+                            .selected_text(format!("{}", self.rel_def_form_cardinality))
+                            .show_ui(ui, |ui| {
+                                ui.selectable_value(&mut self.rel_def_form_cardinality, Cardinality::ManyToMany, "N:N (Many to Many)");
+                                ui.selectable_value(&mut self.rel_def_form_cardinality, Cardinality::OneToMany, "1:N (One to Many)");
+                                ui.selectable_value(&mut self.rel_def_form_cardinality, Cardinality::ManyToOne, "N:1 (Many to One)");
+                                ui.selectable_value(&mut self.rel_def_form_cardinality, Cardinality::OneToOne, "1:1 (One to One)");
+                            });
+                        ui.end_row();
+                    }
+
+                    // Source types (editable)
+                    ui.label("Source Types:");
+                    ui.add(egui::TextEdit::singleline(&mut self.rel_def_form_source_types)
+                        .hint_text("Functional, System (comma-separated, empty = all)"));
+                    ui.end_row();
+
+                    // Target types (editable)
+                    ui.label("Target Types:");
+                    ui.add(egui::TextEdit::singleline(&mut self.rel_def_form_target_types)
+                        .hint_text("Functional, System (comma-separated, empty = all)"));
+                    ui.end_row();
+
+                    // Color (editable)
+                    ui.label("Color:");
+                    ui.horizontal(|ui| {
+                        ui.add(egui::TextEdit::singleline(&mut self.rel_def_form_color)
+                            .hint_text("#ff6b6b")
+                            .desired_width(80.0));
+                        // Show color preview
+                        if let Some(c) = parse_hex_color(&self.rel_def_form_color) {
+                            let (rect, _) = ui.allocate_exact_size(
+                                egui::vec2(20.0, 20.0),
+                                egui::Sense::hover()
+                            );
+                            ui.painter().rect_filled(rect, 2.0, c);
+                        }
+                    });
+                    ui.end_row();
+                });
+
+            ui.add_space(10.0);
+            ui.horizontal(|ui| {
+                if ui.button("💾 Save").clicked() {
+                    self.save_rel_def_form();
+                }
+                if ui.button("❌ Cancel").clicked() {
+                    self.show_rel_def_form = false;
+                    self.editing_rel_def = None;
+                }
+            });
+        });
+    }
+
+    fn save_rel_def_form(&mut self) {
+        // Parse source/target types
+        let source_types: Vec<String> = self.rel_def_form_source_types
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect();
+
+        let target_types: Vec<String> = self.rel_def_form_target_types
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect();
+
+        let color = if self.rel_def_form_color.trim().is_empty() {
+            None
+        } else {
+            Some(self.rel_def_form_color.trim().to_string())
+        };
+
+        let inverse = if self.rel_def_form_inverse.trim().is_empty() {
+            None
+        } else {
+            Some(self.rel_def_form_inverse.trim().to_lowercase())
+        };
+
+        if let Some(ref edit_name) = self.editing_rel_def {
+            // Update existing
+            let is_built_in = self.store.get_relationship_definition(edit_name)
+                .map(|d| d.built_in)
+                .unwrap_or(false);
+
+            let mut updated = if is_built_in {
+                // For built-in, start from existing and only update allowed fields
+                self.store.get_relationship_definition(edit_name)
+                    .cloned()
+                    .unwrap_or_else(|| RelationshipDefinition::new(&self.rel_def_form_name, &self.rel_def_form_display_name))
+            } else {
+                RelationshipDefinition::new(&self.rel_def_form_name, &self.rel_def_form_display_name)
+            };
+
+            updated.display_name = self.rel_def_form_display_name.clone();
+            updated.description = self.rel_def_form_description.clone();
+            updated.source_types = source_types;
+            updated.target_types = target_types;
+            updated.color = color;
+
+            if !is_built_in {
+                updated.inverse = inverse;
+                updated.symmetric = self.rel_def_form_symmetric;
+                updated.cardinality = self.rel_def_form_cardinality.clone();
+            }
+
+            match self.store.update_relationship_definition(edit_name, updated) {
+                Ok(()) => {
+                    self.save();
+                    self.message = Some(("Relationship definition updated".to_string(), false));
+                    self.show_rel_def_form = false;
+                    self.editing_rel_def = None;
+                }
+                Err(e) => {
+                    self.message = Some((format!("Failed to update: {}", e), true));
+                }
+            }
+        } else {
+            // Add new
+            if self.rel_def_form_name.trim().is_empty() {
+                self.message = Some(("Name is required".to_string(), true));
+                return;
+            }
+
+            let mut new_def = RelationshipDefinition::new(
+                &self.rel_def_form_name.trim().to_lowercase(),
+                if self.rel_def_form_display_name.trim().is_empty() {
+                    &self.rel_def_form_name
+                } else {
+                    &self.rel_def_form_display_name
+                },
+            );
+
+            new_def.description = self.rel_def_form_description.clone();
+            new_def.inverse = inverse;
+            new_def.symmetric = self.rel_def_form_symmetric;
+            new_def.cardinality = self.rel_def_form_cardinality.clone();
+            new_def.source_types = source_types;
+            new_def.target_types = target_types;
+            new_def.color = color;
+
+            match self.store.add_relationship_definition(new_def) {
+                Ok(()) => {
+                    self.save();
+                    self.message = Some(("Relationship definition added".to_string(), false));
+                    self.show_rel_def_form = false;
+                }
+                Err(e) => {
+                    self.message = Some((format!("Failed to add: {}", e), true));
+                }
+            }
         }
     }
 
@@ -2053,15 +2442,39 @@ impl RequirementsApp {
             let target_id = self.store.requirements.get(target_idx).map(|r| r.id);
 
             if let (Some(source_id), Some(target_id)) = (source_id, target_id) {
+                // Validate the relationship first
+                let validation = self.store.validate_relationship(&source_id, &rel_type, &target_id);
+
+                // Check for errors
+                if !validation.valid {
+                    let error_msg = validation.errors.join("; ");
+                    self.message = Some((format!("Cannot create relationship: {}", error_msg), true));
+                    return;
+                }
+
+                // Show warnings but proceed
+                if !validation.warnings.is_empty() {
+                    // We'll show the warning along with success
+                    let _warning_msg = validation.warnings.join("; ");
+                }
+
                 // Set the relationship (replaces any existing relationship of same type)
                 // source stores the relationship pointing to target
-                // Bidirectional for parent/child types (adds inverse on target)
-                let bidirectional = matches!(rel_type, RelationshipType::Parent | RelationshipType::Verifies);
+                // Use inverse from definitions to determine bidirectionality
+                let bidirectional = self.store.get_inverse_type(&rel_type).is_some();
                 match self.store.set_relationship(&source_id, rel_type.clone(), &target_id, bidirectional) {
                     Ok(()) => {
                         self.save();
-                        let rel_name = format!("{:?}", rel_type);
-                        self.message = Some((format!("Relationship '{}' set", rel_name), false));
+                        // Get display name from definition
+                        let rel_name = self.store.get_definition_for_type(&rel_type)
+                            .map(|d| d.display_name.clone())
+                            .unwrap_or_else(|| format!("{:?}", rel_type));
+
+                        let mut msg = format!("Relationship '{}' set", rel_name);
+                        if !validation.warnings.is_empty() {
+                            msg = format!("{} (Warning: {})", msg, validation.warnings.join("; "));
+                        }
+                        self.message = Some((msg, false));
                     }
                     Err(e) => {
                         self.message = Some((format!("Failed to set relationship: {}", e), true));
@@ -2715,19 +3128,37 @@ impl RequirementsApp {
                     .find(|r| r.id == rel.target_id)
                     .map(|r| r.title.clone())
                     .unwrap_or_else(|| "(not found)".to_string());
-                (rel.rel_type.clone(), rel.target_id, target_idx, target_label, target_title)
+
+                // Get display name and color from relationship definition
+                let (display_name, color) = self.store.get_definition_for_type(&rel.rel_type)
+                    .map(|def| (def.display_name.clone(), def.color.clone()))
+                    .unwrap_or_else(|| (format!("{}", rel.rel_type), None));
+
+                (rel.rel_type.clone(), rel.target_id, target_idx, target_label, target_title, display_name, color)
             }).collect();
 
             let mut relationship_to_remove: Option<(RelationshipType, Uuid)> = None;
 
-            for (rel_type, target_id, target_idx, target_label, target_title) in rel_info {
+            for (rel_type, target_id, target_idx, target_label, target_title, display_name, color) in rel_info {
                 ui.horizontal(|ui| {
                     // Break link button
                     if ui.small_button("x").on_hover_text("Remove relationship").clicked() {
                         relationship_to_remove = Some((rel_type.clone(), target_id));
                     }
 
-                    let label = format!("{:?} {} - {}", rel_type, target_label, target_title);
+                    // Show color indicator if defined
+                    if let Some(ref hex_color) = color {
+                        if let Some(c) = parse_hex_color(hex_color) {
+                            let (rect, _) = ui.allocate_exact_size(
+                                egui::vec2(12.0, 12.0),
+                                egui::Sense::hover()
+                            );
+                            ui.painter().rect_filled(rect, 2.0, c);
+                        }
+                    }
+
+                    // Use display name from definition
+                    let label = format!("{} {} - {}", display_name, target_label, target_title);
 
                     let response = ui.add(
                         egui::Label::new(&label)
@@ -2752,7 +3183,8 @@ impl RequirementsApp {
 
             // Remove relationship if requested
             if let Some((rel_type, target_id)) = relationship_to_remove {
-                let bidirectional = matches!(rel_type, RelationshipType::Parent | RelationshipType::Child | RelationshipType::Verifies | RelationshipType::VerifiedBy);
+                // Check if the relationship has an inverse defined
+                let bidirectional = self.store.get_inverse_type(&rel_type).is_some();
                 if let Err(e) = self.store.remove_relationship(&req_id, &rel_type, &target_id, bidirectional) {
                     self.message = Some((format!("Failed to remove relationship: {}", e), true));
                 } else {
@@ -3427,4 +3859,18 @@ impl eframe::App for RequirementsApp {
         // Show migration confirmation dialog
         self.show_migration_confirmation_dialog(ctx);
     }
+}
+
+/// Parse a hex color string (e.g., "#ff6b6b" or "ff6b6b") into an egui Color32
+fn parse_hex_color(hex: &str) -> Option<egui::Color32> {
+    let hex = hex.trim().trim_start_matches('#');
+    if hex.len() != 6 {
+        return None;
+    }
+
+    let r = u8::from_str_radix(&hex[0..2], 16).ok()?;
+    let g = u8::from_str_radix(&hex[2..4], 16).ok()?;
+    let b = u8::from_str_radix(&hex[4..6], 16).ok()?;
+
+    Some(egui::Color32::from_rgb(r, g, b))
 }

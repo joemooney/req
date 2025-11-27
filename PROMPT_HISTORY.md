@@ -305,6 +305,33 @@ A chronological record of development sessions and changes made to the Requireme
   - Exported new types from requirements-core lib.rs
   - Updated user guide with relationship definitions documentation
 
+### GUI Integration for Relationship Definitions (Phase 4)
+- **Prompt**: Proceed to Phase 4: GUI Integration - Add Relationships tab to Settings, update Links tab to respect constraints
+- **Actions**:
+  - Added `Relationships` tab to Settings dialog with full CRUD for definitions
+  - Created relationship definition list view showing:
+    - Display name with [built-in] badge
+    - Name, inverse/symmetric indicator, cardinality
+    - Type constraints (source/target types)
+    - Color swatch preview
+    - Edit/Delete buttons (delete only for non-built-in)
+  - Added relationship definition edit form with:
+    - Name field (readonly for built-in/editing)
+    - Display name, description (always editable)
+    - Inverse/symmetric/cardinality (not editable for built-in)
+    - Source/target type constraints
+    - Color picker with hex preview
+  - Updated Links tab to use relationship definitions:
+    - Shows display name instead of enum debug format
+    - Displays color indicator swatch from definition
+    - Uses definition-based inverse detection for bidirectional removal
+  - Added validation feedback when creating relationships:
+    - Validates type constraints before creation
+    - Checks cardinality constraints
+    - Shows errors for invalid relationships
+    - Shows warnings for constraint violations
+  - Added `parse_hex_color()` helper for color rendering
+
 ---
 
 ## Git Operations Summary
