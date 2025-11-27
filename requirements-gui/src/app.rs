@@ -414,6 +414,7 @@ pub enum KeyAction {
     ZoomOut,
     ZoomReset,
     CycleTheme,
+    NewRequirement,
 }
 
 impl KeyAction {
@@ -428,6 +429,7 @@ impl KeyAction {
             KeyAction::ZoomOut => "Zoom Out",
             KeyAction::ZoomReset => "Reset Zoom",
             KeyAction::CycleTheme => "Cycle Theme",
+            KeyAction::NewRequirement => "New Requirement",
         }
     }
 
@@ -443,6 +445,7 @@ impl KeyAction {
             KeyAction::ZoomOut => KeyContext::Global,
             KeyAction::ZoomReset => KeyContext::Global,
             KeyAction::CycleTheme => KeyContext::Global,
+            KeyAction::NewRequirement => KeyContext::Global,
         }
     }
 
@@ -457,6 +460,7 @@ impl KeyAction {
             KeyAction::ZoomOut,
             KeyAction::ZoomReset,
             KeyAction::CycleTheme,
+            KeyAction::NewRequirement,
         ]
     }
 }
@@ -728,6 +732,10 @@ impl Default for KeyBindings {
         bindings.insert(
             KeyAction::CycleTheme,
             KeyBinding::new(egui::Key::T, KeyAction::CycleTheme.default_context()).with_ctrl(),
+        );
+        bindings.insert(
+            KeyAction::NewRequirement,
+            KeyBinding::new(egui::Key::N, KeyAction::NewRequirement.default_context()).with_ctrl(),
         );
         Self { bindings }
     }
@@ -7845,6 +7853,18 @@ impl eframe::App for RequirementsApp {
             self.user_settings.theme = self.user_settings.theme.next();
             self.user_settings.theme.apply(ctx);
             let _ = self.user_settings.save();
+        }
+
+        // Check for new requirement keybinding (Ctrl+N, global context)
+        if self.user_settings.keybindings.is_pressed(
+            KeyAction::NewRequirement,
+            ctx,
+            self.current_key_context,
+        ) && !self.show_settings_dialog
+        {
+            // Switch to Add view with no parent (creates orphan requirement)
+            self.form_parent_id = None;
+            self.pending_view_change = Some(View::Add);
         }
 
         // Also handle Ctrl+= as alternate zoom in (common on keyboards)

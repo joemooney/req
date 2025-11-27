@@ -1950,13 +1950,29 @@ requirements:
 - id: 3fe85c39-0da4-477a-9ac5-04ecb9696ec9
   spec_id: FR-0057
   title: Recursive relationships view
-  description: In the Relationships tab, ability to list all immediate relationships (as presently implemented), and a checkbox (recursive) to present a tree structure (children collapsed by default)  - protect against infinite cycles.
+  description: |
+    In the Relationships tab, ability to list all immediate relationships (as presently implemented), and a checkbox (recursive) to present a tree structure (children collapsed by default)  - protect against infinite cycles.
+
+    The Relationships section has two modes:
+
+      Immediate View (default, checkbox unchecked):
+      - Shows only direct relationships of the current requirement
+      - Has the "x" button to delete relationships
+      - Original behavior preserved
+
+      Recursive View (checkbox checked):
+      - Shows relationships as a tree structure
+      - Nodes are collapsed by default - click ▶ to expand, ▼ to collapse
+      - Only nodes with children show the expand/collapse button
+      - Cycle protection: If a requirement is visited twice in the same path, shows "↻ (cycle)" indicator and stops recursion
+      - No delete button in recursive view to avoid confusion with the collapse button
+      - Double-click any node to navigate to that requirement
   status: Draft
   priority: Medium
   owner: ''
   feature: 27-Uncategorized
   created_at: 2025-11-27T17:26:03.149592683Z
-  modified_at: 2025-11-27T22:48:23.342711154Z
+  modified_at: 2025-11-27T22:58:14.414333211Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -1971,6 +1987,29 @@ requirements:
     - field_name: title
       old_value: ''
       new_value: Recursive relationships view
+  - id: ac9371f3-4250-425e-b4a4-91aa58beecae
+    author: '@joe'
+    timestamp: 2025-11-27T22:58:14.414327109Z
+    changes:
+    - field_name: description
+      old_value: In the Relationships tab, ability to list all immediate relationships (as presently implemented), and a checkbox (recursive) to present a tree structure (children collapsed by default)  - protect against infinite cycles.
+      new_value: |
+        In the Relationships tab, ability to list all immediate relationships (as presently implemented), and a checkbox (recursive) to present a tree structure (children collapsed by default)  - protect against infinite cycles.
+
+        The Relationships section has two modes:
+
+          Immediate View (default, checkbox unchecked):
+          - Shows only direct relationships of the current requirement
+          - Has the "x" button to delete relationships
+          - Original behavior preserved
+
+          Recursive View (checkbox checked):
+          - Shows relationships as a tree structure
+          - Nodes are collapsed by default - click ▶ to expand, ▼ to collapse
+          - Only nodes with children show the expand/collapse button
+          - Cycle protection: If a requirement is visited twice in the same path, shows "↻ (cycle)" indicator and stops recursion
+          - No delete button in recursive view to avoid confusion with the collapse button
+          - Double-click any node to navigate to that requirement
 - id: cc712910-5468-4c7c-a62d-75d7b8110b76
   spec_id: FR-0058
   title: Requirements List view Navigation keys
@@ -2108,6 +2147,9 @@ requirements:
   req_type: Functional
   dependencies: []
   tags: []
+  relationships:
+  - rel_type: Child
+    target_id: 5d7fd7b2-a29e-439b-8212-0f9f6be0d468
   history:
   - id: 26b8bd36-e257-426e-8686-bef6dc5933f7
     author: '@joe'
@@ -2276,6 +2318,22 @@ requirements:
   relationships:
   - rel_type: Parent
     target_id: 0b904a04-4422-4767-a7b6-28b9a721a1b9
+- id: 5d7fd7b2-a29e-439b-8212-0f9f6be0d468
+  spec_id: FR-0072
+  title: Ctrl+N for new requirement (with no parent)
+  description: Ctrl+N for new requirement (with no parent). This way we can add a top level requirement without having to delete the parent relationship that we get automatically with the +Add based on the currently selected requirement.
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-27T22:57:07.853710181Z
+  modified_at: 2025-11-27T22:57:07.853710181Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: cb0cb997-723e-4605-a306-1c1b2296e121
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
   spec_id: $USER-001
@@ -2317,7 +2375,7 @@ id_config:
     description: Change requests for modifications to existing functionality
 features: []
 next_feature_number: 31
-next_spec_number: 72
+next_spec_number: 73
 prefix_counters: {}
 relationship_definitions:
 - name: parent
