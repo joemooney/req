@@ -865,12 +865,12 @@ enum SettingsTab {
     User,
     Appearance,
     Keybindings,
-    Project,
+    IDs,
     Relationships,
     Reactions,
     TypeDefinitions,
     Users,
-    Administration,
+    Database,
 }
 
 #[derive(Default, PartialEq, Clone, Copy)]
@@ -2051,7 +2051,7 @@ impl RequirementsApp {
                         "🎨 Appearance",
                     );
                     ui.selectable_value(&mut self.settings_tab, SettingsTab::Keybindings, "⌨ Keys");
-                    ui.selectable_value(&mut self.settings_tab, SettingsTab::Project, "📋 Project");
+                    ui.selectable_value(&mut self.settings_tab, SettingsTab::IDs, "🔢 IDs");
                     ui.selectable_value(
                         &mut self.settings_tab,
                         SettingsTab::Relationships,
@@ -2068,11 +2068,7 @@ impl RequirementsApp {
                         "📝 Types",
                     );
                     ui.selectable_value(&mut self.settings_tab, SettingsTab::Users, "👥 Users");
-                    ui.selectable_value(
-                        &mut self.settings_tab,
-                        SettingsTab::Administration,
-                        "🔧 Admin",
-                    );
+                    ui.selectable_value(&mut self.settings_tab, SettingsTab::Database, "🗄 Db");
                 });
 
                 ui.separator();
@@ -2089,8 +2085,8 @@ impl RequirementsApp {
                     SettingsTab::Keybindings => {
                         self.show_settings_keybindings_tab(ui, ctx);
                     }
-                    SettingsTab::Project => {
-                        self.show_settings_project_tab(ui);
+                    SettingsTab::IDs => {
+                        self.show_settings_ids_tab(ui);
                     }
                     SettingsTab::Relationships => {
                         self.show_settings_relationships_tab(ui);
@@ -2104,8 +2100,8 @@ impl RequirementsApp {
                     SettingsTab::Users => {
                         self.show_settings_users_tab(ui);
                     }
-                    SettingsTab::Administration => {
-                        self.show_settings_admin_tab(ui);
+                    SettingsTab::Database => {
+                        self.show_settings_database_tab(ui);
                     }
                 }
 
@@ -2496,8 +2492,9 @@ impl RequirementsApp {
         });
     }
 
-    fn show_settings_project_tab(&mut self, ui: &mut egui::Ui) {
-        ui.heading("Requirement ID Configuration");
+    fn show_settings_ids_tab(&mut self, ui: &mut egui::Ui) {
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            ui.heading("Requirement ID Configuration");
         ui.add_space(10.0);
 
         // Validate current settings against proposed changes
@@ -2639,6 +2636,97 @@ impl RequirementsApp {
                 "Note: Changes will apply to new requirements only.",
             );
         }
+
+            ui.add_space(15.0);
+            ui.separator();
+            ui.add_space(10.0);
+
+            // ID Prefix Management Section
+            ui.heading("ID Prefix Management");
+            ui.add_space(5.0);
+
+            // Toggle for restricting prefixes
+            let mut restrict = self.store.restrict_prefixes;
+            if ui
+                .checkbox(&mut restrict, "Restrict prefixes to allowed list")
+                .on_hover_text("When enabled, users must select from the allowed prefixes list. When disabled, users can enter any valid prefix.")
+                .changed()
+            {
+                self.store.restrict_prefixes = restrict;
+                self.save();
+            }
+
+            ui.add_space(5.0);
+
+            // Show used prefixes
+            let used_prefixes = self.store.get_used_prefixes();
+
+            ui.label(format!(
+                "Prefixes in use: {}",
+                if used_prefixes.is_empty() {
+                    "none".to_string()
+                } else {
+                    used_prefixes.join(", ")
+                }
+            ));
+
+            ui.add_space(5.0);
+            ui.label("Allowed Prefixes:");
+
+            // Add new prefix input
+            ui.horizontal(|ui| {
+                ui.label("Add prefix:");
+                ui.add(
+                    egui::TextEdit::singleline(&mut self.new_prefix_input)
+                        .desired_width(80.0)
+                        .hint_text("e.g., SEC"),
+                );
+
+                if ui.button("Add").clicked() && !self.new_prefix_input.is_empty() {
+                    let prefix = self.new_prefix_input.to_uppercase();
+                    // Validate: must be uppercase letters only
+                    if prefix.chars().all(|c| c.is_ascii_uppercase()) {
+                        self.store.add_allowed_prefix(&prefix);
+                        self.save();
+                        self.new_prefix_input.clear();
+                    }
+                }
+            });
+
+            ui.add_space(5.0);
+
+            // List allowed prefixes with delete buttons
+            if self.store.allowed_prefixes.is_empty() {
+                ui.label("No prefixes explicitly allowed (all valid prefixes permitted).");
+            } else {
+                let prefixes_to_show: Vec<String> = self.store.allowed_prefixes.clone();
+                let mut to_remove: Option<String> = None;
+
+                ui.horizontal_wrapped(|ui| {
+                    for prefix in &prefixes_to_show {
+                        let in_use = used_prefixes.contains(prefix);
+                        ui.horizontal(|ui| {
+                            ui.label(prefix);
+                            if in_use {
+                                ui.small("[in use]");
+                            }
+                            if ui
+                                .small_button("×")
+                                .on_hover_text("Remove from allowed list")
+                                .clicked()
+                            {
+                                to_remove = Some(prefix.clone());
+                            }
+                        });
+                    }
+                });
+
+                if let Some(prefix) = to_remove {
+                    self.store.remove_allowed_prefix(&prefix);
+                    self.save();
+                }
+            }
+        });
     }
 
     fn show_settings_relationships_tab(&mut self, ui: &mut egui::Ui) {
@@ -4025,84 +4113,8 @@ impl RequirementsApp {
         });
     }
 
-    fn show_settings_admin_tab(&mut self, ui: &mut egui::Ui) {
+    fn show_settings_database_tab(&mut self, ui: &mut egui::Ui) {
         egui::ScrollArea::vertical().show(ui, |ui| {
-            // ID Prefix Management Section
-            ui.heading("ID Prefix Management");
-            ui.add_space(5.0);
-
-            // Toggle for restricting prefixes
-            let mut restrict = self.store.restrict_prefixes;
-            if ui.checkbox(&mut restrict, "Restrict prefixes to allowed list")
-                .on_hover_text("When enabled, users must select from the allowed prefixes list. When disabled, users can enter any valid prefix.")
-                .changed()
-            {
-                self.store.restrict_prefixes = restrict;
-                self.save();
-            }
-
-            ui.add_space(5.0);
-
-            // Show used prefixes
-            let used_prefixes = self.store.get_used_prefixes();
-
-            ui.label(format!("Prefixes in use: {}", if used_prefixes.is_empty() { "none".to_string() } else { used_prefixes.join(", ") }));
-
-            ui.add_space(5.0);
-            ui.label("Allowed Prefixes:");
-
-            // Add new prefix input
-            ui.horizontal(|ui| {
-                ui.label("Add prefix:");
-                ui.add(egui::TextEdit::singleline(&mut self.new_prefix_input)
-                    .desired_width(80.0)
-                    .hint_text("e.g., SEC"));
-
-                if ui.button("Add").clicked() && !self.new_prefix_input.is_empty() {
-                    let prefix = self.new_prefix_input.to_uppercase();
-                    // Validate: must be uppercase letters only
-                    if prefix.chars().all(|c| c.is_ascii_uppercase()) {
-                        self.store.add_allowed_prefix(&prefix);
-                        self.save();
-                        self.new_prefix_input.clear();
-                    }
-                }
-            });
-
-            ui.add_space(5.0);
-
-            // List allowed prefixes with delete buttons
-            if self.store.allowed_prefixes.is_empty() {
-                ui.label("No prefixes explicitly allowed (all valid prefixes permitted).");
-            } else {
-                let prefixes_to_show: Vec<String> = self.store.allowed_prefixes.clone();
-                let mut to_remove: Option<String> = None;
-
-                ui.horizontal_wrapped(|ui| {
-                    for prefix in &prefixes_to_show {
-                        let in_use = used_prefixes.contains(prefix);
-                        ui.horizontal(|ui| {
-                            ui.label(prefix);
-                            if in_use {
-                                ui.small("[in use]");
-                            }
-                            if ui.small_button("×").on_hover_text("Remove from allowed list").clicked() {
-                                to_remove = Some(prefix.clone());
-                            }
-                        });
-                    }
-                });
-
-                if let Some(prefix) = to_remove {
-                    self.store.remove_allowed_prefix(&prefix);
-                    self.save();
-                }
-            }
-
-            ui.add_space(15.0);
-            ui.separator();
-            ui.add_space(10.0);
-
             // Database Management Section
             ui.heading("Database Management");
             ui.add_space(5.0);
