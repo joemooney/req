@@ -716,6 +716,8 @@ requirements:
     target_id: d51487eb-36a5-4266-9c79-29a7c5399849
   - rel_type: Child
     target_id: 3fe85c39-0da4-477a-9ac5-04ecb9696ec9
+  - rel_type: Child
+    target_id: cc712910-5468-4c7c-a62d-75d7b8110b76
   history:
   - id: e2ba3669-855e-4b99-9b7f-30300da178c5
     author: '@joe'
@@ -1736,7 +1738,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 27-Uncategorized
   created_at: 2025-11-27T06:59:28.942923410Z
   modified_at: 2025-11-27T06:59:28.942923410Z
   req_type: ChangeRequest
@@ -1763,7 +1765,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 27-Uncategorized
   created_at: 2025-11-27T16:50:11.501316511Z
   modified_at: 2025-11-27T17:03:31.753686370Z
   req_type: Functional
@@ -1805,7 +1807,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 27-Uncategorized
   created_at: 2025-11-27T16:56:06.315250924Z
   modified_at: 2025-11-27T16:56:06.315250924Z
   req_type: Functional
@@ -1833,7 +1835,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 27-Uncategorized
   created_at: 2025-11-27T17:02:58.915305926Z
   modified_at: 2025-11-27T17:19:02.101175892Z
   req_type: Functional
@@ -1877,7 +1879,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 27-Uncategorized
   created_at: 2025-11-27T17:07:50.165704716Z
   modified_at: 2025-11-27T17:07:50.165704716Z
   req_type: Functional
@@ -1895,7 +1897,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 27-Uncategorized
   created_at: 2025-11-27T17:21:11.683638399Z
   modified_at: 2025-11-27T17:21:11.683638399Z
   req_type: Functional
@@ -1911,7 +1913,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 27-Uncategorized
   created_at: 2025-11-27T17:26:03.149592683Z
   modified_at: 2025-11-27T17:26:03.149592683Z
   req_type: Functional
@@ -1920,6 +1922,51 @@ requirements:
   relationships:
   - rel_type: Parent
     target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
+- id: cc712910-5468-4c7c-a62d-75d7b8110b76
+  spec_id: FR-0058
+  title: Requirements List view Navigation keys
+  description: "Support up/down/Page-Up/Page-Down and Home and End in Requirements List view. Also Mouse Wheel would also be nice \n\n - Page Up/Page Down: Move by 10 items at a time\n  - Home: Jump to the first requirement in the list\n  - End: Jump to the last requirement in the list\n  - Mouse Wheel: Scroll through requirements one at a time (without Ctrl - Ctrl+wheel is still zoom)\n"
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 28-Uncategorized
+  created_at: 2025-11-27T17:39:30.783500080Z
+  modified_at: 2025-11-27T17:40:32.774552223Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
+  history:
+  - id: 84472583-449c-49fa-b862-0494c0f0cff9
+    author: '@joe'
+    timestamp: 2025-11-27T17:40:32.774548389Z
+    changes:
+    - field_name: description
+      old_value: "Support up/down/Page-Up/Page-Down and Home and End in Requirements List view. Also Mouse Wheel would also be nice \n"
+      new_value: "Support up/down/Page-Up/Page-Down and Home and End in Requirements List view. Also Mouse Wheel would also be nice \n\n - Page Up/Page Down: Move by 10 items at a time\n  - Home: Jump to the first requirement in the list\n  - End: Jump to the last requirement in the list\n  - Mouse Wheel: Scroll through requirements one at a time (without Ctrl - Ctrl+wheel is still zoom)\n"
+- id: 090ade6e-ac01-48cb-84a6-db9b3dd214b0
+  spec_id: DOC-0059
+  prefix_override: DOC
+  title: Documentation requirements
+  description: User Guide, README.md, help, etc.
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-27T20:55:50.580655527Z
+  modified_at: 2025-11-27T20:55:50.580655527Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  urls:
+  - id: b69fefd6-d4bd-4187-8802-2b904abf4b1b
+    url: https://github.com/joemooney/aida
+    title: Aida Git Repo
+    description: Source code for tool
+    added_at: 2025-11-27T20:56:48.807093988Z
+    added_by: Joe Mooney
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
   spec_id: $USER-001
@@ -1948,8 +1995,8 @@ id_config:
     prefix: CR
     description: Change requests for modifications to existing functionality
 features: []
-next_feature_number: 27
-next_spec_number: 58
+next_feature_number: 29
+next_spec_number: 60
 prefix_counters: {}
 relationship_definitions:
 - name: parent
@@ -2175,5 +2222,6 @@ type_definitions:
   color: '#9333ea'
 allowed_prefixes:
 - DETAILVIEW
+- DOC
 - FILTER
 restrict_prefixes: false

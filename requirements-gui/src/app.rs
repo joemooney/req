@@ -1099,6 +1099,7 @@ pub struct RequirementsApp {
     pending_comment_delete: Option<Uuid>,
     pending_reaction_toggle: Option<(Uuid, String)>, // (comment_id, reaction_name)
     show_reaction_picker: Option<Uuid>,              // Comment ID to show reaction picker for
+    scroll_to_requirement: Option<Uuid>,             // Requirement ID to scroll into view
 
     // Settings
     user_settings: UserSettings,
@@ -1304,6 +1305,7 @@ impl RequirementsApp {
             pending_comment_delete: None,
             pending_reaction_toggle: None,
             show_reaction_picker: None,
+            scroll_to_requirement: None,
             current_font_size: initial_font_size,
             user_settings,
             show_settings_dialog: false,
@@ -1719,7 +1721,21 @@ impl RequirementsApp {
         self.save();
         self.form_parent_id = None; // Clear parent after adding
         self.clear_form();
-        self.current_view = View::List;
+
+        // Find the index of the newly added requirement and select it
+        if let Some(idx) = self
+            .store
+            .requirements
+            .iter()
+            .position(|r| r.id == new_req_id)
+        {
+            self.selected_idx = Some(idx);
+            self.scroll_to_requirement = Some(new_req_id);
+            self.current_view = View::Detail; // Show the new requirement's details
+        } else {
+            self.current_view = View::List;
+        }
+
         self.message = Some(("Requirement added successfully".to_string(), false));
     }
 
@@ -5238,12 +5254,14 @@ impl RequirementsApp {
             return;
         };
 
+        let req_id = req.id;
         let spec_id = req.spec_id.clone();
         let title = req.title.clone();
         let selected = self.selected_idx == Some(idx);
         let is_drag_source = self.drag_source == Some(idx);
         let is_drop_target = self.drop_target == Some(idx);
         let can_drag = self.perspective != Perspective::Flat; // Only allow drag in tree views
+        let should_scroll_to = self.scroll_to_requirement == Some(req_id);
 
         let indent_space = indent as f32 * 20.0;
 
@@ -5288,6 +5306,12 @@ impl RequirementsApp {
             let desired_size = galley.size() + egui::vec2(8.0, 4.0); // padding
 
             let (rect, response) = ui.allocate_exact_size(desired_size, sense);
+
+            // Scroll to this item if requested (e.g., after adding a new requirement)
+            if should_scroll_to {
+                response.scroll_to_me(Some(egui::Align::Center));
+                self.scroll_to_requirement = None; // Clear after scrolling
+            }
 
             // Paint background
             if bg_color != egui::Color32::TRANSPARENT {
