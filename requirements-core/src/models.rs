@@ -1652,6 +1652,10 @@ impl Requirement {
 /// Collection of all requirements
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RequirementsStore {
+    /// Database name (displayed in window title)
+    #[serde(default)]
+    pub name: String,
+
     pub requirements: Vec<Requirement>,
 
     /// Users in the system
@@ -1727,6 +1731,7 @@ impl RequirementsStore {
     /// Creates an empty requirements store
     pub fn new() -> Self {
         Self {
+            name: String::new(),
             requirements: Vec::new(),
             users: Vec::new(),
             id_config: IdConfiguration::default(),

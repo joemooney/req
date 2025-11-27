@@ -1077,6 +1077,8 @@ requirements:
     target_id: 67a6162d-a44c-4cf5-8756-6b6cb8808928
   - rel_type: Child
     target_id: 5a9b7e50-4678-4c85-bb69-6ac380ac985e
+  - rel_type: Child
+    target_id: 4d2cce7c-d8e4-4c9b-a6a5-61637a423f12
 - id: 5738b675-4fa8-4f10-94a8-e6d16c418c35
   spec_id: FILTER-0042
   prefix_override: FILTER
@@ -2088,6 +2090,22 @@ requirements:
     - field_name: spec_id
       old_value: FR-0065
       new_value: ADDREQ-0066
+- id: 4d2cce7c-d8e4-4c9b-a6a5-61637a423f12
+  spec_id: FR-0067
+  title: Database Name
+  description: The database should have a name store in the yaml file and it should be used in the Title bar of the Window. You may change the database name in the Settings/Db tab.
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-27T22:29:31.052887770Z
+  modified_at: 2025-11-27T22:29:31.052887770Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: bb81e51e-dd32-48ef-9806-cf26a09643f5
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
   spec_id: $USER-001
@@ -2129,7 +2147,7 @@ id_config:
     description: Change requests for modifications to existing functionality
 features: []
 next_feature_number: 30
-next_spec_number: 67
+next_spec_number: 68
 prefix_counters: {}
 relationship_definitions:
 - name: parent

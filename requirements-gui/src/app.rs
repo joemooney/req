@@ -4115,6 +4115,28 @@ impl RequirementsApp {
 
     fn show_settings_database_tab(&mut self, ui: &mut egui::Ui) {
         egui::ScrollArea::vertical().show(ui, |ui| {
+            // Database Name Section
+            ui.heading("Database Name");
+            ui.add_space(5.0);
+
+            ui.horizontal(|ui| {
+                ui.label("Name:");
+                let response = ui.add(
+                    egui::TextEdit::singleline(&mut self.store.name)
+                        .desired_width(300.0)
+                        .hint_text("Enter database name (shown in title bar)"),
+                );
+                if response.lost_focus() {
+                    self.save();
+                }
+            });
+            ui.add_space(5.0);
+            ui.label("This name is displayed in the window title bar.");
+
+            ui.add_space(15.0);
+            ui.separator();
+            ui.add_space(10.0);
+
             // Database Management Section
             ui.heading("Database Management");
             ui.add_space(5.0);
@@ -7493,6 +7515,14 @@ impl RequirementsApp {
 
 impl eframe::App for RequirementsApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Update window title based on database name
+        let title = if self.store.name.is_empty() {
+            "Requirements Manager".to_string()
+        } else {
+            format!("{} - Requirements Manager", self.store.name)
+        };
+        ctx.send_viewport_cmd(egui::ViewportCommand::Title(title));
+
         // Apply the selected theme
         self.user_settings.theme.apply(ctx);
 
