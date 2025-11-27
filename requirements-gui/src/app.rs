@@ -5445,6 +5445,22 @@ impl RequirementsApp {
                 self.scroll_to_requirement = None; // Clear after scrolling
             }
 
+            // Keep selected item visible - if it's selected but outside clip rect, scroll to it
+            // This handles the case where mouse wheel/scrollbar scrolls the selection out of view
+            if selected {
+                let clip_rect = ui.clip_rect();
+                let is_visible = clip_rect.contains(rect.center());
+                if !is_visible {
+                    // Scroll to bring selected item into view (use TOP or BOTTOM based on position)
+                    let align = if rect.center().y < clip_rect.center().y {
+                        egui::Align::TOP
+                    } else {
+                        egui::Align::BOTTOM
+                    };
+                    response.scroll_to_me(Some(align));
+                }
+            }
+
             // Paint background
             if bg_color != egui::Color32::TRANSPARENT {
                 ui.painter().rect_filled(rect, 2.0, bg_color);
