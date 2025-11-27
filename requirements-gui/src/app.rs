@@ -1130,6 +1130,10 @@ pub struct RequirementsApp {
     user_form_handle: String,
     show_archived_users: bool,
 
+    // Relationships view
+    show_recursive_relationships: bool,                      // Toggle for recursive tree view
+    relationship_tree_collapsed: HashMap<(Uuid, Uuid), bool>, // Track collapsed relationship tree nodes (source_id, target_id)
+
     // Font size (runtime, can differ from saved base)
     current_font_size: f32,
 
@@ -1331,6 +1335,8 @@ impl RequirementsApp {
             user_form_email: String::new(),
             user_form_handle: String::new(),
             show_archived_users: false,
+            show_recursive_relationships: false,
+            relationship_tree_collapsed: HashMap::new(),
             perspective: initial_perspective,
             perspective_direction: PerspectiveDirection::default(),
             filter_types: HashSet::new(),
@@ -6121,124 +6127,298 @@ impl RequirementsApp {
         ui.add_space(10.0);
 
         // Relationships section
-        ui.heading("Relationships");
+        ui.horizontal(|ui| {
+            ui.heading("Relationships");
+            ui.add_space(20.0);
+            ui.checkbox(&mut self.show_recursive_relationships, "Recursive")
+                .on_hover_text("Show relationships as a tree, recursively expanding related requirements");
+        });
         ui.add_space(10.0);
 
         if req.relationships.is_empty() {
             ui.label("No relationships defined");
+        } else if self.show_recursive_relationships {
+            // Recursive tree view
+            self.show_relationships_tree(ui, req_id, 0, &mut HashSet::new());
         } else {
-            // Collect relationship info first to avoid borrow issues
-            let rel_info: Vec<_> = req
-                .relationships
-                .iter()
-                .map(|rel| {
-                    let target_idx = self
-                        .store
-                        .requirements
-                        .iter()
-                        .position(|r| r.id == rel.target_id);
-                    let target_label = self
-                        .store
-                        .requirements
-                        .iter()
-                        .find(|r| r.id == rel.target_id)
-                        .and_then(|r| r.spec_id.as_ref())
-                        .cloned()
-                        .unwrap_or_else(|| "Unknown".to_string());
-                    let target_title = self
-                        .store
-                        .requirements
-                        .iter()
-                        .find(|r| r.id == rel.target_id)
-                        .map(|r| r.title.clone())
-                        .unwrap_or_else(|| "(not found)".to_string());
+            // Immediate relationships view (original behavior)
+            self.show_immediate_relationships(ui, req_id);
+        }
+    }
 
-                    // Get display name and color from relationship definition
-                    let (display_name, color) = self
-                        .store
-                        .get_definition_for_type(&rel.rel_type)
-                        .map(|def| (def.display_name.clone(), def.color.clone()))
-                        .unwrap_or_else(|| (format!("{}", rel.rel_type), None));
+    /// Show immediate (non-recursive) relationships for a requirement
+    fn show_immediate_relationships(&mut self, ui: &mut egui::Ui, req_id: Uuid) {
+        let Some(req) = self.store.requirements.iter().find(|r| r.id == req_id) else {
+            return;
+        };
 
-                    (
-                        rel.rel_type.clone(),
-                        rel.target_id,
-                        target_idx,
-                        target_label,
-                        target_title,
-                        display_name,
-                        color,
-                    )
-                })
-                .collect();
+        // Collect relationship info first to avoid borrow issues
+        let rel_info: Vec<_> = req
+            .relationships
+            .iter()
+            .map(|rel| {
+                let target_idx = self
+                    .store
+                    .requirements
+                    .iter()
+                    .position(|r| r.id == rel.target_id);
+                let target_label = self
+                    .store
+                    .requirements
+                    .iter()
+                    .find(|r| r.id == rel.target_id)
+                    .and_then(|r| r.spec_id.as_ref())
+                    .cloned()
+                    .unwrap_or_else(|| "Unknown".to_string());
+                let target_title = self
+                    .store
+                    .requirements
+                    .iter()
+                    .find(|r| r.id == rel.target_id)
+                    .map(|r| r.title.clone())
+                    .unwrap_or_else(|| "(not found)".to_string());
 
-            let mut relationship_to_remove: Option<(RelationshipType, Uuid)> = None;
+                // Get display name and color from relationship definition
+                let (display_name, color) = self
+                    .store
+                    .get_definition_for_type(&rel.rel_type)
+                    .map(|def| (def.display_name.clone(), def.color.clone()))
+                    .unwrap_or_else(|| (format!("{}", rel.rel_type), None));
 
-            for (
-                rel_type,
-                target_id,
-                target_idx,
-                target_label,
-                target_title,
-                display_name,
-                color,
-            ) in rel_info
-            {
-                ui.horizontal(|ui| {
-                    // Break link button
-                    if ui
-                        .small_button("x")
-                        .on_hover_text("Remove relationship")
-                        .clicked()
-                    {
-                        relationship_to_remove = Some((rel_type.clone(), target_id));
-                    }
+                (
+                    rel.rel_type.clone(),
+                    rel.target_id,
+                    target_idx,
+                    target_label,
+                    target_title,
+                    display_name,
+                    color,
+                )
+            })
+            .collect();
 
-                    // Show color indicator if defined
-                    if let Some(ref hex_color) = color {
-                        if let Some(c) = parse_hex_color(hex_color) {
-                            let (rect, _) = ui
-                                .allocate_exact_size(egui::vec2(12.0, 12.0), egui::Sense::hover());
-                            ui.painter().rect_filled(rect, 2.0, c);
-                        }
-                    }
+        let mut relationship_to_remove: Option<(RelationshipType, Uuid)> = None;
 
-                    // Use display name from definition
-                    let label = format!("{} {} - {}", display_name, target_label, target_title);
-
-                    let response = ui.add(egui::Label::new(&label).sense(egui::Sense::click()));
-
-                    // Show hover cursor and tooltip
-                    if response.hovered() {
-                        ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
-                    }
-                    response.clone().on_hover_text("Double-click to view");
-
-                    // Navigate on double-click
-                    if response.double_clicked() {
-                        if let Some(idx) = target_idx {
-                            self.selected_idx = Some(idx);
-                            self.pending_view_change = Some(View::Detail);
-                        }
-                    }
-                });
-            }
-
-            // Remove relationship if requested
-            if let Some((rel_type, target_id)) = relationship_to_remove {
-                // Check if the relationship has an inverse defined
-                let bidirectional = self.store.get_inverse_type(&rel_type).is_some();
-                if let Err(e) =
-                    self.store
-                        .remove_relationship(&req_id, &rel_type, &target_id, bidirectional)
+        for (
+            rel_type,
+            target_id,
+            target_idx,
+            target_label,
+            target_title,
+            display_name,
+            color,
+        ) in rel_info
+        {
+            ui.horizontal(|ui| {
+                // Break link button
+                if ui
+                    .small_button("x")
+                    .on_hover_text("Remove relationship")
+                    .clicked()
                 {
-                    self.message = Some((format!("Failed to remove relationship: {}", e), true));
-                } else {
-                    self.save();
-                    self.message = Some(("Relationship removed".to_string(), false));
+                    relationship_to_remove = Some((rel_type.clone(), target_id));
                 }
+
+                // Show color indicator if defined
+                if let Some(ref hex_color) = color {
+                    if let Some(c) = parse_hex_color(hex_color) {
+                        let (rect, _) = ui
+                            .allocate_exact_size(egui::vec2(12.0, 12.0), egui::Sense::hover());
+                        ui.painter().rect_filled(rect, 2.0, c);
+                    }
+                }
+
+                // Use display name from definition
+                let label = format!("{} {} - {}", display_name, target_label, target_title);
+
+                let response = ui.add(egui::Label::new(&label).sense(egui::Sense::click()));
+
+                // Show hover cursor and tooltip
+                if response.hovered() {
+                    ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+                }
+                response.clone().on_hover_text("Double-click to view");
+
+                // Navigate on double-click
+                if response.double_clicked() {
+                    if let Some(idx) = target_idx {
+                        self.selected_idx = Some(idx);
+                        self.pending_view_change = Some(View::Detail);
+                    }
+                }
+            });
+        }
+
+        // Remove relationship if requested
+        if let Some((rel_type, target_id)) = relationship_to_remove {
+            // Check if the relationship has an inverse defined
+            let bidirectional = self.store.get_inverse_type(&rel_type).is_some();
+            if let Err(e) =
+                self.store
+                    .remove_relationship(&req_id, &rel_type, &target_id, bidirectional)
+            {
+                self.message = Some((format!("Failed to remove relationship: {}", e), true));
+            } else {
+                self.save();
+                self.message = Some(("Relationship removed".to_string(), false));
             }
         }
+    }
+
+    /// Show relationships as a recursive tree structure
+    fn show_relationships_tree(
+        &mut self,
+        ui: &mut egui::Ui,
+        req_id: Uuid,
+        depth: usize,
+        visited: &mut HashSet<Uuid>,
+    ) {
+        // Cycle protection: if we've already visited this requirement, show indicator and stop
+        if visited.contains(&req_id) {
+            let indent = depth as f32 * 20.0;
+            ui.horizontal(|ui| {
+                ui.add_space(indent);
+                ui.label(egui::RichText::new("↻ (cycle)").italics().weak());
+            });
+            return;
+        }
+
+        // Mark as visited
+        visited.insert(req_id);
+
+        let Some(req) = self.store.requirements.iter().find(|r| r.id == req_id) else {
+            return;
+        };
+
+        if req.relationships.is_empty() {
+            if depth == 0 {
+                ui.label("No relationships defined");
+            }
+            visited.remove(&req_id);
+            return;
+        }
+
+        // Collect relationship info
+        let rel_info: Vec<_> = req
+            .relationships
+            .iter()
+            .map(|rel| {
+                let target_idx = self
+                    .store
+                    .requirements
+                    .iter()
+                    .position(|r| r.id == rel.target_id);
+                let target_label = self
+                    .store
+                    .requirements
+                    .iter()
+                    .find(|r| r.id == rel.target_id)
+                    .and_then(|r| r.spec_id.as_ref())
+                    .cloned()
+                    .unwrap_or_else(|| "Unknown".to_string());
+                let target_title = self
+                    .store
+                    .requirements
+                    .iter()
+                    .find(|r| r.id == rel.target_id)
+                    .map(|r| r.title.clone())
+                    .unwrap_or_else(|| "(not found)".to_string());
+                let target_has_relationships = self
+                    .store
+                    .requirements
+                    .iter()
+                    .find(|r| r.id == rel.target_id)
+                    .map(|r| !r.relationships.is_empty())
+                    .unwrap_or(false);
+
+                // Get display name and color from relationship definition
+                let (display_name, color) = self
+                    .store
+                    .get_definition_for_type(&rel.rel_type)
+                    .map(|def| (def.display_name.clone(), def.color.clone()))
+                    .unwrap_or_else(|| (format!("{}", rel.rel_type), None));
+
+                (
+                    rel.rel_type.clone(),
+                    rel.target_id,
+                    target_idx,
+                    target_label,
+                    target_title,
+                    display_name,
+                    color,
+                    target_has_relationships,
+                )
+            })
+            .collect();
+
+        let indent = depth as f32 * 20.0;
+
+        for (
+            _rel_type,
+            target_id,
+            target_idx,
+            target_label,
+            target_title,
+            display_name,
+            color,
+            has_children,
+        ) in rel_info
+        {
+            // Check if this node is collapsed (default: collapsed)
+            let collapse_key = (req_id, target_id);
+            let is_collapsed = *self.relationship_tree_collapsed.get(&collapse_key).unwrap_or(&true);
+
+            ui.horizontal(|ui| {
+                ui.add_space(indent);
+
+                // Show expand/collapse button if target has relationships
+                if has_children {
+                    let icon = if is_collapsed { "▶" } else { "▼" };
+                    if ui.small_button(icon).clicked() {
+                        self.relationship_tree_collapsed.insert(collapse_key, !is_collapsed);
+                    }
+                } else {
+                    // Placeholder for alignment
+                    ui.add_space(20.0);
+                }
+
+                // Show color indicator if defined
+                if let Some(ref hex_color) = color {
+                    if let Some(c) = parse_hex_color(hex_color) {
+                        let (rect, _) = ui
+                            .allocate_exact_size(egui::vec2(12.0, 12.0), egui::Sense::hover());
+                        ui.painter().rect_filled(rect, 2.0, c);
+                    }
+                }
+
+                // Use display name from definition
+                let label = format!("{} {} - {}", display_name, target_label, target_title);
+
+                let response = ui.add(egui::Label::new(&label).sense(egui::Sense::click()));
+
+                // Show hover cursor and tooltip
+                if response.hovered() {
+                    ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+                }
+                response.clone().on_hover_text("Double-click to view");
+
+                // Navigate on double-click
+                if response.double_clicked() {
+                    if let Some(idx) = target_idx {
+                        self.selected_idx = Some(idx);
+                        self.pending_view_change = Some(View::Detail);
+                    }
+                }
+            });
+
+            // Recursively show children if expanded
+            if has_children && !is_collapsed {
+                self.show_relationships_tree(ui, target_id, depth + 1, visited);
+            }
+        }
+
+        // Remove from visited when done (to allow visiting via different paths)
+        visited.remove(&req_id);
     }
 
     fn show_url_form_modal(&mut self, ui: &mut egui::Ui, req_id: Uuid) {
