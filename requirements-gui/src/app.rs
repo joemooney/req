@@ -62,6 +62,19 @@ fn show_text_context_menu(
         let selection = stored_selection.clone().filter(|s| s.widget_id == Some(id));
         let has_selection = selection.as_ref().map(|s| !s.text.is_empty()).unwrap_or(false);
 
+        // Show what's selected at the top of the menu
+        if let Some(ref sel) = selection {
+            let display_text = if sel.text.len() > 50 {
+                format!("\"{}...\"", &sel.text.chars().take(47).collect::<String>())
+            } else {
+                format!("\"{}\"", &sel.text)
+            };
+            // Replace newlines with visible indicator
+            let display_text = display_text.replace('\n', "↵");
+            ui.label(egui::RichText::new(display_text).italics().weak());
+            ui.separator();
+        }
+
         // Cut
         if ui.add_enabled(has_selection, egui::Button::new("✂ Cut")).clicked() {
             if let Some(ref sel) = selection {
