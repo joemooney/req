@@ -409,6 +409,9 @@ pub struct UserSettings {
     /// Key bindings
     #[serde(default)]
     pub keybindings: KeyBindings,
+    /// Saved view presets
+    #[serde(default)]
+    pub view_presets: Vec<ViewPreset>,
 }
 
 fn default_font_size() -> f32 {
@@ -425,6 +428,7 @@ impl Default for UserSettings {
             preferred_perspective: Perspective::default(),
             theme: Theme::default(),
             keybindings: KeyBindings::default(),
+            view_presets: Vec::new(),
         }
     }
 }
@@ -538,8 +542,8 @@ impl Perspective {
 }
 
 /// Direction for viewing relationship hierarchies
-#[derive(Default, PartialEq, Clone, Copy)]
-enum PerspectiveDirection {
+#[derive(Debug, Default, PartialEq, Clone, Copy, Serialize, Deserialize)]
+pub(crate) enum PerspectiveDirection {
     /// View from parent/source to children/targets
     #[default]
     TopDown,
@@ -553,6 +557,59 @@ impl PerspectiveDirection {
             PerspectiveDirection::TopDown => "Top-down",
             PerspectiveDirection::BottomUp => "Bottom-up",
         }
+    }
+}
+
+/// A saved view preset combining perspective, direction, and filters
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ViewPreset {
+    /// User-defined name for the preset
+    pub name: String,
+    /// The perspective (Flat, ParentChild, etc.)
+    pub perspective: Perspective,
+    /// Direction for tree views
+    pub direction: PerspectiveDirection,
+    /// Filter by requirement types (empty = all)
+    pub filter_types: Vec<String>,
+    /// Filter by features (empty = all)
+    pub filter_features: Vec<String>,
+}
+
+impl ViewPreset {
+    /// Create a new preset with the given name and current settings
+    fn new(
+        name: String,
+        perspective: Perspective,
+        direction: PerspectiveDirection,
+        filter_types: &HashSet<RequirementType>,
+        filter_features: &HashSet<String>,
+    ) -> Self {
+        Self {
+            name,
+            perspective,
+            direction,
+            filter_types: filter_types.iter().map(|t| format!("{:?}", t)).collect(),
+            filter_features: filter_features.iter().cloned().collect(),
+        }
+    }
+
+    /// Get filter_types as HashSet<RequirementType>
+    fn get_filter_types(&self) -> HashSet<RequirementType> {
+        self.filter_types.iter().filter_map(|s| {
+            match s.as_str() {
+                "Functional" => Some(RequirementType::Functional),
+                "NonFunctional" => Some(RequirementType::NonFunctional),
+                "System" => Some(RequirementType::System),
+                "User" => Some(RequirementType::User),
+                "ChangeRequest" => Some(RequirementType::ChangeRequest),
+                _ => None,
+            }
+        }).collect()
+    }
+
+    /// Get filter_features as HashSet<String>
+    fn get_filter_features(&self) -> HashSet<String> {
+        self.filter_features.iter().cloned().collect()
     }
 }
 
@@ -658,6 +715,12 @@ pub struct RequirementsApp {
     rel_def_form_target_types: String,           // Comma-separated
     rel_def_form_color: String,
     show_rel_def_form: bool,
+
+    // View presets
+    active_preset: Option<String>,               // Name of currently active preset (None = custom/unsaved)
+    show_save_preset_dialog: bool,               // Show the save preset dialog
+    preset_name_input: String,                   // Name input for new preset
+    show_delete_preset_confirm: Option<String>,  // Name of preset to confirm deletion
 }
 
 impl RequirementsApp {
@@ -753,6 +816,10 @@ impl RequirementsApp {
             rel_def_form_target_types: String::new(),
             rel_def_form_color: String::new(),
             show_rel_def_form: false,
+            active_preset: None,
+            show_save_preset_dialog: false,
+            preset_name_input: String::new(),
+            show_delete_preset_confirm: None,
         }
     }
 
@@ -769,6 +836,97 @@ impl RequirementsApp {
     /// Reset font size to base setting
     fn reset_zoom(&mut self) {
         self.current_font_size = self.user_settings.base_font_size;
+    }
+
+    /// Check if the current view settings match the active preset
+    fn current_view_matches_active_preset(&self) -> bool {
+        if let Some(ref preset_name) = self.active_preset {
+            if let Some(preset) = self.user_settings.view_presets.iter().find(|p| &p.name == preset_name) {
+                return self.perspective == preset.perspective
+                    && self.perspective_direction == preset.direction
+                    && self.filter_types == preset.get_filter_types()
+                    && self.filter_features == preset.get_filter_features();
+            }
+        }
+        false
+    }
+
+    /// Check if there's an unsaved view (view differs from active preset or no preset active but has non-default settings)
+    fn has_unsaved_view(&self) -> bool {
+        if self.active_preset.is_some() {
+            // If we have an active preset, check if current view differs
+            !self.current_view_matches_active_preset()
+        } else {
+            // If no active preset, check if we have non-default settings
+            self.perspective != Perspective::Flat
+                || self.perspective_direction != PerspectiveDirection::TopDown
+                || !self.filter_types.is_empty()
+                || !self.filter_features.is_empty()
+        }
+    }
+
+    /// Apply a preset to the current view
+    fn apply_preset(&mut self, preset: &ViewPreset) {
+        self.perspective = preset.perspective.clone();
+        self.perspective_direction = preset.direction;
+        self.filter_types = preset.get_filter_types();
+        self.filter_features = preset.get_filter_features();
+        self.active_preset = Some(preset.name.clone());
+    }
+
+    /// Save the current view as a new preset
+    fn save_current_view_as_preset(&mut self, name: String) {
+        let preset = ViewPreset::new(
+            name.clone(),
+            self.perspective.clone(),
+            self.perspective_direction,
+            &self.filter_types,
+            &self.filter_features,
+        );
+
+        // Check if preset with this name already exists
+        if let Some(existing) = self.user_settings.view_presets.iter_mut().find(|p| p.name == name) {
+            // Update existing preset
+            *existing = preset;
+        } else {
+            // Add new preset
+            self.user_settings.view_presets.push(preset);
+        }
+
+        self.active_preset = Some(name);
+
+        // Save settings
+        if let Err(e) = self.user_settings.save() {
+            self.message = Some((format!("Failed to save preset: {}", e), true));
+        } else {
+            self.message = Some(("View preset saved".to_string(), false));
+        }
+    }
+
+    /// Delete a preset by name
+    fn delete_preset(&mut self, name: &str) {
+        self.user_settings.view_presets.retain(|p| p.name != name);
+
+        // If the deleted preset was active, clear it
+        if self.active_preset.as_deref() == Some(name) {
+            self.active_preset = None;
+        }
+
+        // Save settings
+        if let Err(e) = self.user_settings.save() {
+            self.message = Some((format!("Failed to delete preset: {}", e), true));
+        } else {
+            self.message = Some(("View preset deleted".to_string(), false));
+        }
+    }
+
+    /// Reset to default view (Flat, TopDown, no filters)
+    fn reset_to_default_view(&mut self) {
+        self.perspective = Perspective::Flat;
+        self.perspective_direction = PerspectiveDirection::TopDown;
+        self.filter_types.clear();
+        self.filter_features.clear();
+        self.active_preset = None;
     }
 
     /// Open the user guide in the default browser
@@ -2514,17 +2672,88 @@ impl RequirementsApp {
                 }
             });
 
-            // Perspective selector
+            // Perspective and preset selector
             ui.horizontal(|ui| {
                 ui.label("View:");
+
+                // Determine what to show as selected text
+                let selected_text = if let Some(ref preset_name) = self.active_preset {
+                    if self.current_view_matches_active_preset() {
+                        preset_name.clone()
+                    } else {
+                        format!("{}*", preset_name)  // Modified indicator
+                    }
+                } else {
+                    self.perspective.label().to_string()
+                };
+
+                // Clone presets for iteration
+                let presets: Vec<ViewPreset> = self.user_settings.view_presets.clone();
+                let mut preset_to_apply: Option<ViewPreset> = None;
+                let mut clear_active_preset = false;
+
                 egui::ComboBox::from_id_salt("perspective_combo")
-                    .selected_text(self.perspective.label())
+                    .selected_text(&selected_text)
                     .show_ui(ui, |ui| {
-                        ui.selectable_value(&mut self.perspective, Perspective::Flat, Perspective::Flat.label());
-                        ui.selectable_value(&mut self.perspective, Perspective::ParentChild, Perspective::ParentChild.label());
-                        ui.selectable_value(&mut self.perspective, Perspective::Verification, Perspective::Verification.label());
-                        ui.selectable_value(&mut self.perspective, Perspective::References, Perspective::References.label());
+                        // Built-in perspectives section
+                        ui.label("Built-in Views");
+                        ui.separator();
+
+                        // Check if current view matches a built-in (for highlighting)
+                        let is_flat = self.perspective == Perspective::Flat && self.active_preset.is_none();
+                        let is_parent_child = self.perspective == Perspective::ParentChild && self.active_preset.is_none();
+                        let is_verification = self.perspective == Perspective::Verification && self.active_preset.is_none();
+                        let is_references = self.perspective == Perspective::References && self.active_preset.is_none();
+
+                        if ui.selectable_label(is_flat, Perspective::Flat.label()).clicked() {
+                            self.perspective = Perspective::Flat;
+                            clear_active_preset = true;
+                        }
+                        if ui.selectable_label(is_parent_child, Perspective::ParentChild.label()).clicked() {
+                            self.perspective = Perspective::ParentChild;
+                            clear_active_preset = true;
+                        }
+                        if ui.selectable_label(is_verification, Perspective::Verification.label()).clicked() {
+                            self.perspective = Perspective::Verification;
+                            clear_active_preset = true;
+                        }
+                        if ui.selectable_label(is_references, Perspective::References.label()).clicked() {
+                            self.perspective = Perspective::References;
+                            clear_active_preset = true;
+                        }
+
+                        // User presets section (if any exist)
+                        if !presets.is_empty() {
+                            ui.add_space(5.0);
+                            ui.label("Saved Presets");
+                            ui.separator();
+
+                            for preset in &presets {
+                                let is_selected = self.active_preset.as_ref() == Some(&preset.name)
+                                    && self.current_view_matches_active_preset();
+
+                                ui.horizontal(|ui| {
+                                    if ui.selectable_label(is_selected, &preset.name).clicked() {
+                                        preset_to_apply = Some(preset.clone());
+                                    }
+                                    // Delete button (small X)
+                                    if ui.small_button("✕").on_hover_text("Delete preset").clicked() {
+                                        self.show_delete_preset_confirm = Some(preset.name.clone());
+                                    }
+                                });
+                            }
+                        }
                     });
+
+                // Apply preset if one was selected
+                if let Some(preset) = preset_to_apply {
+                    self.apply_preset(&preset);
+                }
+
+                // Clear active preset if built-in was selected
+                if clear_active_preset {
+                    self.active_preset = None;
+                }
 
                 // Direction selector (only shown for non-flat perspectives)
                 if self.perspective != Perspective::Flat {
@@ -2534,6 +2763,26 @@ impl RequirementsApp {
                             ui.selectable_value(&mut self.perspective_direction, PerspectiveDirection::TopDown, "Top-down ↓");
                             ui.selectable_value(&mut self.perspective_direction, PerspectiveDirection::BottomUp, "Bottom-up ↑");
                         });
+                }
+
+                // Save As button (shown when view has unsaved changes)
+                if self.has_unsaved_view() {
+                    if ui.button("💾 Save As...").on_hover_text("Save current view as a preset").clicked() {
+                        // Pre-fill with active preset name if modifying, otherwise empty
+                        self.preset_name_input = self.active_preset.clone().unwrap_or_default();
+                        self.show_save_preset_dialog = true;
+                    }
+                }
+
+                // Reset button (shown when not at default)
+                if self.perspective != Perspective::Flat
+                    || self.perspective_direction != PerspectiveDirection::TopDown
+                    || !self.filter_types.is_empty()
+                    || !self.filter_features.is_empty()
+                {
+                    if ui.small_button("↺").on_hover_text("Reset to default view").clicked() {
+                        self.reset_to_default_view();
+                    }
                 }
             });
 
@@ -3621,6 +3870,115 @@ impl RequirementsApp {
                 });
             });
     }
+
+    fn show_save_preset_dialog_window(&mut self, ctx: &egui::Context) {
+        if !self.show_save_preset_dialog {
+            return;
+        }
+
+        egui::Window::new("💾 Save View Preset")
+            .collapsible(false)
+            .resizable(false)
+            .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
+            .show(ctx, |ui| {
+                ui.set_min_width(300.0);
+
+                ui.label("Enter a name for this view preset:");
+                ui.add_space(5.0);
+
+                let response = ui.add(
+                    egui::TextEdit::singleline(&mut self.preset_name_input)
+                        .hint_text("Preset name")
+                        .desired_width(280.0)
+                );
+
+                // Focus the text field when dialog opens
+                if response.gained_focus() || self.preset_name_input.is_empty() {
+                    response.request_focus();
+                }
+
+                // Check if name already exists
+                let name_exists = self.user_settings.view_presets.iter()
+                    .any(|p| p.name == self.preset_name_input);
+
+                if name_exists {
+                    ui.colored_label(egui::Color32::YELLOW, "⚠ This will overwrite existing preset");
+                }
+
+                ui.add_space(10.0);
+
+                // Show current view settings summary
+                ui.group(|ui| {
+                    ui.label("Current View Settings:");
+                    ui.label(format!("  Perspective: {}", self.perspective.label()));
+                    if self.perspective != Perspective::Flat {
+                        ui.label(format!("  Direction: {}", self.perspective_direction.label()));
+                    }
+                    if !self.filter_types.is_empty() {
+                        let types: Vec<_> = self.filter_types.iter()
+                            .map(|t| format!("{:?}", t))
+                            .collect();
+                        ui.label(format!("  Type filters: {}", types.join(", ")));
+                    }
+                    if !self.filter_features.is_empty() {
+                        let features: Vec<_> = self.filter_features.iter().cloned().collect();
+                        ui.label(format!("  Feature filters: {}", features.join(", ")));
+                    }
+                });
+
+                ui.add_space(10.0);
+
+                ui.horizontal(|ui| {
+                    let can_save = !self.preset_name_input.trim().is_empty();
+
+                    if ui.add_enabled(can_save, egui::Button::new("Save")).clicked()
+                        || (can_save && ui.input(|i| i.key_pressed(egui::Key::Enter)))
+                    {
+                        let name = self.preset_name_input.trim().to_string();
+                        self.save_current_view_as_preset(name);
+                        self.show_save_preset_dialog = false;
+                        self.preset_name_input.clear();
+                    }
+
+                    if ui.button("Cancel").clicked() || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                        self.show_save_preset_dialog = false;
+                        self.preset_name_input.clear();
+                    }
+                });
+            });
+    }
+
+    fn show_delete_preset_confirmation_dialog(&mut self, ctx: &egui::Context) {
+        let preset_name = match &self.show_delete_preset_confirm {
+            Some(name) => name.clone(),
+            None => return,
+        };
+
+        egui::Window::new("⚠ Delete Preset")
+            .collapsible(false)
+            .resizable(false)
+            .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
+            .show(ctx, |ui| {
+                ui.set_min_width(300.0);
+
+                ui.label(format!("Delete preset \"{}\"?", preset_name));
+                ui.add_space(5.0);
+                ui.label("This action cannot be undone.");
+
+                ui.add_space(10.0);
+
+                ui.horizontal(|ui| {
+                    if ui.button("Delete").clicked() {
+                        self.delete_preset(&preset_name);
+                        self.show_delete_preset_confirm = None;
+                    }
+
+                    if ui.button("Cancel").clicked() || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                        self.show_delete_preset_confirm = None;
+                    }
+                });
+            });
+    }
 }
 
 impl eframe::App for RequirementsApp {
@@ -3858,6 +4216,12 @@ impl eframe::App for RequirementsApp {
 
         // Show migration confirmation dialog
         self.show_migration_confirmation_dialog(ctx);
+
+        // Show save preset dialog
+        self.show_save_preset_dialog_window(ctx);
+
+        // Show delete preset confirmation dialog
+        self.show_delete_preset_confirmation_dialog(ctx);
     }
 }
 

@@ -245,6 +245,30 @@ The requirements list can be displayed in different organizational views. Select
 
 In tree views, use the +/- buttons or press Space to expand/collapse nodes.
 
+### View Presets
+
+You can save your current view configuration (perspective, direction, and filters) as a named preset for quick access later.
+
+**To save a preset:**
+1. Configure your view using the View dropdown, direction selector, and filter options
+2. When you have unsaved changes, a "💾 Save As..." button appears
+3. Click it, enter a name, and click Save
+
+**To use a preset:**
+- Select it from the View dropdown under "Saved Presets"
+- The preset will restore all saved settings (perspective, direction, type filters, feature filters)
+
+**To delete a preset:**
+- Click the ✕ button next to the preset name in the dropdown
+- Confirm deletion in the dialog
+
+**Modified indicator:**
+- If you modify an active preset, its name shows with an asterisk (e.g., "My View*")
+- Use "Save As..." to save changes to the same name or create a new preset
+
+**Reset button (↺):**
+- Click to return to the default Flat List view with no filters
+
 ### Adding Comments
 
 1. Select a requirement

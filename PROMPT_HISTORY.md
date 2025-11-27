@@ -332,6 +332,40 @@ A chronological record of development sessions and changes made to the Requireme
     - Shows warnings for constraint violations
   - Added `parse_hex_color()` helper for color rendering
 
+### View Presets Feature
+- **Prompt**: Save view configuration (filters, perspective, direction) as named presets
+- **Actions**:
+  - Added `ViewPreset` struct to store view configuration:
+    - name, perspective, direction
+    - filter_types and filter_features as serializable vectors
+  - Added `view_presets: Vec<ViewPreset>` to `UserSettings`
+  - Added preset state tracking to `RequirementsApp`:
+    - `active_preset: Option<String>` for currently active preset
+    - `show_save_preset_dialog` and `preset_name_input` for save dialog
+    - `show_delete_preset_confirm` for deletion confirmation
+  - Added helper methods:
+    - `current_view_matches_active_preset()` - checks if view matches saved preset
+    - `has_unsaved_view()` - detects when view has unsaved changes
+    - `apply_preset()` - applies a preset to current view
+    - `save_current_view_as_preset()` - saves current view as new/updated preset
+    - `delete_preset()` - removes a preset
+    - `reset_to_default_view()` - returns to Flat/TopDown with no filters
+  - Updated View dropdown in `show_list_panel()`:
+    - Shows "Built-in Views" section with Flat, Parent/Child, etc.
+    - Shows "Saved Presets" section with user presets
+    - Presets have delete (✕) button inline
+    - Selected text shows preset name with * if modified
+  - Added "💾 Save As..." button (appears when view has unsaved changes)
+  - Added "↺" reset button (appears when not at default view)
+  - Implemented `show_save_preset_dialog_window()`:
+    - Text input for preset name
+    - Warning if overwriting existing preset
+    - Shows current view settings summary
+  - Implemented `show_delete_preset_confirmation_dialog()`:
+    - Confirms preset deletion
+  - Added `PerspectiveDirection` serialize/deserialize support
+  - Updated user guide with View Presets documentation
+
 ---
 
 ## Git Operations Summary
