@@ -526,8 +526,12 @@ impl KeyBinding {
     /// Check if the binding matches given the current app context
     fn matches(&self, egui_ctx: &egui::Context, current_context: KeyContext) -> bool {
         // Global bindings work everywhere
+        // RequirementsList bindings also work in DetailView since both show the list panel
         // Otherwise, context must match
-        let context_matches = self.context == KeyContext::Global || self.context == current_context;
+        let context_matches = self.context == KeyContext::Global
+            || self.context == current_context
+            || (self.context == KeyContext::RequirementsList
+                && current_context == KeyContext::DetailView);
         context_matches && self.key_matches(egui_ctx)
     }
 }
@@ -875,7 +879,7 @@ enum FilterTab {
     Children,
 }
 
-#[derive(Default, PartialEq, Clone)]
+#[derive(Default, Debug, PartialEq, Clone)]
 enum View {
     #[default]
     List,

@@ -714,6 +714,8 @@ requirements:
     target_id: ae4d77e5-55a4-4a56-97d1-a030d922a04d
   - rel_type: Child
     target_id: d51487eb-36a5-4266-9c79-29a7c5399849
+  - rel_type: Child
+    target_id: 3fe85c39-0da4-477a-9ac5-04ecb9696ec9
   history:
   - id: e2ba3669-855e-4b99-9b7f-30300da178c5
     author: '@joe'
@@ -1902,6 +1904,22 @@ requirements:
   relationships:
   - rel_type: Parent
     target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
+- id: 3fe85c39-0da4-477a-9ac5-04ecb9696ec9
+  spec_id: FR-0057
+  title: ''
+  description: In the Relationships tab, ability to list all immediate relationships (as presently implemented), and a checkbox (recursive) to present a tree structure (children collapsed by default)  - protect against infinite cycles.
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-27T17:26:03.149592683Z
+  modified_at: 2025-11-27T17:26:03.149592683Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
   spec_id: $USER-001
@@ -1931,7 +1949,7 @@ id_config:
     description: Change requests for modifications to existing functionality
 features: []
 next_feature_number: 27
-next_spec_number: 57
+next_spec_number: 58
 prefix_counters: {}
 relationship_definitions:
 - name: parent
