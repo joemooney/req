@@ -7964,20 +7964,8 @@ impl eframe::App for RequirementsApp {
                         jump_to_end = true;
                     }
 
-                    // Mouse wheel navigation (without Ctrl - Ctrl+wheel is zoom)
-                    if !i.modifiers.ctrl {
-                        // Check for scroll events in the requirements list area
-                        // Only trigger if we have focus on the list (not scrolling detail panel)
-                        let scroll = i.raw_scroll_delta.y;
-                        if scroll.abs() > 10.0 {
-                            // Threshold to avoid accidental triggers
-                            if scroll > 0.0 {
-                                nav_delta = -1; // Scroll up = previous item
-                            } else {
-                                nav_delta = 1; // Scroll down = next item
-                            }
-                        }
-                    }
+                    // Mouse wheel scrolls the view without changing selection
+                    // (Ctrl+wheel is handled separately for zoom)
                 });
             }
 
@@ -8065,6 +8053,10 @@ impl eframe::App for RequirementsApp {
                     if Some(new_sel) != self.selected_idx {
                         self.selected_idx = Some(new_sel);
                         self.pending_view_change = Some(View::Detail);
+                        // Scroll the newly selected item into view
+                        if let Some(req) = self.store.requirements.get(new_sel) {
+                            self.scroll_to_requirement = Some(req.id);
+                        }
                     }
                 }
             }
