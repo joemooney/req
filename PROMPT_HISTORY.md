@@ -596,3 +596,45 @@ A chronological record of development sessions and changes made to the Requireme
     - Flat list views - is_root=true (all at same level)
   - Updated user-guide.md with "Filtering Requirements" section
   - Updated OVERVIEW.md with two-level filtering in GUI features
+
+### Type Definition Editor
+- **Prompt**: "For the Types in the Settings, does it make sense to have an editor so that we can add/remove/update fields?"
+- **User Preferences**:
+  - Allow modifying built-in types (with reset to defaults option)
+  - Validate on save - warn if removing statuses/fields that are in use
+- **Solution**: Implemented full type definition editor in Settings > Types tab
+- **Actions**:
+  - Added type definition editing state to RequirementsApp:
+    - `editing_type_def: Option<String>` - name of type being edited
+    - `type_def_form_*` fields for name, display_name, description, prefix
+    - `type_def_form_statuses: Vec<String>` - editable status list
+    - `type_def_form_fields: Vec<CustomFieldDefinition>` - editable fields list
+    - `show_type_def_form: bool` - toggle form visibility
+    - `new_status_input: String` - input for adding new statuses
+  - Added custom field editing state:
+    - `editing_field_idx: Option<usize>` - index of field being edited
+    - `field_form_*` fields for name, label, type, required, options, default
+    - `show_field_form: bool` - toggle field form visibility
+  - Refactored `show_settings_type_definitions_tab()`:
+    - Added "➕ Add New Type" button
+    - Each type shows edit (✏), reset (↺ for built-in), and delete (🗑 for custom) buttons
+    - Uses CollapsingState for expandable type details
+  - Added `show_type_definition_form()`:
+    - Form for editing type properties (name, display_name, description, prefix)
+    - Status management with add/remove buttons
+    - Validates removing statuses - prevents if status is in use by requirements
+    - Custom fields table with edit/remove buttons per field
+    - Validates removing fields - prevents if field is in use by requirements
+  - Added `show_custom_field_form()`:
+    - Form for adding/editing custom fields
+    - Field type dropdown (Text, TextArea, Select, Boolean, Date, Number, User, Requirement)
+    - Options input for Select type (comma-separated)
+    - Required checkbox and default value input
+  - Added `save_type_definition()`:
+    - Creates CustomTypeDefinition from form data
+    - Preserves built_in flag when editing existing types
+    - Updates or adds type to store
+  - Added `field_type_display()` helper for field type labels
+  - Added individual type reset (restore single built-in type to defaults)
+  - Added type deletion with validation (cannot delete if in use)
+  - Updated user-guide.md with detailed type management documentation

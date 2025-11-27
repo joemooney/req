@@ -454,7 +454,31 @@ When creating or editing a requirement with custom fields, additional form field
 
 **Managing Type Definitions:**
 
-In the GUI, go to **Settings** > **Types** tab to view all configured type definitions, their statuses, and custom fields. Built-in types can be viewed but not modified directly.
+In the GUI, go to **Settings** > **Types** tab to manage type definitions:
+
+**Viewing Types:**
+- Each type is shown in a collapsible section with 📦 (built-in) or 📝 (custom) icons
+- Expand a type to see its internal name, prefix, description, statuses, and custom fields
+
+**Editing Types:**
+- Click the ✏ button to edit any type (including built-in types)
+- Modify the display name, description, and ID prefix
+- Add or remove statuses (validation prevents removing statuses that are in use)
+- Add, edit, or remove custom fields (validation prevents removing fields that are in use)
+
+**Adding New Types:**
+- Click "➕ Add New Type" to create a custom requirement type
+- Define internal name, display name, description, and ID prefix
+- Configure the available statuses (at least one required)
+- Add custom fields with various types (Text, Select, Boolean, Date, etc.)
+
+**Resetting Types:**
+- Built-in types show a ↺ button to reset them to their default configuration
+- "Reset All to Defaults" restores all built-in types to their original state
+
+**Deleting Types:**
+- Custom types (not built-in) can be deleted using the 🗑 button
+- Types in use by existing requirements cannot be deleted
 
 ### Relationship Types
 

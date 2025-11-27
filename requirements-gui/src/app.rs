@@ -4,7 +4,7 @@ use requirements_core::{
     Requirement, RequirementPriority, RequirementStatus, RequirementType,
     RequirementsStore, Storage, determine_requirements_path, Comment, FieldChange,
     RelationshipType, IdFormat, NumberingStrategy, RelationshipDefinition, Cardinality,
-    CustomFieldType,
+    CustomFieldType, CustomFieldDefinition,
 };
 use std::collections::{HashSet, HashMap};
 use std::path::PathBuf;
@@ -883,6 +883,26 @@ pub struct RequirementsApp {
 
     // Prefix management
     new_prefix_input: String,                    // Input for adding new allowed prefix
+
+    // Type definition editing
+    editing_type_def: Option<String>,            // Name of type def being edited (None = adding new)
+    type_def_form_name: String,
+    type_def_form_display_name: String,
+    type_def_form_description: String,
+    type_def_form_prefix: String,
+    type_def_form_statuses: Vec<String>,         // Editable list of statuses
+    type_def_form_fields: Vec<CustomFieldDefinition>, // Editable list of custom fields
+    show_type_def_form: bool,
+    new_status_input: String,                    // Input for adding new status
+    // Custom field form (for adding/editing fields within type)
+    editing_field_idx: Option<usize>,            // Index of field being edited (None = adding new)
+    field_form_name: String,
+    field_form_label: String,
+    field_form_type: CustomFieldType,
+    field_form_required: bool,
+    field_form_options: String,                  // Comma-separated for Select type
+    field_form_default: String,
+    show_field_form: bool,
 }
 
 impl RequirementsApp {
@@ -1001,6 +1021,24 @@ impl RequirementsApp {
             reaction_def_form_description: String::new(),
             show_reaction_def_form: false,
             new_prefix_input: String::new(),
+            // Type definition editing
+            editing_type_def: None,
+            type_def_form_name: String::new(),
+            type_def_form_display_name: String::new(),
+            type_def_form_description: String::new(),
+            type_def_form_prefix: String::new(),
+            type_def_form_statuses: Vec::new(),
+            type_def_form_fields: Vec::new(),
+            show_type_def_form: false,
+            new_status_input: String::new(),
+            editing_field_idx: None,
+            field_form_name: String::new(),
+            field_form_label: String::new(),
+            field_form_type: CustomFieldType::Text,
+            field_form_required: false,
+            field_form_options: String::new(),
+            field_form_default: String::new(),
+            show_field_form: false,
         }
     }
 
@@ -2556,12 +2594,30 @@ impl RequirementsApp {
     }
 
     fn show_settings_type_definitions_tab(&mut self, ui: &mut egui::Ui) {
-        use requirements_core::CustomFieldType;
-
         egui::ScrollArea::vertical().show(ui, |ui| {
             ui.heading("Requirement Type Definitions");
             ui.add_space(5.0);
             ui.label("Configure requirement types, their available statuses, and custom fields.");
+            ui.add_space(10.0);
+
+            // Show type definition form if editing/adding
+            if self.show_type_def_form {
+                self.show_type_definition_form(ui);
+                return;
+            }
+
+            // Add new type button
+            if ui.button("➕ Add New Type").clicked() {
+                self.editing_type_def = None;
+                self.type_def_form_name.clear();
+                self.type_def_form_display_name.clear();
+                self.type_def_form_description.clear();
+                self.type_def_form_prefix.clear();
+                self.type_def_form_statuses = vec!["Draft".to_string(), "Approved".to_string(), "Completed".to_string(), "Rejected".to_string()];
+                self.type_def_form_fields.clear();
+                self.show_type_def_form = true;
+            }
+
             ui.add_space(10.0);
 
             // Clone type definitions to avoid borrow issues
@@ -2570,16 +2626,47 @@ impl RequirementsApp {
             if type_defs.is_empty() {
                 ui.label("No type definitions configured.");
             } else {
+                let mut type_to_delete: Option<String> = None;
+                let mut type_to_edit: Option<String> = None;
+                let mut type_to_reset: Option<String> = None;
+
                 for type_def in &type_defs {
-                    ui.collapsing(format!("{} {}",
-                        if type_def.built_in { "📦" } else { "📝" },
-                        &type_def.display_name
-                    ), |ui| {
+                    let header = egui::collapsing_header::CollapsingState::load_with_default_open(
+                        ui.ctx(),
+                        egui::Id::new(format!("type_def_{}", type_def.name)),
+                        false
+                    );
+
+                    header.show_header(ui, |ui| {
+                        ui.horizontal(|ui| {
+                            ui.label(format!("{} {}",
+                                if type_def.built_in { "📦" } else { "📝" },
+                                &type_def.display_name
+                            ));
+
+                            // Edit button
+                            if ui.small_button("✏").on_hover_text("Edit type").clicked() {
+                                type_to_edit = Some(type_def.name.clone());
+                            }
+
+                            // Reset to default button (only for built-in types)
+                            if type_def.built_in {
+                                if ui.small_button("↺").on_hover_text("Reset to default").clicked() {
+                                    type_to_reset = Some(type_def.name.clone());
+                                }
+                            } else {
+                                // Delete button (only for custom types)
+                                if ui.small_button("🗑").on_hover_text("Delete type").clicked() {
+                                    type_to_delete = Some(type_def.name.clone());
+                                }
+                            }
+                        });
+                    }).body(|ui| {
                         egui::Grid::new(format!("type_def_grid_{}", type_def.name))
                             .num_columns(2)
                             .spacing([10.0, 5.0])
                             .show(ui, |ui| {
-                                ui.label("Name:");
+                                ui.label("Internal Name:");
                                 ui.label(&type_def.name);
                                 ui.end_row();
 
@@ -2630,16 +2717,7 @@ impl RequirementsApp {
 
                                     for field in &type_def.custom_fields {
                                         ui.label(&field.label);
-                                        ui.label(match field.field_type {
-                                            CustomFieldType::Text => "Text",
-                                            CustomFieldType::TextArea => "Text Area",
-                                            CustomFieldType::Select => "Select",
-                                            CustomFieldType::Boolean => "Boolean",
-                                            CustomFieldType::Date => "Date",
-                                            CustomFieldType::User => "User Reference",
-                                            CustomFieldType::Requirement => "Requirement Reference",
-                                            CustomFieldType::Number => "Number",
-                                        });
+                                        ui.label(Self::field_type_display(&field.field_type));
                                         ui.label(if field.required { "Yes" } else { "No" });
                                         // Show options or default
                                         let extra_info = if !field.options.is_empty() {
@@ -2657,19 +2735,447 @@ impl RequirementsApp {
                     });
                     ui.add_space(5.0);
                 }
+
+                // Handle edit action
+                if let Some(name) = type_to_edit {
+                    if let Some(type_def) = self.store.type_definitions.iter().find(|t| t.name == name) {
+                        self.editing_type_def = Some(name);
+                        self.type_def_form_name = type_def.name.clone();
+                        self.type_def_form_display_name = type_def.display_name.clone();
+                        self.type_def_form_description = type_def.description.clone().unwrap_or_default();
+                        self.type_def_form_prefix = type_def.prefix.clone().unwrap_or_default();
+                        self.type_def_form_statuses = type_def.statuses.clone();
+                        self.type_def_form_fields = type_def.custom_fields.clone();
+                        self.show_type_def_form = true;
+                    }
+                }
+
+                // Handle reset action
+                if let Some(name) = type_to_reset {
+                    let defaults = requirements_core::default_type_definitions();
+                    if let Some(default_def) = defaults.iter().find(|t| t.name == name) {
+                        if let Some(idx) = self.store.type_definitions.iter().position(|t| t.name == name) {
+                            self.store.type_definitions[idx] = default_def.clone();
+                            self.save();
+                        }
+                    }
+                }
+
+                // Handle delete action
+                if let Some(name) = type_to_delete {
+                    // Check if any requirements use this type
+                    let in_use = self.store.requirements.iter().any(|r| format!("{:?}", r.req_type) == name);
+                    if in_use {
+                        self.message = Some((format!("Cannot delete '{}': type is in use by existing requirements", name), true));
+                    } else {
+                        self.store.type_definitions.retain(|t| t.name != name);
+                        self.save();
+                    }
+                }
             }
 
             ui.add_space(15.0);
 
-            // Reset to defaults button
-            if ui.button("↺ Reset to Defaults").on_hover_text("Restore built-in type definitions").clicked() {
+            // Reset all to defaults button
+            if ui.button("↺ Reset All to Defaults").on_hover_text("Restore all built-in type definitions").clicked() {
                 self.store.type_definitions = requirements_core::default_type_definitions();
                 self.save();
             }
-
-            ui.add_space(10.0);
-            ui.label("Note: Custom type editing will be available in a future release.");
         });
+    }
+
+    fn field_type_display(field_type: &CustomFieldType) -> &'static str {
+        match field_type {
+            CustomFieldType::Text => "Text",
+            CustomFieldType::TextArea => "Text Area",
+            CustomFieldType::Select => "Select",
+            CustomFieldType::Boolean => "Boolean",
+            CustomFieldType::Date => "Date",
+            CustomFieldType::User => "User Reference",
+            CustomFieldType::Requirement => "Requirement Reference",
+            CustomFieldType::Number => "Number",
+        }
+    }
+
+    fn show_type_definition_form(&mut self, ui: &mut egui::Ui) {
+        let is_editing = self.editing_type_def.is_some();
+        let title = if is_editing {
+            format!("Edit Type: {}", self.editing_type_def.as_ref().unwrap())
+        } else {
+            "Add New Type".to_string()
+        };
+
+        ui.heading(&title);
+        ui.add_space(10.0);
+
+        // Show custom field form if editing/adding a field
+        if self.show_field_form {
+            self.show_custom_field_form(ui);
+            return;
+        }
+
+        egui::Grid::new("type_def_form_grid")
+            .num_columns(2)
+            .spacing([10.0, 8.0])
+            .show(ui, |ui| {
+                // Name field (only editable for new types)
+                ui.label("Internal Name:");
+                if is_editing {
+                    ui.label(&self.type_def_form_name);
+                } else {
+                    ui.add(egui::TextEdit::singleline(&mut self.type_def_form_name)
+                        .hint_text("e.g., BugReport")
+                        .desired_width(200.0));
+                }
+                ui.end_row();
+
+                // Display name
+                ui.label("Display Name:");
+                ui.add(egui::TextEdit::singleline(&mut self.type_def_form_display_name)
+                    .hint_text("e.g., Bug Report")
+                    .desired_width(200.0));
+                ui.end_row();
+
+                // Description
+                ui.label("Description:");
+                ui.add(egui::TextEdit::singleline(&mut self.type_def_form_description)
+                    .hint_text("Optional description")
+                    .desired_width(300.0));
+                ui.end_row();
+
+                // ID Prefix
+                ui.label("ID Prefix:");
+                ui.add(egui::TextEdit::singleline(&mut self.type_def_form_prefix)
+                    .hint_text("e.g., BUG")
+                    .desired_width(100.0));
+                ui.end_row();
+            });
+
+        ui.add_space(15.0);
+
+        // Statuses section
+        ui.heading("Statuses");
+        ui.add_space(5.0);
+
+        // Display current statuses with remove buttons
+        let mut status_to_remove: Option<usize> = None;
+        ui.horizontal_wrapped(|ui| {
+            for (idx, status) in self.type_def_form_statuses.iter().enumerate() {
+                ui.group(|ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(status);
+                        if ui.small_button("✕").on_hover_text("Remove status").clicked() {
+                            status_to_remove = Some(idx);
+                        }
+                    });
+                });
+            }
+        });
+
+        if let Some(idx) = status_to_remove {
+            // Check if status is in use before removing
+            let status_name = &self.type_def_form_statuses[idx];
+            if let Some(ref editing_name) = self.editing_type_def {
+                let in_use = self.store.requirements.iter().any(|r| {
+                    format!("{:?}", r.req_type) == *editing_name &&
+                    r.custom_status.as_ref() == Some(status_name)
+                });
+                if in_use {
+                    self.message = Some((format!("Cannot remove '{}': status is in use", status_name), true));
+                } else {
+                    self.type_def_form_statuses.remove(idx);
+                }
+            } else {
+                self.type_def_form_statuses.remove(idx);
+            }
+        }
+
+        // Add new status
+        ui.horizontal(|ui| {
+            ui.add(egui::TextEdit::singleline(&mut self.new_status_input)
+                .hint_text("New status name")
+                .desired_width(150.0));
+            if ui.button("Add Status").clicked() && !self.new_status_input.is_empty() {
+                if !self.type_def_form_statuses.contains(&self.new_status_input) {
+                    self.type_def_form_statuses.push(self.new_status_input.clone());
+                    self.new_status_input.clear();
+                }
+            }
+        });
+
+        ui.add_space(15.0);
+
+        // Custom fields section
+        ui.heading("Custom Fields");
+        ui.add_space(5.0);
+
+        if self.type_def_form_fields.is_empty() {
+            ui.label("No custom fields defined.");
+        } else {
+            let mut field_to_remove: Option<usize> = None;
+            let mut field_to_edit: Option<usize> = None;
+
+            egui::Grid::new("type_def_fields_grid")
+                .num_columns(5)
+                .striped(true)
+                .spacing([10.0, 3.0])
+                .show(ui, |ui| {
+                    ui.strong("Field");
+                    ui.strong("Type");
+                    ui.strong("Required");
+                    ui.strong("Options");
+                    ui.strong("Actions");
+                    ui.end_row();
+
+                    for (idx, field) in self.type_def_form_fields.iter().enumerate() {
+                        ui.label(&field.label);
+                        ui.label(Self::field_type_display(&field.field_type));
+                        ui.label(if field.required { "Yes" } else { "No" });
+                        let extra = if !field.options.is_empty() {
+                            field.options.join(", ")
+                        } else if let Some(ref def) = field.default_value {
+                            format!("Default: {}", def)
+                        } else {
+                            "-".to_string()
+                        };
+                        ui.label(extra);
+                        ui.horizontal(|ui| {
+                            if ui.small_button("✏").on_hover_text("Edit field").clicked() {
+                                field_to_edit = Some(idx);
+                            }
+                            if ui.small_button("🗑").on_hover_text("Remove field").clicked() {
+                                field_to_remove = Some(idx);
+                            }
+                        });
+                        ui.end_row();
+                    }
+                });
+
+            if let Some(idx) = field_to_edit {
+                let field = &self.type_def_form_fields[idx];
+                self.editing_field_idx = Some(idx);
+                self.field_form_name = field.name.clone();
+                self.field_form_label = field.label.clone();
+                self.field_form_type = field.field_type.clone();
+                self.field_form_required = field.required;
+                self.field_form_options = field.options.join(", ");
+                self.field_form_default = field.default_value.clone().unwrap_or_default();
+                self.show_field_form = true;
+            }
+
+            if let Some(idx) = field_to_remove {
+                // Check if field is in use before removing
+                let field_name = &self.type_def_form_fields[idx].name;
+                if let Some(ref editing_name) = self.editing_type_def {
+                    let in_use = self.store.requirements.iter().any(|r| {
+                        format!("{:?}", r.req_type) == *editing_name &&
+                        r.custom_fields.contains_key(field_name)
+                    });
+                    if in_use {
+                        self.message = Some((format!("Cannot remove '{}': field is in use", field_name), true));
+                    } else {
+                        self.type_def_form_fields.remove(idx);
+                    }
+                } else {
+                    self.type_def_form_fields.remove(idx);
+                }
+            }
+        }
+
+        ui.add_space(5.0);
+        if ui.button("➕ Add Field").clicked() {
+            self.editing_field_idx = None;
+            self.field_form_name.clear();
+            self.field_form_label.clear();
+            self.field_form_type = CustomFieldType::Text;
+            self.field_form_required = false;
+            self.field_form_options.clear();
+            self.field_form_default.clear();
+            self.show_field_form = true;
+        }
+
+        ui.add_space(20.0);
+        ui.separator();
+        ui.add_space(10.0);
+
+        // Save/Cancel buttons
+        ui.horizontal(|ui| {
+            let can_save = !self.type_def_form_name.is_empty() &&
+                           !self.type_def_form_display_name.is_empty() &&
+                           !self.type_def_form_statuses.is_empty();
+
+            if ui.add_enabled(can_save, egui::Button::new("💾 Save")).clicked() {
+                self.save_type_definition();
+            }
+
+            if ui.button("Cancel").clicked() {
+                self.show_type_def_form = false;
+            }
+        });
+
+        if self.type_def_form_name.is_empty() || self.type_def_form_display_name.is_empty() {
+            ui.small("Name and display name are required.");
+        }
+        if self.type_def_form_statuses.is_empty() {
+            ui.small("At least one status is required.");
+        }
+    }
+
+    fn show_custom_field_form(&mut self, ui: &mut egui::Ui) {
+        let is_editing = self.editing_field_idx.is_some();
+        let title = if is_editing { "Edit Custom Field" } else { "Add Custom Field" };
+
+        ui.heading(title);
+        ui.add_space(10.0);
+
+        egui::Grid::new("custom_field_form_grid")
+            .num_columns(2)
+            .spacing([10.0, 8.0])
+            .show(ui, |ui| {
+                // Field name (internal key)
+                ui.label("Field Name:");
+                if is_editing {
+                    ui.label(&self.field_form_name);
+                } else {
+                    ui.add(egui::TextEdit::singleline(&mut self.field_form_name)
+                        .hint_text("e.g., impact_level")
+                        .desired_width(200.0));
+                }
+                ui.end_row();
+
+                // Label (display name)
+                ui.label("Label:");
+                ui.add(egui::TextEdit::singleline(&mut self.field_form_label)
+                    .hint_text("e.g., Impact Level")
+                    .desired_width(200.0));
+                ui.end_row();
+
+                // Field type
+                ui.label("Type:");
+                egui::ComboBox::from_id_salt("field_type_combo")
+                    .selected_text(Self::field_type_display(&self.field_form_type))
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(&mut self.field_form_type, CustomFieldType::Text, "Text");
+                        ui.selectable_value(&mut self.field_form_type, CustomFieldType::TextArea, "Text Area");
+                        ui.selectable_value(&mut self.field_form_type, CustomFieldType::Select, "Select");
+                        ui.selectable_value(&mut self.field_form_type, CustomFieldType::Boolean, "Boolean");
+                        ui.selectable_value(&mut self.field_form_type, CustomFieldType::Date, "Date");
+                        ui.selectable_value(&mut self.field_form_type, CustomFieldType::Number, "Number");
+                        ui.selectable_value(&mut self.field_form_type, CustomFieldType::User, "User Reference");
+                        ui.selectable_value(&mut self.field_form_type, CustomFieldType::Requirement, "Requirement Reference");
+                    });
+                ui.end_row();
+
+                // Required checkbox
+                ui.label("Required:");
+                ui.checkbox(&mut self.field_form_required, "");
+                ui.end_row();
+
+                // Options (for Select type)
+                if self.field_form_type == CustomFieldType::Select {
+                    ui.label("Options:");
+                    ui.add(egui::TextEdit::singleline(&mut self.field_form_options)
+                        .hint_text("Option1, Option2, Option3")
+                        .desired_width(300.0));
+                    ui.end_row();
+                }
+
+                // Default value
+                ui.label("Default Value:");
+                ui.add(egui::TextEdit::singleline(&mut self.field_form_default)
+                    .hint_text("Optional default")
+                    .desired_width(200.0));
+                ui.end_row();
+            });
+
+        ui.add_space(15.0);
+
+        // Save/Cancel buttons
+        ui.horizontal(|ui| {
+            let can_save = !self.field_form_name.is_empty() && !self.field_form_label.is_empty();
+
+            if ui.add_enabled(can_save, egui::Button::new("💾 Save Field")).clicked() {
+                let options: Vec<String> = if self.field_form_type == CustomFieldType::Select {
+                    self.field_form_options.split(',')
+                        .map(|s| s.trim().to_string())
+                        .filter(|s| !s.is_empty())
+                        .collect()
+                } else {
+                    Vec::new()
+                };
+
+                let field = CustomFieldDefinition {
+                    name: self.field_form_name.clone(),
+                    label: self.field_form_label.clone(),
+                    field_type: self.field_form_type.clone(),
+                    required: self.field_form_required,
+                    options,
+                    default_value: if self.field_form_default.is_empty() {
+                        None
+                    } else {
+                        Some(self.field_form_default.clone())
+                    },
+                    description: None,
+                    order: 0,
+                };
+
+                if let Some(idx) = self.editing_field_idx {
+                    self.type_def_form_fields[idx] = field;
+                } else {
+                    self.type_def_form_fields.push(field);
+                }
+
+                self.show_field_form = false;
+            }
+
+            if ui.button("Cancel").clicked() {
+                self.show_field_form = false;
+            }
+        });
+    }
+
+    fn save_type_definition(&mut self) {
+        use requirements_core::CustomTypeDefinition;
+
+        let type_def = CustomTypeDefinition {
+            name: self.type_def_form_name.clone(),
+            display_name: self.type_def_form_display_name.clone(),
+            description: if self.type_def_form_description.is_empty() {
+                None
+            } else {
+                Some(self.type_def_form_description.clone())
+            },
+            prefix: if self.type_def_form_prefix.is_empty() {
+                None
+            } else {
+                Some(self.type_def_form_prefix.to_uppercase())
+            },
+            statuses: self.type_def_form_statuses.clone(),
+            custom_fields: self.type_def_form_fields.clone(),
+            built_in: if let Some(ref editing_name) = self.editing_type_def {
+                // Preserve built_in status when editing
+                self.store.type_definitions.iter()
+                    .find(|t| &t.name == editing_name)
+                    .map(|t| t.built_in)
+                    .unwrap_or(false)
+            } else {
+                false
+            },
+            color: None,
+        };
+
+        if let Some(ref editing_name) = self.editing_type_def {
+            // Update existing type
+            if let Some(idx) = self.store.type_definitions.iter().position(|t| &t.name == editing_name) {
+                self.store.type_definitions[idx] = type_def;
+            }
+        } else {
+            // Add new type
+            self.store.type_definitions.push(type_def);
+        }
+
+        self.save();
+        self.show_type_def_form = false;
     }
 
     fn show_settings_admin_tab(&mut self, ui: &mut egui::Ui) {

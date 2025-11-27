@@ -633,9 +633,26 @@ requirement</li>
 </ul>
 <p><strong>Managing Type Definitions:</strong></p>
 <p>In the GUI, go to <strong>Settings</strong> &gt;
-<strong>Types</strong> tab to view all configured type definitions,
-their statuses, and custom fields. Built-in types can be viewed but not
-modified directly.</p>
+<strong>Types</strong> tab to manage type definitions:</p>
+<p><strong>Viewing Types:</strong> - Each type is shown in a collapsible
+section with 📦 (built-in) or 📝 (custom) icons - Expand a type to see
+its internal name, prefix, description, statuses, and custom fields</p>
+<p><strong>Editing Types:</strong> - Click the ✏ button to edit any type
+(including built-in types) - Modify the display name, description, and
+ID prefix - Add or remove statuses (validation prevents removing
+statuses that are in use) - Add, edit, or remove custom fields
+(validation prevents removing fields that are in use)</p>
+<p><strong>Adding New Types:</strong> - Click “➕ Add New Type” to
+create a custom requirement type - Define internal name, display name,
+description, and ID prefix - Configure the available statuses (at least
+one required) - Add custom fields with various types (Text, Select,
+Boolean, Date, etc.)</p>
+<p><strong>Resetting Types:</strong> - Built-in types show a ↺ button to
+reset them to their default configuration - “Reset All to Defaults”
+restores all built-in types to their original state</p>
+<p><strong>Deleting Types:</strong> - Custom types (not built-in) can be
+deleted using the 🗑 button - Types in use by existing requirements
+cannot be deleted</p>
 <h3 id="relationship-types">Relationship Types</h3>
 <p>The system includes built-in relationship types with configurable
 constraints:</p>
