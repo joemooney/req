@@ -1109,6 +1109,8 @@ pub struct RequirementsApp {
     pending_reaction_toggle: Option<(Uuid, String)>, // (comment_id, reaction_name)
     show_reaction_picker: Option<Uuid>,              // Comment ID to show reaction picker for
     scroll_to_requirement: Option<Uuid>,             // Requirement ID to scroll into view
+    visible_requirement_indices: Vec<usize>,         // Indices of requirements currently visible in reqlist
+    last_scroll_offset: f32,                         // Track scroll position to detect scroll direction
 
     // Settings
     user_settings: UserSettings,
@@ -1320,6 +1322,8 @@ impl RequirementsApp {
             pending_reaction_toggle: None,
             show_reaction_picker: None,
             scroll_to_requirement: None,
+            visible_requirement_indices: Vec::new(),
+            last_scroll_offset: 0.0,
             current_font_size: initial_font_size,
             user_settings,
             show_settings_dialog: false,
@@ -5018,6 +5022,9 @@ impl RequirementsApp {
                     }
                 }
 
+                // Clear visible indices before rendering (will be populated during render)
+                self.visible_requirement_indices.clear();
+
                 // Requirement list (flat or tree) with drag auto-scroll support
                 let mut scroll_area = egui::ScrollArea::vertical()
                     .id_salt("requirements_list_scroll");
@@ -5042,12 +5049,29 @@ impl RequirementsApp {
                 });
 
                 // Update stored offset from actual scroll state (for when user scrolls manually)
+                let current_scroll_offset = scroll_output.state.offset.y;
                 if self.drag_source.is_some() {
-                    self.drag_scroll_delta = scroll_output.state.offset.y;
+                    self.drag_scroll_delta = current_scroll_offset;
                 } else {
-                    // Reset when not dragging
-                    self.drag_scroll_delta = scroll_output.state.offset.y;
+                    self.drag_scroll_delta = current_scroll_offset;
                 }
+
+                // Check if selected item scrolled out of view - if so, jump selection to visible item
+                if let Some(selected_idx) = self.selected_idx {
+                    if !self.visible_requirement_indices.contains(&selected_idx) && !self.visible_requirement_indices.is_empty() {
+                        // Selection is not visible, jump to first or last visible based on scroll direction
+                        let scrolling_down = current_scroll_offset > self.last_scroll_offset;
+                        let new_selection = if scrolling_down {
+                            // Scrolling down: select the first visible item
+                            *self.visible_requirement_indices.first().unwrap()
+                        } else {
+                            // Scrolling up: select the last visible item
+                            *self.visible_requirement_indices.last().unwrap()
+                        };
+                        self.selected_idx = Some(new_selection);
+                    }
+                }
+                self.last_scroll_offset = current_scroll_offset;
             });
     }
 
@@ -5445,20 +5469,10 @@ impl RequirementsApp {
                 self.scroll_to_requirement = None; // Clear after scrolling
             }
 
-            // Keep selected item visible - if it's selected but outside clip rect, scroll to it
-            // This handles the case where mouse wheel/scrollbar scrolls the selection out of view
-            if selected {
-                let clip_rect = ui.clip_rect();
-                let is_visible = clip_rect.contains(rect.center());
-                if !is_visible {
-                    // Scroll to bring selected item into view (use TOP or BOTTOM based on position)
-                    let align = if rect.center().y < clip_rect.center().y {
-                        egui::Align::TOP
-                    } else {
-                        egui::Align::BOTTOM
-                    };
-                    response.scroll_to_me(Some(align));
-                }
+            // Track if this item is visible in the scroll area
+            let clip_rect = ui.clip_rect();
+            if clip_rect.intersects(rect) {
+                self.visible_requirement_indices.push(idx);
             }
 
             // Paint background
@@ -5619,11 +5633,13 @@ impl RequirementsApp {
             return;
         };
 
+        let req_id = req.id;
         let spec_id = req.spec_id.clone();
         let title = req.title.clone();
         let selected = self.selected_idx == Some(idx);
         let is_drag_source = self.drag_source == Some(idx);
         let is_drop_target = self.drop_target == Some(idx);
+        let should_scroll_to = self.scroll_to_requirement == Some(req_id);
 
         let label = format!("{} - {}", spec_id.as_deref().unwrap_or("N/A"), title);
 
@@ -5655,6 +5671,18 @@ impl RequirementsApp {
         let desired_size = galley.size() + egui::vec2(8.0, 4.0);
 
         let (rect, response) = ui.allocate_exact_size(desired_size, egui::Sense::click_and_drag());
+
+        // Scroll to this item if requested (e.g., after adding a new requirement)
+        if should_scroll_to {
+            response.scroll_to_me(Some(egui::Align::Center));
+            self.scroll_to_requirement = None;
+        }
+
+        // Track if this item is visible in the scroll area
+        let clip_rect = ui.clip_rect();
+        if clip_rect.intersects(rect) {
+            self.visible_requirement_indices.push(idx);
+        }
 
         // Paint background
         if bg_color != egui::Color32::TRANSPARENT {
