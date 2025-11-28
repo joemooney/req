@@ -370,6 +370,10 @@ fn show_requirement(storage: &Storage, id_str: &str) -> Result<()> {
         RequirementType::User => "User",
         RequirementType::ChangeRequest => "Change Request",
         RequirementType::Bug => "Bug",
+        RequirementType::Epic => "Epic",
+        RequirementType::Story => "Story",
+        RequirementType::Task => "Task",
+        RequirementType::Spike => "Spike",
     };
     println!("{}: {}", "Type".blue(), type_str);
 
@@ -686,6 +690,10 @@ fn parse_type(type_str: &str) -> Result<RequirementType> {
         "user" => Ok(RequirementType::User),
         "change-request" | "changerequest" | "cr" => Ok(RequirementType::ChangeRequest),
         "bug" => Ok(RequirementType::Bug),
+        "epic" => Ok(RequirementType::Epic),
+        "story" => Ok(RequirementType::Story),
+        "task" => Ok(RequirementType::Task),
+        "spike" => Ok(RequirementType::Spike),
         _ => anyhow::bail!("Invalid requirement type: {}", type_str),
     }
 }

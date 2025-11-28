@@ -5856,6 +5856,10 @@ impl RequirementsApp {
                 (RequirementType::User, "UR"),
                 (RequirementType::ChangeRequest, "CR"),
                 (RequirementType::Bug, "BUG"),
+                (RequirementType::Epic, "Epic"),
+                (RequirementType::Story, "Story"),
+                (RequirementType::Task, "Task"),
+                (RequirementType::Spike, "Spike"),
             ];
 
             for (req_type, label) in types {
@@ -6001,6 +6005,10 @@ impl RequirementsApp {
                     (RequirementType::User, "UR"),
                     (RequirementType::ChangeRequest, "CR"),
                     (RequirementType::Bug, "BUG"),
+                    (RequirementType::Epic, "Epic"),
+                    (RequirementType::Story, "Story"),
+                    (RequirementType::Task, "Task"),
+                    (RequirementType::Spike, "Spike"),
                 ];
 
                 for (req_type, label) in types {
@@ -7756,6 +7764,11 @@ impl RequirementsApp {
                         "Change Request",
                     );
                     ui.selectable_value(&mut self.form_type, RequirementType::Bug, "Bug");
+                    ui.separator();
+                    ui.selectable_value(&mut self.form_type, RequirementType::Epic, "Epic");
+                    ui.selectable_value(&mut self.form_type, RequirementType::Story, "Story");
+                    ui.selectable_value(&mut self.form_type, RequirementType::Task, "Task");
+                    ui.selectable_value(&mut self.form_type, RequirementType::Spike, "Spike");
                 });
             type_changed = old_type != self.form_type;
 

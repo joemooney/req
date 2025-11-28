@@ -46,12 +46,18 @@ impl fmt::Display for RequirementPriority {
 /// Represents the type of a requirement
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum RequirementType {
+    // Traditional requirements types
     Functional,
     NonFunctional,
     System,
     User,
     ChangeRequest,
     Bug,
+    // Agile types
+    Epic,
+    Story,
+    Task,
+    Spike,
 }
 
 impl fmt::Display for RequirementType {
@@ -63,6 +69,10 @@ impl fmt::Display for RequirementType {
             RequirementType::User => write!(f, "User"),
             RequirementType::ChangeRequest => write!(f, "Change Request"),
             RequirementType::Bug => write!(f, "Bug"),
+            RequirementType::Epic => write!(f, "Epic"),
+            RequirementType::Story => write!(f, "Story"),
+            RequirementType::Task => write!(f, "Task"),
+            RequirementType::Spike => write!(f, "Spike"),
         }
     }
 }
@@ -1769,6 +1779,10 @@ impl RequirementsStore {
             RequirementType::User => "User",
             RequirementType::ChangeRequest => "ChangeRequest",
             RequirementType::Bug => "Bug",
+            RequirementType::Epic => "Epic",
+            RequirementType::Story => "Story",
+            RequirementType::Task => "Task",
+            RequirementType::Spike => "Spike",
         };
         self.type_definitions.iter().find(|td| td.name == type_name)
     }
@@ -2269,6 +2283,10 @@ impl RequirementsStore {
             RequirementType::User => "User",
             RequirementType::ChangeRequest => "Change Request",
             RequirementType::Bug => "Bug",
+            RequirementType::Epic => "Epic",
+            RequirementType::Story => "Story",
+            RequirementType::Task => "Task",
+            RequirementType::Spike => "Spike",
         };
         self.id_config
             .get_type_by_name(type_name)
@@ -2385,6 +2403,10 @@ impl RequirementsStore {
                     RequirementType::User => Some("UR".to_string()),
                     RequirementType::ChangeRequest => Some("CR".to_string()),
                     RequirementType::Bug => Some("BUG".to_string()),
+                    RequirementType::Epic => Some("EPIC".to_string()),
+                    RequirementType::Story => Some("STORY".to_string()),
+                    RequirementType::Task => Some("TASK".to_string()),
+                    RequirementType::Spike => Some("SPIKE".to_string()),
                 };
                 (i, prefix_override, feature_prefix, type_prefix)
             })
@@ -2553,6 +2575,10 @@ impl RequirementsStore {
                     RequirementType::User => Some("UR".to_string()),
                     RequirementType::ChangeRequest => Some("CR".to_string()),
                     RequirementType::Bug => Some("BUG".to_string()),
+                    RequirementType::Epic => Some("EPIC".to_string()),
+                    RequirementType::Story => Some("STORY".to_string()),
+                    RequirementType::Task => Some("TASK".to_string()),
+                    RequirementType::Spike => Some("SPIKE".to_string()),
                 };
                 (i, prefix_override, feature_prefix, type_prefix)
             })

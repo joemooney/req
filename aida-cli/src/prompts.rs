@@ -43,6 +43,10 @@ pub fn prompt_new_requirement(store: &mut aida_core::RequirementsStore) -> Resul
         RequirementType::User,
         RequirementType::ChangeRequest,
         RequirementType::Bug,
+        RequirementType::Epic,
+        RequirementType::Story,
+        RequirementType::Task,
+        RequirementType::Spike,
     ];
     let req_type = Select::new("Type:", type_options).prompt()?;
     req.req_type = req_type;
