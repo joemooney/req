@@ -1600,12 +1600,13 @@ impl RequirementsApp {
         }
     }
 
-    /// Reset to default view (user's preferred perspective, TopDown, no filters)
+    /// Reset to default view (user's preferred perspective, TopDown, no filters, clear search)
     fn reset_to_default_view(&mut self) {
         self.perspective = self.user_settings.preferred_perspective.clone();
         self.perspective_direction = PerspectiveDirection::TopDown;
         self.filter_types.clear();
         self.filter_features.clear();
+        self.filter_text.clear();
         self.active_preset = None;
     }
 
