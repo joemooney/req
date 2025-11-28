@@ -5387,6 +5387,7 @@ impl RequirementsApp {
                         ui.separator();
 
                         egui::ScrollArea::vertical()
+                            .id_salt("theme_editor_properties_scroll")
                             .max_height(available_height - 50.0)
                             .show(ui, |ui| {
                                 match self.theme_editor_category {
@@ -5429,6 +5430,7 @@ impl RequirementsApp {
                         ui.add_space(5.0);
 
                         egui::ScrollArea::vertical()
+                            .id_salt("theme_editor_preview_scroll")
                             .max_height(available_height - 30.0)
                             .show(ui, |ui| {
                                 Self::show_theme_preview(&self.theme_editor_theme, ui);
