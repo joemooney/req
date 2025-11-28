@@ -5307,70 +5307,78 @@ impl RequirementsApp {
         egui::Window::new("🎨 Theme Editor")
             .collapsible(false)
             .resizable(true)
-            .min_width(800.0)
-            .min_height(500.0)
+            .default_width(850.0)
+            .default_height(550.0)
             .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
             .show(ctx, |ui| {
+                // Use a fixed height area for the main content
+                let available_height = ui.available_height() - 40.0; // Reserve space for buttons
+
                 ui.horizontal(|ui| {
-                    // Left panel: Category selector and color editors
-                    egui::SidePanel::left("theme_editor_categories")
-                        .resizable(false)
-                        .min_width(150.0)
-                        .show_inside(ui, |ui| {
-                            ui.heading("Categories");
-                            ui.add_space(5.0);
-                            for cat in ThemeEditorCategory::all() {
+                    // Left column: Categories
+                    ui.vertical(|ui| {
+                        ui.set_min_width(150.0);
+                        ui.set_min_height(available_height);
+
+                        ui.heading("Categories");
+                        ui.add_space(5.0);
+                        for cat in ThemeEditorCategory::all() {
+                            if ui
+                                .selectable_label(
+                                    self.theme_editor_category == *cat,
+                                    cat.label(),
+                                )
+                                .clicked()
+                            {
+                                self.theme_editor_category = *cat;
+                            }
+                        }
+                        ui.add_space(10.0);
+                        ui.separator();
+                        ui.add_space(5.0);
+
+                        // Base theme selector
+                        ui.label("Base Theme:");
+                        egui::ComboBox::from_id_salt("theme_editor_base")
+                            .selected_text(self.theme_editor_theme.base.label())
+                            .show_ui(ui, |ui| {
                                 if ui
                                     .selectable_label(
-                                        self.theme_editor_category == *cat,
-                                        cat.label(),
+                                        self.theme_editor_theme.base == BaseTheme::Dark,
+                                        "Dark",
                                     )
                                     .clicked()
                                 {
-                                    self.theme_editor_category = *cat;
+                                    self.theme_editor_theme.base = BaseTheme::Dark;
+                                    self.theme_editor_theme.dark_mode = true;
                                 }
-                            }
-                            ui.add_space(10.0);
-                            ui.separator();
-                            ui.add_space(5.0);
+                                if ui
+                                    .selectable_label(
+                                        self.theme_editor_theme.base == BaseTheme::Light,
+                                        "Light",
+                                    )
+                                    .clicked()
+                                {
+                                    self.theme_editor_theme.base = BaseTheme::Light;
+                                    self.theme_editor_theme.dark_mode = false;
+                                }
+                            });
 
-                            // Base theme selector
-                            ui.label("Base Theme:");
-                            egui::ComboBox::from_id_salt("theme_editor_base")
-                                .selected_text(self.theme_editor_theme.base.label())
-                                .show_ui(ui, |ui| {
-                                    if ui
-                                        .selectable_label(
-                                            self.theme_editor_theme.base == BaseTheme::Dark,
-                                            "Dark",
-                                        )
-                                        .clicked()
-                                    {
-                                        self.theme_editor_theme.base = BaseTheme::Dark;
-                                        self.theme_editor_theme.dark_mode = true;
-                                    }
-                                    if ui
-                                        .selectable_label(
-                                            self.theme_editor_theme.base == BaseTheme::Light,
-                                            "Light",
-                                        )
-                                        .clicked()
-                                    {
-                                        self.theme_editor_theme.base = BaseTheme::Light;
-                                        self.theme_editor_theme.dark_mode = false;
-                                    }
-                                });
+                        ui.add_space(10.0);
+                        if ui.button("Reset to Base").clicked() {
+                            let name = self.theme_editor_theme.name.clone();
+                            self.theme_editor_theme =
+                                CustomTheme::from_base(self.theme_editor_theme.base, name);
+                        }
+                    });
 
-                            ui.add_space(10.0);
-                            if ui.button("Reset to Base").clicked() {
-                                let name = self.theme_editor_theme.name.clone();
-                                self.theme_editor_theme =
-                                    CustomTheme::from_base(self.theme_editor_theme.base, name);
-                            }
-                        });
+                    ui.separator();
 
-                    // Center panel: Property editors for selected category
-                    egui::CentralPanel::default().show_inside(ui, |ui| {
+                    // Center column: Property editors
+                    ui.vertical(|ui| {
+                        ui.set_min_width(350.0);
+                        ui.set_min_height(available_height);
+
                         ui.horizontal(|ui| {
                             ui.label("Theme Name:");
                             ui.text_edit_singleline(&mut self.theme_editor_theme.name);
@@ -5378,39 +5386,54 @@ impl RequirementsApp {
                         ui.add_space(10.0);
                         ui.separator();
 
-                        egui::ScrollArea::vertical().show(ui, |ui| {
-                            match self.theme_editor_category {
-                                ThemeEditorCategory::Backgrounds => {
-                                    Self::show_theme_backgrounds(&mut self.theme_editor_theme, ui);
+                        egui::ScrollArea::vertical()
+                            .max_height(available_height - 50.0)
+                            .show(ui, |ui| {
+                                match self.theme_editor_category {
+                                    ThemeEditorCategory::Backgrounds => {
+                                        Self::show_theme_backgrounds(
+                                            &mut self.theme_editor_theme,
+                                            ui,
+                                        );
+                                    }
+                                    ThemeEditorCategory::Text => {
+                                        Self::show_theme_text(&mut self.theme_editor_theme, ui);
+                                    }
+                                    ThemeEditorCategory::Widgets => {
+                                        Self::show_theme_widgets(&mut self.theme_editor_theme, ui);
+                                    }
+                                    ThemeEditorCategory::Selection => {
+                                        Self::show_theme_selection(
+                                            &mut self.theme_editor_theme,
+                                            ui,
+                                        );
+                                    }
+                                    ThemeEditorCategory::Borders => {
+                                        Self::show_theme_borders(&mut self.theme_editor_theme, ui);
+                                    }
+                                    ThemeEditorCategory::Spacing => {
+                                        Self::show_theme_spacing(&mut self.theme_editor_theme, ui);
+                                    }
                                 }
-                                ThemeEditorCategory::Text => {
-                                    Self::show_theme_text(&mut self.theme_editor_theme, ui);
-                                }
-                                ThemeEditorCategory::Widgets => {
-                                    Self::show_theme_widgets(&mut self.theme_editor_theme, ui);
-                                }
-                                ThemeEditorCategory::Selection => {
-                                    Self::show_theme_selection(&mut self.theme_editor_theme, ui);
-                                }
-                                ThemeEditorCategory::Borders => {
-                                    Self::show_theme_borders(&mut self.theme_editor_theme, ui);
-                                }
-                                ThemeEditorCategory::Spacing => {
-                                    Self::show_theme_spacing(&mut self.theme_editor_theme, ui);
-                                }
-                            }
-                        });
+                            });
                     });
 
-                    // Right panel: Live preview
-                    egui::SidePanel::right("theme_preview")
-                        .resizable(false)
-                        .min_width(250.0)
-                        .show_inside(ui, |ui| {
-                            ui.heading("Live Preview");
-                            ui.add_space(5.0);
-                            Self::show_theme_preview(&self.theme_editor_theme, ui);
-                        });
+                    ui.separator();
+
+                    // Right column: Live preview
+                    ui.vertical(|ui| {
+                        ui.set_min_width(220.0);
+                        ui.set_min_height(available_height);
+
+                        ui.heading("Live Preview");
+                        ui.add_space(5.0);
+
+                        egui::ScrollArea::vertical()
+                            .max_height(available_height - 30.0)
+                            .show(ui, |ui| {
+                                Self::show_theme_preview(&self.theme_editor_theme, ui);
+                            });
+                    });
                 });
 
                 ui.add_space(10.0);
