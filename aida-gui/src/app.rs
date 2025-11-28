@@ -2103,47 +2103,22 @@ impl RequirementsApp {
     fn configure_fonts(ctx: &egui::Context) {
         let mut fonts = egui::FontDefinitions::default();
 
-        // Try to load system fonts with good Unicode coverage
-        // These are common fonts that support many Unicode symbols
-        let font_paths = [
-            // Linux common paths
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-            "/usr/share/fonts/TTF/DejaVuSans.ttf",
-            "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
-            "/usr/share/fonts/noto/NotoSans-Regular.ttf",
-            "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-            // macOS paths
-            "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
-            "/Library/Fonts/Arial Unicode.ttf",
-            // Windows paths
-            "C:\\Windows\\Fonts\\arial.ttf",
-            "C:\\Windows\\Fonts\\seguisym.ttf",
-        ];
+        // Embed DejaVu Sans font at compile time for cross-platform Unicode support
+        // DejaVu Sans is licensed under a free license (similar to MIT)
+        // See: https://dejavu-fonts.github.io/License.html
+        const DEJAVU_SANS: &[u8] = include_bytes!("../assets/DejaVuSans.ttf");
 
-        let mut loaded_font = false;
-        for path in &font_paths {
-            if let Ok(font_data) = std::fs::read(path) {
-                fonts.font_data.insert(
-                    "unicode_font".to_owned(),
-                    egui::FontData::from_owned(font_data).into(),
-                );
+        fonts.font_data.insert(
+            "dejavu_sans".to_owned(),
+            egui::FontData::from_static(DEJAVU_SANS).into(),
+        );
 
-                // Add to both proportional and monospace families as highest priority
-                fonts
-                    .families
-                    .entry(egui::FontFamily::Proportional)
-                    .or_default()
-                    .insert(0, "unicode_font".to_owned());
-
-                loaded_font = true;
-                eprintln!("Loaded Unicode font from: {}", path);
-                break;
-            }
-        }
-
-        if !loaded_font {
-            eprintln!("Warning: Could not load a Unicode-supporting font. Some symbols may not display correctly.");
-        }
+        // Add DejaVu Sans as highest priority for proportional text
+        fonts
+            .families
+            .entry(egui::FontFamily::Proportional)
+            .or_default()
+            .insert(0, "dejavu_sans".to_owned());
 
         ctx.set_fonts(fonts);
     }
