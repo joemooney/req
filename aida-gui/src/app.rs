@@ -2112,6 +2112,10 @@ impl RequirementsApp {
                         self.show_new_project_dialog = true;
                         ui.close_menu();
                     }
+                    ui.separator();
+                    if ui.button("🚪 Quit").clicked() {
+                        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                    }
                 });
 
                 if ui.button("➕ Add").clicked() {

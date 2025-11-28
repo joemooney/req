@@ -1105,6 +1105,10 @@ requirements:
     target_id: 5a9b7e50-4678-4c85-bb69-6ac380ac985e
   - rel_type: Child
     target_id: 4d2cce7c-d8e4-4c9b-a6a5-61637a423f12
+  - rel_type: Child
+    target_id: 25b4e80b-ae19-401f-bd69-dd5636a08944
+  - rel_type: Child
+    target_id: b1ba8347-d9f7-4aee-a1e2-8c96f0ad5d3c
 - id: 5738b675-4fa8-4f10-94a8-e6d16c418c35
   spec_id: FILTER-0042
   prefix_override: FILTER
@@ -3203,6 +3207,53 @@ requirements:
           - PageUp/PageDown: Navigate selection by page
           - Home/End: Jump to first/last item
           - Click: Select an item
+- id: 25b4e80b-ae19-401f-bd69-dd5636a08944
+  spec_id: FR-0074
+  title: Switch Project
+  description: |2+
+      Switch Project Feature
+
+      - Shows all registered projects from the registry
+      - Only displays projects whose files exist on disk
+      - One-click to switch to any project
+
+
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-28T03:47:02.328158796Z
+  modified_at: 2025-11-28T03:47:02.328158796Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: bb81e51e-dd32-48ef-9806-cf26a09643f5
+- id: b1ba8347-d9f7-4aee-a1e2-8c96f0ad5d3c
+  spec_id: FR-0075
+  title: New Project
+  description: |2-
+      New Project Feature
+
+      - Directory selection
+      - Project name, title, and description fields
+      - Template dropdown (current project or templates from ~/.config/aida/templates/)
+      - Option to include all users from template (default: only current user)
+      - Automatically registers new project in the registry
+      - Switches to the new project after creation
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-28T03:47:19.429481884Z
+  modified_at: 2025-11-28T03:47:19.429481884Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: bb81e51e-dd32-48ef-9806-cf26a09643f5
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
   spec_id: $USER-001
@@ -3244,7 +3295,7 @@ id_config:
     description: Change requests for modifications to existing functionality
 features: []
 next_feature_number: 33
-next_spec_number: 74
+next_spec_number: 76
 prefix_counters: {}
 relationship_definitions:
 - name: parent
