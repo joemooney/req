@@ -782,6 +782,9 @@ pub struct UserSettings {
     /// Base font size in points
     #[serde(default = "default_font_size")]
     pub base_font_size: f32,
+    /// UI title heading level (1-6, default 3)
+    #[serde(default = "default_ui_heading_level")]
+    pub ui_heading_level: u8,
     /// Preferred view perspective
     #[serde(default)]
     pub preferred_perspective: Perspective,
@@ -800,6 +803,10 @@ fn default_font_size() -> f32 {
     DEFAULT_FONT_SIZE
 }
 
+fn default_ui_heading_level() -> u8 {
+    3 // H3 by default
+}
+
 impl Default for UserSettings {
     fn default() -> Self {
         Self {
@@ -807,6 +814,7 @@ impl Default for UserSettings {
             email: String::new(),
             handle: String::new(),
             base_font_size: DEFAULT_FONT_SIZE,
+            ui_heading_level: default_ui_heading_level(),
             preferred_perspective: Perspective::default(),
             theme: Theme::default(),
             keybindings: KeyBindings::default(),
@@ -1118,6 +1126,7 @@ pub struct RequirementsApp {
     settings_form_email: String,
     settings_form_handle: String,
     settings_form_font_size: f32,
+    settings_form_ui_heading_level: u8,
     settings_form_perspective: Perspective,
     settings_form_theme: Theme,
     settings_form_keybindings: KeyBindings,
@@ -1366,6 +1375,7 @@ impl RequirementsApp {
             settings_form_email: String::new(),
             settings_form_handle: String::new(),
             settings_form_font_size: DEFAULT_FONT_SIZE,
+            settings_form_ui_heading_level: default_ui_heading_level(),
             settings_form_perspective: Perspective::default(),
             settings_form_theme: Theme::default(),
             settings_form_keybindings: KeyBindings::default(),
@@ -2060,6 +2070,7 @@ impl RequirementsApp {
                         self.settings_form_email = self.user_settings.email.clone();
                         self.settings_form_handle = self.user_settings.handle.clone();
                         self.settings_form_font_size = self.user_settings.base_font_size;
+                        self.settings_form_ui_heading_level = self.user_settings.ui_heading_level;
                         self.settings_form_perspective =
                             self.user_settings.preferred_perspective.clone();
                         self.settings_form_theme = self.user_settings.theme.clone();
@@ -2170,6 +2181,7 @@ impl RequirementsApp {
                         self.user_settings.email = self.settings_form_email.clone();
                         self.user_settings.handle = self.settings_form_handle.clone();
                         self.user_settings.base_font_size = self.settings_form_font_size;
+                        self.user_settings.ui_heading_level = self.settings_form_ui_heading_level;
                         self.user_settings.preferred_perspective =
                             self.settings_form_perspective.clone();
                         self.user_settings.theme = self.settings_form_theme.clone();
@@ -2307,6 +2319,25 @@ impl RequirementsApp {
                     );
                     if ui.button("Reset").clicked() {
                         self.settings_form_font_size = DEFAULT_FONT_SIZE;
+                    }
+                });
+                ui.end_row();
+
+                ui.label("UI Title Size:");
+                ui.horizontal(|ui| {
+                    egui::ComboBox::from_id_salt("settings_heading_level_combo")
+                        .selected_text(format!("H{}", self.settings_form_ui_heading_level))
+                        .show_ui(ui, |ui| {
+                            for level in 1..=6_u8 {
+                                ui.selectable_value(
+                                    &mut self.settings_form_ui_heading_level,
+                                    level,
+                                    format!("H{}", level),
+                                );
+                            }
+                        });
+                    if ui.button("Reset").clicked() {
+                        self.settings_form_ui_heading_level = default_ui_heading_level();
                     }
                 });
                 ui.end_row();
@@ -7845,12 +7876,18 @@ impl eframe::App for RequirementsApp {
 
         // Exponential scaling for markdown headings - makes differences much more visible
         let scale = 1.25_f32;
-        let h6 = base;                    // H6 = base size
-        let h5 = base * scale;            // H5 = 1.25x
-        let h4 = base * scale.powi(2);    // H4 = ~1.56x
-        let h3 = base * scale.powi(3);    // H3 = ~1.95x
-        let h2 = base * scale.powi(4);    // H2 = ~2.44x
-        let h1 = base * scale.powi(5);    // H1 = ~3.05x
+        let heading_sizes = [
+            base * scale.powi(5), // H1 = ~3.05x
+            base * scale.powi(4), // H2 = ~2.44x
+            base * scale.powi(3), // H3 = ~1.95x
+            base * scale.powi(2), // H4 = ~1.56x
+            base * scale,         // H5 = 1.25x
+            base,                 // H6 = base size
+        ];
+
+        // Get the UI heading size based on user preference (1-6 maps to index 0-5)
+        let ui_heading_idx = (self.user_settings.ui_heading_level.clamp(1, 6) - 1) as usize;
+        let ui_heading_size = heading_sizes[ui_heading_idx];
 
         // Update standard text styles
         for (text_style, font_id) in style.text_styles.iter_mut() {
@@ -7859,17 +7896,17 @@ impl eframe::App for RequirementsApp {
                 egui::TextStyle::Body => font_id.size = base,
                 egui::TextStyle::Monospace => font_id.size = base,
                 egui::TextStyle::Button => font_id.size = base,
-                egui::TextStyle::Heading => font_id.size = h3, // Default heading uses H3 size
+                egui::TextStyle::Heading => font_id.size = ui_heading_size, // UI headings use user preference
                 egui::TextStyle::Name(name) => {
                     // Set distinct sizes for markdown heading levels (exponential scaling)
                     let name_str: &str = name.as_ref();
                     match name_str {
-                        "Heading" => font_id.size = h1,
-                        "Heading2" => font_id.size = h2,
-                        "Heading3" => font_id.size = h3,
-                        "Heading4" => font_id.size = h4,
-                        "Heading5" => font_id.size = h5,
-                        "Heading6" => font_id.size = h6,
+                        "Heading" => font_id.size = heading_sizes[0],  // H1
+                        "Heading2" => font_id.size = heading_sizes[1], // H2
+                        "Heading3" => font_id.size = heading_sizes[2], // H3
+                        "Heading4" => font_id.size = heading_sizes[3], // H4
+                        "Heading5" => font_id.size = heading_sizes[4], // H5
+                        "Heading6" => font_id.size = heading_sizes[5], // H6
                         _ => font_id.size = base,
                     }
                 }
