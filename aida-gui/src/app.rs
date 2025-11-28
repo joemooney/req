@@ -1203,6 +1203,12 @@ pub struct UserSettings {
     /// Saved view presets
     #[serde(default)]
     pub view_presets: Vec<ViewPreset>,
+    /// Saved custom themes
+    #[serde(default)]
+    pub custom_themes: Vec<CustomTheme>,
+    /// Show status icons in requirements list
+    #[serde(default)]
+    pub show_status_icons: bool,
 }
 
 fn default_font_size() -> f32 {
@@ -1225,6 +1231,8 @@ impl Default for UserSettings {
             theme: Theme::default(),
             keybindings: KeyBindings::default(),
             view_presets: Vec::new(),
+            custom_themes: Vec::new(),
+            show_status_icons: false,
         }
     }
 }
@@ -1569,6 +1577,7 @@ pub struct RequirementsApp {
     settings_form_theme: Theme,
     settings_form_keybindings: KeyBindings,
     capturing_key_for: Option<KeyAction>, // Which action we're capturing a key for
+    settings_form_show_status_icons: bool,
 
     // Project settings form fields
     settings_form_id_format: IdFormat,
@@ -1581,6 +1590,7 @@ pub struct RequirementsApp {
     show_theme_editor: bool,
     theme_editor_theme: CustomTheme,   // Working copy being edited
     theme_editor_category: ThemeEditorCategory, // Currently selected category
+    theme_editor_original_theme: Theme, // Original theme before editing (for Cancel)
 
     // User management
     show_user_form: bool,
@@ -1849,6 +1859,7 @@ impl RequirementsApp {
             settings_form_theme: Theme::default(),
             settings_form_keybindings: KeyBindings::default(),
             capturing_key_for: None,
+            settings_form_show_status_icons: false,
             settings_form_id_format: initial_id_format,
             settings_form_numbering: initial_numbering,
             settings_form_digits: initial_digits,
@@ -1857,6 +1868,7 @@ impl RequirementsApp {
             show_theme_editor: false,
             theme_editor_theme: CustomTheme::default(),
             theme_editor_category: ThemeEditorCategory::default(),
+            theme_editor_original_theme: Theme::default(),
             show_user_form: false,
             editing_user_id: None,
             user_form_name: String::new(),
@@ -2236,6 +2248,77 @@ impl RequirementsApp {
         } else {
             self.message = Some(("Saved successfully".to_string(), false));
         }
+    }
+
+    /// Cycle through all themes including custom ones
+    fn cycle_theme(&mut self) {
+        // Build list of all available themes: built-ins + custom themes
+        let built_in_themes = [
+            Theme::Dark,
+            Theme::Light,
+            Theme::HighContrastDark,
+            Theme::SolarizedDark,
+            Theme::Nord,
+        ];
+
+        // Find current theme index
+        let current = &self.user_settings.theme;
+
+        // Check if current is a built-in theme
+        let mut current_idx: Option<usize> = None;
+        for (i, theme) in built_in_themes.iter().enumerate() {
+            if std::mem::discriminant(current) == std::mem::discriminant(theme)
+                && !matches!(current, Theme::Custom(_))
+            {
+                if current == theme {
+                    current_idx = Some(i);
+                    break;
+                }
+            }
+        }
+
+        // If not found in built-ins, check custom themes
+        let custom_themes = &self.user_settings.custom_themes;
+        let mut current_custom_idx: Option<usize> = None;
+        if current_idx.is_none() {
+            if let Theme::Custom(ref current_custom) = current {
+                for (i, custom) in custom_themes.iter().enumerate() {
+                    if custom.name == current_custom.name {
+                        current_custom_idx = Some(i);
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Determine next theme
+        let next_theme = if let Some(idx) = current_idx {
+            // Currently on a built-in theme
+            if idx + 1 < built_in_themes.len() {
+                // Next built-in
+                built_in_themes[idx + 1].clone()
+            } else if !custom_themes.is_empty() {
+                // First custom theme
+                Theme::Custom(Box::new(custom_themes[0].clone()))
+            } else {
+                // Wrap to first built-in
+                Theme::Dark
+            }
+        } else if let Some(idx) = current_custom_idx {
+            // Currently on a custom theme
+            if idx + 1 < custom_themes.len() {
+                // Next custom theme
+                Theme::Custom(Box::new(custom_themes[idx + 1].clone()))
+            } else {
+                // Wrap to first built-in
+                Theme::Dark
+            }
+        } else {
+            // Unknown state, reset to Dark
+            Theme::Dark
+        };
+
+        self.user_settings.theme = next_theme;
     }
 
     fn clear_form(&mut self) {
@@ -2701,6 +2784,8 @@ impl RequirementsApp {
                             self.user_settings.preferred_perspective.clone();
                         self.settings_form_theme = self.user_settings.theme.clone();
                         self.settings_form_keybindings = self.user_settings.keybindings.clone();
+                        self.settings_form_show_status_icons =
+                            self.user_settings.show_status_icons;
                         self.capturing_key_for = None;
                         // Load current project settings into form
                         self.settings_form_id_format = self.store.id_config.format.clone();
@@ -3138,6 +3223,8 @@ impl RequirementsApp {
                             self.settings_form_perspective.clone();
                         self.user_settings.theme = self.settings_form_theme.clone();
                         self.user_settings.keybindings = self.settings_form_keybindings.clone();
+                        self.user_settings.show_status_icons =
+                            self.settings_form_show_status_icons;
 
                         // Update project settings (stored in requirements file)
                         self.store.id_config.format = self.settings_form_id_format.clone();
@@ -3229,6 +3316,17 @@ impl RequirementsApp {
             .show(ui, |ui| {
                 ui.label("Theme:");
                 ui.horizontal(|ui| {
+                    // Track if theme changed to apply it immediately
+                    let old_theme = self.settings_form_theme.clone();
+
+                    // Collect saved custom themes first to avoid borrow issues
+                    let saved_customs: Vec<(String, CustomTheme)> = self
+                        .user_settings
+                        .custom_themes
+                        .iter()
+                        .map(|ct| (ct.name.clone(), ct.clone()))
+                        .collect();
+
                     egui::ComboBox::from_id_salt("settings_theme_combo")
                         .selected_text(self.settings_form_theme.label())
                         .show_ui(ui, |ui| {
@@ -3257,22 +3355,29 @@ impl RequirementsApp {
                                 Theme::Nord,
                                 Theme::Nord.label(),
                             );
-                            ui.separator();
-                            // Show any existing custom theme (extract info first to avoid borrow issues)
-                            let custom_theme_copy = if let Theme::Custom(custom) = &self.settings_form_theme {
-                                Some((custom.clone(), custom.name.clone()))
-                            } else {
-                                None
-                            };
-                            if let Some((theme_copy, name)) = custom_theme_copy {
-                                ui.selectable_value(
-                                    &mut self.settings_form_theme,
-                                    Theme::Custom(theme_copy),
-                                    format!("Custom: {}", name),
-                                );
+
+                            // Show saved custom themes
+                            if !saved_customs.is_empty() {
+                                ui.separator();
+                                for (name, custom) in saved_customs {
+                                    ui.selectable_value(
+                                        &mut self.settings_form_theme,
+                                        Theme::Custom(Box::new(custom)),
+                                        format!("Custom: {}", name),
+                                    );
+                                }
                             }
                         });
+
+                    // Apply theme change immediately for live preview
+                    if self.settings_form_theme != old_theme {
+                        self.user_settings.theme = self.settings_form_theme.clone();
+                    }
+
                     if ui.button("🎨 Edit Theme...").clicked() {
+                        // Store original theme for Cancel
+                        self.theme_editor_original_theme = self.settings_form_theme.clone();
+
                         // Initialize the theme editor with current theme or create new
                         self.theme_editor_theme = if let Theme::Custom(ref custom) = self.settings_form_theme {
                             (**custom).clone()
@@ -3350,6 +3455,13 @@ impl RequirementsApp {
                             Perspective::References.label(),
                         );
                     });
+                ui.end_row();
+
+                ui.label("Status Icons:");
+                ui.checkbox(
+                    &mut self.settings_form_show_status_icons,
+                    "Show status icons in requirements list",
+                );
                 ui.end_row();
             });
 
@@ -5304,138 +5416,154 @@ impl RequirementsApp {
         // Apply the working theme so user sees changes live
         self.theme_editor_theme.apply(ctx);
 
+        // Fixed dimensions for theme editor
+        const THEME_EDITOR_WIDTH: f32 = 850.0;
+        const THEME_EDITOR_HEIGHT: f32 = 500.0;
+        const CONTENT_HEIGHT: f32 = 400.0;
+
         egui::Window::new("🎨 Theme Editor")
             .collapsible(false)
-            .resizable(true)
-            .default_width(900.0)
-            .default_height(500.0)
+            .resizable(false)
+            .fixed_size([THEME_EDITOR_WIDTH, THEME_EDITOR_HEIGHT])
             .anchor(egui::Align2::CENTER_CENTER, [0.0, 30.0]) // Offset down to avoid menu bar
             .show(ctx, |ui| {
-                // Use a fixed height area for the main content
-                let available_height = ui.available_height() - 40.0; // Reserve space for buttons
-
                 ui.horizontal(|ui| {
-                    // Left column: Categories
-                    ui.vertical(|ui| {
-                        ui.set_min_width(150.0);
-                        ui.set_min_height(available_height);
-
-                        ui.heading("Categories");
-                        ui.add_space(5.0);
-                        for cat in ThemeEditorCategory::all() {
-                            if ui
-                                .selectable_label(
-                                    self.theme_editor_category == *cat,
-                                    cat.label(),
-                                )
-                                .clicked()
-                            {
-                                self.theme_editor_category = *cat;
+                    // Left column: Categories (fixed width)
+                    ui.allocate_ui_with_layout(
+                        egui::vec2(140.0, CONTENT_HEIGHT),
+                        egui::Layout::top_down(egui::Align::LEFT),
+                        |ui| {
+                            ui.heading("Categories");
+                            ui.add_space(5.0);
+                            for cat in ThemeEditorCategory::all() {
+                                if ui
+                                    .selectable_label(
+                                        self.theme_editor_category == *cat,
+                                        cat.label(),
+                                    )
+                                    .clicked()
+                                {
+                                    self.theme_editor_category = *cat;
+                                }
                             }
-                        }
-                        ui.add_space(10.0);
-                        ui.separator();
-                        ui.add_space(5.0);
+                            ui.add_space(10.0);
+                            ui.separator();
+                            ui.add_space(5.0);
 
-                        // Base theme selector
-                        ui.label("Base Theme:");
-                        egui::ComboBox::from_id_salt("theme_editor_base")
-                            .selected_text(self.theme_editor_theme.base.label())
-                            .show_ui(ui, |ui| {
-                                if ui
-                                    .selectable_label(
-                                        self.theme_editor_theme.base == BaseTheme::Dark,
-                                        "Dark",
-                                    )
-                                    .clicked()
-                                {
-                                    self.theme_editor_theme.base = BaseTheme::Dark;
-                                    self.theme_editor_theme.dark_mode = true;
-                                }
-                                if ui
-                                    .selectable_label(
-                                        self.theme_editor_theme.base == BaseTheme::Light,
-                                        "Light",
-                                    )
-                                    .clicked()
-                                {
-                                    self.theme_editor_theme.base = BaseTheme::Light;
-                                    self.theme_editor_theme.dark_mode = false;
-                                }
-                            });
+                            // Base theme selector
+                            ui.label("Base Theme:");
+                            egui::ComboBox::from_id_salt("theme_editor_base")
+                                .selected_text(self.theme_editor_theme.base.label())
+                                .show_ui(ui, |ui| {
+                                    if ui
+                                        .selectable_label(
+                                            self.theme_editor_theme.base == BaseTheme::Dark,
+                                            "Dark",
+                                        )
+                                        .clicked()
+                                    {
+                                        self.theme_editor_theme.base = BaseTheme::Dark;
+                                        self.theme_editor_theme.dark_mode = true;
+                                    }
+                                    if ui
+                                        .selectable_label(
+                                            self.theme_editor_theme.base == BaseTheme::Light,
+                                            "Light",
+                                        )
+                                        .clicked()
+                                    {
+                                        self.theme_editor_theme.base = BaseTheme::Light;
+                                        self.theme_editor_theme.dark_mode = false;
+                                    }
+                                });
 
-                        ui.add_space(10.0);
-                        if ui.button("Reset to Base").clicked() {
-                            let name = self.theme_editor_theme.name.clone();
-                            self.theme_editor_theme =
-                                CustomTheme::from_base(self.theme_editor_theme.base, name);
-                        }
-                    });
+                            ui.add_space(10.0);
+                            if ui.button("Reset to Base").clicked() {
+                                let name = self.theme_editor_theme.name.clone();
+                                self.theme_editor_theme =
+                                    CustomTheme::from_base(self.theme_editor_theme.base, name);
+                            }
+                        },
+                    );
 
                     ui.separator();
 
-                    // Center column: Property editors
-                    ui.vertical(|ui| {
-                        ui.set_min_width(350.0);
-                        ui.set_min_height(available_height);
-
-                        ui.horizontal(|ui| {
-                            ui.label("Theme Name:");
-                            ui.text_edit_singleline(&mut self.theme_editor_theme.name);
-                        });
-                        ui.add_space(10.0);
-                        ui.separator();
-
-                        egui::ScrollArea::vertical()
-                            .id_salt("theme_editor_properties_scroll")
-                            .max_height(available_height - 50.0)
-                            .show(ui, |ui| {
-                                match self.theme_editor_category {
-                                    ThemeEditorCategory::Backgrounds => {
-                                        Self::show_theme_backgrounds(
-                                            &mut self.theme_editor_theme,
-                                            ui,
-                                        );
-                                    }
-                                    ThemeEditorCategory::Text => {
-                                        Self::show_theme_text(&mut self.theme_editor_theme, ui);
-                                    }
-                                    ThemeEditorCategory::Widgets => {
-                                        Self::show_theme_widgets(&mut self.theme_editor_theme, ui);
-                                    }
-                                    ThemeEditorCategory::Selection => {
-                                        Self::show_theme_selection(
-                                            &mut self.theme_editor_theme,
-                                            ui,
-                                        );
-                                    }
-                                    ThemeEditorCategory::Borders => {
-                                        Self::show_theme_borders(&mut self.theme_editor_theme, ui);
-                                    }
-                                    ThemeEditorCategory::Spacing => {
-                                        Self::show_theme_spacing(&mut self.theme_editor_theme, ui);
-                                    }
-                                }
+                    // Center column: Property editors (fixed width)
+                    ui.allocate_ui_with_layout(
+                        egui::vec2(340.0, CONTENT_HEIGHT),
+                        egui::Layout::top_down(egui::Align::LEFT),
+                        |ui| {
+                            ui.horizontal(|ui| {
+                                ui.label("Theme Name:");
+                                ui.add(
+                                    egui::TextEdit::singleline(&mut self.theme_editor_theme.name)
+                                        .desired_width(200.0),
+                                );
                             });
-                    });
+                            ui.add_space(10.0);
+                            ui.separator();
+
+                            egui::ScrollArea::vertical()
+                                .id_salt("theme_editor_properties_scroll")
+                                .max_height(CONTENT_HEIGHT - 50.0)
+                                .show(ui, |ui| {
+                                    match self.theme_editor_category {
+                                        ThemeEditorCategory::Backgrounds => {
+                                            Self::show_theme_backgrounds(
+                                                &mut self.theme_editor_theme,
+                                                ui,
+                                            );
+                                        }
+                                        ThemeEditorCategory::Text => {
+                                            Self::show_theme_text(&mut self.theme_editor_theme, ui);
+                                        }
+                                        ThemeEditorCategory::Widgets => {
+                                            Self::show_theme_widgets(
+                                                &mut self.theme_editor_theme,
+                                                ui,
+                                            );
+                                        }
+                                        ThemeEditorCategory::Selection => {
+                                            Self::show_theme_selection(
+                                                &mut self.theme_editor_theme,
+                                                ui,
+                                            );
+                                        }
+                                        ThemeEditorCategory::Borders => {
+                                            Self::show_theme_borders(
+                                                &mut self.theme_editor_theme,
+                                                ui,
+                                            );
+                                        }
+                                        ThemeEditorCategory::Spacing => {
+                                            Self::show_theme_spacing(
+                                                &mut self.theme_editor_theme,
+                                                ui,
+                                            );
+                                        }
+                                    }
+                                });
+                        },
+                    );
 
                     ui.separator();
 
-                    // Right column: Live preview
-                    ui.vertical(|ui| {
-                        ui.set_min_width(220.0);
-                        ui.set_min_height(available_height);
+                    // Right column: Live preview (fixed width)
+                    ui.allocate_ui_with_layout(
+                        egui::vec2(320.0, CONTENT_HEIGHT),
+                        egui::Layout::top_down(egui::Align::LEFT),
+                        |ui| {
+                            ui.heading("Live Preview");
+                            ui.add_space(5.0);
 
-                        ui.heading("Live Preview");
-                        ui.add_space(5.0);
-
-                        egui::ScrollArea::vertical()
-                            .id_salt("theme_editor_preview_scroll")
-                            .max_height(available_height - 30.0)
-                            .show(ui, |ui| {
-                                Self::show_theme_preview(&self.theme_editor_theme, ui);
-                            });
-                    });
+                            egui::ScrollArea::vertical()
+                                .id_salt("theme_editor_preview_scroll")
+                                .max_height(CONTENT_HEIGHT - 30.0)
+                                .show(ui, |ui| {
+                                    Self::show_theme_preview(&self.theme_editor_theme, ui);
+                                });
+                        },
+                    );
                 });
 
                 ui.add_space(10.0);
@@ -5443,14 +5571,39 @@ impl RequirementsApp {
 
                 ui.horizontal(|ui| {
                     if ui.button("✓ Apply & Close").clicked() {
-                        // Save the custom theme
-                        self.settings_form_theme =
-                            Theme::Custom(Box::new(self.theme_editor_theme.clone()));
+                        // Save the custom theme to the list
+                        let new_theme = self.theme_editor_theme.clone();
+                        let theme_name = new_theme.name.clone();
+
+                        // Check if a theme with this name already exists
+                        if let Some(existing) = self
+                            .user_settings
+                            .custom_themes
+                            .iter_mut()
+                            .find(|t| t.name == theme_name)
+                        {
+                            // Update existing theme
+                            *existing = new_theme.clone();
+                        } else {
+                            // Add new theme
+                            self.user_settings.custom_themes.push(new_theme.clone());
+                        }
+
+                        // Set as current theme
+                        self.settings_form_theme = Theme::Custom(Box::new(new_theme.clone()));
+                        self.user_settings.theme = Theme::Custom(Box::new(new_theme));
+
+                        // Save settings immediately
+                        if let Err(e) = self.user_settings.save() {
+                            self.message = Some((format!("Failed to save theme: {}", e), true));
+                        }
+
                         self.show_theme_editor = false;
                     }
                     if ui.button("Cancel").clicked() {
-                        // Revert to previous theme
-                        self.settings_form_theme.apply(ctx);
+                        // Revert to the original theme before editing
+                        self.settings_form_theme = self.theme_editor_original_theme.clone();
+                        self.user_settings.theme = self.theme_editor_original_theme.clone();
                         self.show_theme_editor = false;
                     }
                 });
@@ -7207,6 +7360,44 @@ impl RequirementsApp {
         }
     }
 
+    /// Get the status icon for a requirement status string
+    fn get_status_icon(status_string: &str) -> &'static str {
+        let status_lower = status_string.to_lowercase();
+        if status_lower.contains("completed") || status_lower.contains("done") {
+            "✓"
+        } else if status_lower.contains("rejected") || status_lower.contains("closed") {
+            "✗"
+        } else if status_lower.contains("draft") {
+            "📝"
+        } else if status_lower.contains("review") {
+            "👁"
+        } else if status_lower.contains("approved") || status_lower.contains("ready") {
+            "✔"
+        } else if status_lower.contains("implement") || status_lower.contains("progress") {
+            "🔧"
+        } else if status_lower.contains("verified") {
+            "✅"
+        } else if status_lower.contains("backlog") {
+            "📋"
+        } else if status_lower.contains("open") || status_lower.contains("confirmed") {
+            "🔴"
+        } else if status_lower.contains("fixed") {
+            "🔧"
+        } else {
+            "•"
+        }
+    }
+
+    /// Check if a status is considered "inactive" (greyed out)
+    fn is_inactive_status(status_string: &str) -> bool {
+        let status_lower = status_string.to_lowercase();
+        status_lower.contains("completed")
+            || status_lower.contains("done")
+            || status_lower.contains("rejected")
+            || status_lower.contains("closed")
+            || status_lower.contains("verified")
+    }
+
     /// Render a single requirement item with drag-and-drop support
     fn show_draggable_requirement(&mut self, ui: &mut egui::Ui, idx: usize, indent: usize) {
         let Some(req) = self.store.requirements.get(idx) else {
@@ -7216,19 +7407,27 @@ impl RequirementsApp {
         let req_id = req.id;
         let spec_id = req.spec_id.clone();
         let title = req.title.clone();
+        let status_string = req.effective_status();
+        let is_inactive = Self::is_inactive_status(&status_string);
         let selected = self.selected_idx == Some(idx);
         let is_drag_source = self.drag_source == Some(idx);
         let is_drop_target = self.drop_target == Some(idx);
         let can_drag = self.perspective != Perspective::Flat; // Only allow drag in tree views
         let should_scroll_to = self.scroll_to_requirement == Some(req_id);
+        let show_status_icons = self.user_settings.show_status_icons;
 
         let indent_space = indent as f32 * 20.0;
 
         ui.horizontal(|ui| {
             ui.add_space(indent_space);
 
-            // Build the label
-            let label = format!("{} - {}", spec_id.as_deref().unwrap_or("N/A"), title);
+            // Build the label with optional status icon
+            let label = if show_status_icons {
+                let icon = Self::get_status_icon(&status_string);
+                format!("{} {} - {}", icon, spec_id.as_deref().unwrap_or("N/A"), title)
+            } else {
+                format!("{} - {}", spec_id.as_deref().unwrap_or("N/A"), title)
+            };
 
             // Visual feedback for drag/drop state
             let (bg_color, stroke) = if is_drop_target && can_drag {
@@ -7284,6 +7483,9 @@ impl RequirementsApp {
             let text_pos = rect.min + egui::vec2(4.0, 2.0);
             let text_color = if selected {
                 ui.visuals().selection.stroke.color
+            } else if is_inactive {
+                // Grey out completed/rejected items
+                ui.visuals().weak_text_color()
             } else {
                 ui.visuals().text_color()
             };
@@ -7472,12 +7674,21 @@ impl RequirementsApp {
         let req_id = req.id;
         let spec_id = req.spec_id.clone();
         let title = req.title.clone();
+        let status_string = req.effective_status();
+        let is_inactive = Self::is_inactive_status(&status_string);
         let selected = self.selected_idx == Some(idx);
         let is_drag_source = self.drag_source == Some(idx);
         let is_drop_target = self.drop_target == Some(idx);
         let should_scroll_to = self.scroll_to_requirement == Some(req_id);
+        let show_status_icons = self.user_settings.show_status_icons;
 
-        let label = format!("{} - {}", spec_id.as_deref().unwrap_or("N/A"), title);
+        // Build the label with optional status icon
+        let label = if show_status_icons {
+            let icon = Self::get_status_icon(&status_string);
+            format!("{} {} - {}", icon, spec_id.as_deref().unwrap_or("N/A"), title)
+        } else {
+            format!("{} - {}", spec_id.as_deref().unwrap_or("N/A"), title)
+        };
 
         // Visual feedback for drag/drop state
         let (bg_color, stroke) = if is_drop_target {
@@ -7529,6 +7740,9 @@ impl RequirementsApp {
             egui::Color32::from_gray(140)
         } else if selected {
             ui.visuals().selection.stroke.color
+        } else if is_inactive {
+            // Grey out completed/rejected items
+            ui.visuals().weak_text_color()
         } else {
             ui.visuals().text_color()
         };
@@ -9895,7 +10109,7 @@ impl eframe::App for RequirementsApp {
             ctx,
             self.current_key_context,
         ) {
-            self.user_settings.theme = self.user_settings.theme.next();
+            self.cycle_theme();
             self.user_settings.theme.apply(ctx);
             let _ = self.user_settings.save();
         }
