@@ -5106,6 +5106,104 @@ impl RequirementsApp {
         true
     }
 
+    /// Check if a requirement or any of its descendants (via the given relationship type) matches filters
+    /// This is used to determine if non-matching ancestors should be shown (greyed out)
+    fn has_matching_descendant(
+        &self,
+        req_id: &Uuid,
+        outgoing_rel_type: &RelationshipType,
+        visited: &mut HashSet<Uuid>,
+    ) -> bool {
+        // Prevent infinite recursion
+        if visited.contains(req_id) {
+            return false;
+        }
+        visited.insert(*req_id);
+
+        // Find all children via the outgoing relationship type
+        // In Parent/Child, outgoing is "Parent" - so we find requirements that have Parent pointing to us
+        // That means we are their parent, they are our children
+        for req in &self.store.requirements {
+            for rel in &req.relationships {
+                if &rel.rel_type == outgoing_rel_type && &rel.target_id == req_id {
+                    // req has a Parent relationship pointing to req_id
+                    // So req is a child of req_id
+                    // Check if this child matches filters
+                    if self.passes_filters(req, false) {
+                        return true;
+                    }
+                    // Recursively check this child's descendants
+                    if self.has_matching_descendant(&req.id, outgoing_rel_type, visited) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        false
+    }
+
+    /// Compute all ancestor requirement IDs that should be shown (greyed out) because they have matching descendants
+    fn compute_ancestor_ids_to_show(&self, outgoing_rel_type: &RelationshipType) -> HashSet<Uuid> {
+        let mut ancestors_to_show = HashSet::new();
+        let mut visited = HashSet::new();
+
+        // Find all requirements that match filters
+        let matching_reqs: Vec<Uuid> = self
+            .store
+            .requirements
+            .iter()
+            .filter(|req| self.passes_filters(req, false)) // Check with is_root=false for general match
+            .map(|req| req.id)
+            .collect();
+
+        // For each matching requirement, trace back its ancestors
+        for req_id in &matching_reqs {
+            self.collect_ancestors(
+                req_id,
+                outgoing_rel_type,
+                &mut ancestors_to_show,
+                &mut visited,
+            );
+        }
+
+        // Remove the matching requirements themselves (they're not "ancestors to grey out")
+        for req_id in &matching_reqs {
+            ancestors_to_show.remove(req_id);
+        }
+
+        ancestors_to_show
+    }
+
+    /// Recursively collect all ancestors of a requirement
+    fn collect_ancestors(
+        &self,
+        req_id: &Uuid,
+        outgoing_rel_type: &RelationshipType,
+        ancestors: &mut HashSet<Uuid>,
+        visited: &mut HashSet<Uuid>,
+    ) {
+        if visited.contains(req_id) {
+            return;
+        }
+        visited.insert(*req_id);
+
+        // Find the requirement
+        let Some(req) = self.store.requirements.iter().find(|r| &r.id == req_id) else {
+            return;
+        };
+
+        // Find parents: requirements that this one points to via the outgoing relationship
+        // In Parent/Child, outgoing is "Parent", so req.relationships with type Parent point to parents
+        for rel in &req.relationships {
+            if &rel.rel_type == outgoing_rel_type {
+                // rel.target_id is a parent
+                ancestors.insert(rel.target_id);
+                self.collect_ancestors(&rel.target_id, outgoing_rel_type, ancestors, visited);
+            }
+        }
+    }
+
     /// Get all unique feature names from requirements
     fn get_all_features(&self) -> Vec<String> {
         let mut features: Vec<String> = self
@@ -5122,7 +5220,12 @@ impl RequirementsApp {
 
     /// Find root nodes for tree view (requirements that are not children of any other requirement)
     /// For Parent/Child: roots are requirements that no one has a Parent relationship pointing to
-    fn find_tree_roots(&self, outgoing_rel_type: &RelationshipType) -> Vec<usize> {
+    /// If `ancestors_to_show` is provided, also include roots that are in that set (shown greyed out)
+    fn find_tree_roots_with_ancestors(
+        &self,
+        outgoing_rel_type: &RelationshipType,
+        ancestors_to_show: &HashSet<Uuid>,
+    ) -> Vec<usize> {
         // Collect all requirement IDs that are targets of the outgoing relationship type
         // These are the "children" - the ones that parents point to
         let mut is_child: HashSet<Uuid> = HashSet::new();
@@ -5138,17 +5241,33 @@ impl RequirementsApp {
         }
 
         // Return indices of requirements that are NOT children (i.e., they are roots)
+        // Include if: passes filters OR is an ancestor of something that passes filters
         self.store
             .requirements
             .iter()
             .enumerate()
-            .filter(|(_, req)| !is_child.contains(&req.id) && self.passes_filters(req, true))
+            .filter(|(_, req)| {
+                !is_child.contains(&req.id)
+                    && (self.passes_filters(req, true) || ancestors_to_show.contains(&req.id))
+            })
             .map(|(idx, _)| idx)
             .collect()
     }
 
+    /// Find root nodes for tree view (requirements that are not children of any other requirement)
+    /// For Parent/Child: roots are requirements that no one has a Parent relationship pointing to
+    fn find_tree_roots(&self, outgoing_rel_type: &RelationshipType) -> Vec<usize> {
+        self.find_tree_roots_with_ancestors(outgoing_rel_type, &HashSet::new())
+    }
+
     /// Get children of a requirement for a given relationship type
-    fn get_children(&self, parent_id: &Uuid, outgoing_rel_type: &RelationshipType) -> Vec<usize> {
+    /// If `ancestors_to_show` is provided, also include children that are in that set (shown greyed out)
+    fn get_children_with_ancestors(
+        &self,
+        parent_id: &Uuid,
+        outgoing_rel_type: &RelationshipType,
+        ancestors_to_show: &HashSet<Uuid>,
+    ) -> Vec<usize> {
         // Find the parent requirement
         if let Some(parent) = self.store.requirements.iter().find(|r| &r.id == parent_id) {
             // Get all target IDs where relationship type matches
@@ -5159,17 +5278,26 @@ impl RequirementsApp {
                 .map(|r| r.target_id)
                 .collect();
 
-            // Convert to indices, filtering by current filters (these are children)
+            // Convert to indices
+            // Include if: passes filters OR is an ancestor of something that passes filters
             self.store
                 .requirements
                 .iter()
                 .enumerate()
-                .filter(|(_, req)| child_ids.contains(&req.id) && self.passes_filters(req, false))
+                .filter(|(_, req)| {
+                    child_ids.contains(&req.id)
+                        && (self.passes_filters(req, false) || ancestors_to_show.contains(&req.id))
+                })
                 .map(|(idx, _)| idx)
                 .collect()
         } else {
             Vec::new()
         }
+    }
+
+    /// Get children of a requirement for a given relationship type
+    fn get_children(&self, parent_id: &Uuid, outgoing_rel_type: &RelationshipType) -> Vec<usize> {
+        self.get_children_with_ancestors(parent_id, outgoing_rel_type, &HashSet::new())
     }
 
     /// Get parents of a requirement for a given relationship type (for bottom-up view)
@@ -6064,6 +6192,9 @@ impl RequirementsApp {
             return;
         };
 
+        // Compute ancestors that should be shown (greyed out) because they have matching descendants
+        let ancestors_to_show = self.compute_ancestor_ids_to_show(&outgoing_type);
+
         match self.perspective_direction {
             PerspectiveDirection::TopDown => {
                 // Find leaves (no outgoing relationships - they are not parents of anything)
@@ -6084,7 +6215,8 @@ impl RequirementsApp {
             }
             PerspectiveDirection::BottomUp => {
                 // Find roots (requirements that are not children of anyone)
-                let roots = self.find_tree_roots(&outgoing_type);
+                // Include ancestors that have matching descendants (shown greyed out)
+                let roots = self.find_tree_roots_with_ancestors(&outgoing_type, &ancestors_to_show);
 
                 if roots.is_empty() {
                     ui.label("No root requirements found for this perspective.");
@@ -6095,7 +6227,13 @@ impl RequirementsApp {
                     self.show_flat_list(ui);
                 } else {
                     for root_idx in roots {
-                        self.show_tree_node(ui, root_idx, &outgoing_type, 0);
+                        self.show_tree_node_with_ancestors(
+                            ui,
+                            root_idx,
+                            &outgoing_type,
+                            0,
+                            &ancestors_to_show,
+                        );
                     }
                 }
             }
@@ -6109,12 +6247,29 @@ impl RequirementsApp {
         outgoing_rel_type: &RelationshipType,
         depth: usize,
     ) {
+        // Call the version with no ancestors set (old behavior for backward compatibility)
+        self.show_tree_node_with_ancestors(ui, idx, outgoing_rel_type, depth, &HashSet::new());
+    }
+
+    fn show_tree_node_with_ancestors(
+        &mut self,
+        ui: &mut egui::Ui,
+        idx: usize,
+        outgoing_rel_type: &RelationshipType,
+        depth: usize,
+        ancestors_to_show: &HashSet<Uuid>,
+    ) {
         let Some(req) = self.store.requirements.get(idx) else {
             return;
         };
 
         let req_id = req.id;
-        let children = self.get_children(&req_id, outgoing_rel_type);
+        // Check if this item is dimmed (shown only because it's an ancestor of a matching item)
+        let is_dimmed =
+            ancestors_to_show.contains(&req_id) && !self.passes_filters(req, depth == 0);
+
+        let children =
+            self.get_children_with_ancestors(&req_id, outgoing_rel_type, ancestors_to_show);
         let has_children = !children.is_empty();
 
         let is_collapsed = self.tree_collapsed.get(&req_id).copied().unwrap_or(false);
@@ -6138,20 +6293,27 @@ impl RequirementsApp {
                 ui.add_space(btn_size.x + 4.0); // Button width + spacing
             }
 
-            // Show the draggable requirement inline
-            self.show_draggable_requirement_inline(ui, idx);
+            // Show the draggable requirement inline (dimmed if it's an ancestor-only item)
+            self.show_draggable_requirement_inline(ui, idx, is_dimmed);
         });
 
         // Show children if expanded
         if has_children && !is_collapsed {
             for child_idx in children {
-                self.show_tree_node(ui, child_idx, outgoing_rel_type, depth + 1);
+                self.show_tree_node_with_ancestors(
+                    ui,
+                    child_idx,
+                    outgoing_rel_type,
+                    depth + 1,
+                    ancestors_to_show,
+                );
             }
         }
     }
 
     /// Render requirement item inline (without indent, for use in tree nodes)
-    fn show_draggable_requirement_inline(&mut self, ui: &mut egui::Ui, idx: usize) {
+    /// If `dimmed` is true, the item is shown greyed out (ancestor shown for context)
+    fn show_draggable_requirement_inline(&mut self, ui: &mut egui::Ui, idx: usize, dimmed: bool) {
         let Some(req) = self.store.requirements.get(idx) else {
             return;
         };
@@ -6209,9 +6371,12 @@ impl RequirementsApp {
             ui.painter().rect_stroke(rect, 2.0, stroke);
         }
 
-        // Paint text
+        // Paint text - dimmed items use a lighter/greyed color
         let text_pos = rect.min + egui::vec2(4.0, 2.0);
-        let text_color = if selected {
+        let text_color = if dimmed {
+            // Greyed out for non-matching ancestors
+            egui::Color32::from_gray(140)
+        } else if selected {
             ui.visuals().selection.stroke.color
         } else {
             ui.visuals().text_color()
@@ -6295,8 +6460,8 @@ impl RequirementsApp {
                 ui.add_space(btn_size.x + 4.0); // Button width + spacing
             }
 
-            // Show the draggable requirement inline
-            self.show_draggable_requirement_inline(ui, idx);
+            // Show the draggable requirement inline (not dimmed for bottom-up view for now)
+            self.show_draggable_requirement_inline(ui, idx, false);
         });
 
         // Show parents if expanded (going up the tree)

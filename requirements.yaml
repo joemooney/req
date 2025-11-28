@@ -81,6 +81,8 @@ requirements:
     target_id: 974e17ec-b270-49f2-8c50-5f54e0cf7e4e
   - rel_type: Child
     target_id: 1739a3b3-6508-46a6-8ed1-c256fb7bd3d1
+  - rel_type: Child
+    target_id: 0b6acb18-ebe2-49b4-ab44-158213504f25
   comments:
   - id: d4a26b03-f489-4f5f-b24c-223091388caf
     author: Unknown User
@@ -3254,6 +3256,63 @@ requirements:
   relationships:
   - rel_type: Parent
     target_id: bb81e51e-dd32-48ef-9806-cf26a09643f5
+- id: 0b6acb18-ebe2-49b4-ab44-158213504f25
+  spec_id: FR-0076
+  title: Filtered Parent
+  description: |
+    If a requirement is selected by a filter but not its parents, then should show the parents but greyed out.
+
+    If a requirement is selected by a filter but not its parents, then should show the parents but greyed out
+
+    ● provide better context by showing where the filtered requirement sits in the hierarchy, while making it clear
+      which items actually match the filter criteria.
+
+      The behavior would be:
+      - Matching requirements: Normal display (full color)
+      - Non-matching ancestors: Displayed but greyed out/dimmed, showing the path to the matching child
+      - Non-matching siblings/other branches: Hidden (as they are now)
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-28T03:52:10.460760188Z
+  modified_at: 2025-11-28T03:52:20.665666710Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 5a8cda55-badf-48c6-82c9-b9ea53f3f69f
+  history:
+  - id: 8eef3fe3-224f-4c82-aa2d-504fbb04d1f7
+    author: '@joe'
+    timestamp: 2025-11-28T03:52:20.665662492Z
+    changes:
+    - field_name: description
+      old_value: |
+        If a requirement is selected by a filter but not its parents, then should show the parents but greyed out.
+
+        If a requirement is selected by a filter but not its parents, then should show the parents but greyed out
+
+        ● Tprovide better context by showing where the filtered requirement sits in the hierarchy, while making it clear
+          which items actually match the filter criteria.
+
+          The behavior would be:
+          - Matching requirements: Normal display (full color)
+          - Non-matching ancestors: Displayed but greyed out/dimmed, showing the path to the matching child
+          - Non-matching siblings/other branches: Hidden (as they are now)
+      new_value: |
+        If a requirement is selected by a filter but not its parents, then should show the parents but greyed out.
+
+        If a requirement is selected by a filter but not its parents, then should show the parents but greyed out
+
+        ● provide better context by showing where the filtered requirement sits in the hierarchy, while making it clear
+          which items actually match the filter criteria.
+
+          The behavior would be:
+          - Matching requirements: Normal display (full color)
+          - Non-matching ancestors: Displayed but greyed out/dimmed, showing the path to the matching child
+          - Non-matching siblings/other branches: Hidden (as they are now)
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
   spec_id: $USER-001
@@ -3295,7 +3354,7 @@ id_config:
     description: Change requests for modifications to existing functionality
 features: []
 next_feature_number: 33
-next_spec_number: 76
+next_spec_number: 77
 prefix_counters: {}
 relationship_definitions:
 - name: parent
