@@ -7843,6 +7843,15 @@ impl eframe::App for RequirementsApp {
         let mut style = (*ctx.style()).clone();
         let base = self.current_font_size;
 
+        // Exponential scaling for markdown headings - makes differences much more visible
+        let scale = 1.25_f32;
+        let h6 = base;                    // H6 = base size
+        let h5 = base * scale;            // H5 = 1.25x
+        let h4 = base * scale.powi(2);    // H4 = ~1.56x
+        let h3 = base * scale.powi(3);    // H3 = ~1.95x
+        let h2 = base * scale.powi(4);    // H2 = ~2.44x
+        let h1 = base * scale.powi(5);    // H1 = ~3.05x
+
         // Update standard text styles
         for (text_style, font_id) in style.text_styles.iter_mut() {
             match text_style {
@@ -7850,17 +7859,17 @@ impl eframe::App for RequirementsApp {
                 egui::TextStyle::Body => font_id.size = base,
                 egui::TextStyle::Monospace => font_id.size = base,
                 egui::TextStyle::Button => font_id.size = base,
-                egui::TextStyle::Heading => font_id.size = base * 1.3,
+                egui::TextStyle::Heading => font_id.size = h3, // Default heading uses H3 size
                 egui::TextStyle::Name(name) => {
-                    // Set distinct sizes for markdown heading levels
+                    // Set distinct sizes for markdown heading levels (exponential scaling)
                     let name_str: &str = name.as_ref();
                     match name_str {
-                        "Heading" => font_id.size = base * 1.8,
-                        "Heading2" => font_id.size = base * 1.5,
-                        "Heading3" => font_id.size = base * 1.25,
-                        "Heading4" => font_id.size = base * 1.1,
-                        "Heading5" => font_id.size = base,
-                        "Heading6" => font_id.size = base * 0.9,
+                        "Heading" => font_id.size = h1,
+                        "Heading2" => font_id.size = h2,
+                        "Heading3" => font_id.size = h3,
+                        "Heading4" => font_id.size = h4,
+                        "Heading5" => font_id.size = h5,
+                        "Heading6" => font_id.size = h6,
                         _ => font_id.size = base,
                     }
                 }
