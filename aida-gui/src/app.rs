@@ -1688,6 +1688,14 @@ pub struct RequirementsApp {
     show_symbol_picker: bool, // Whether to show the symbol picker popup
     symbol_picker_target: Option<String>, // Which field the symbol picker is targeting
 
+    // Original appearance settings for Cancel reversion (live preview support)
+    original_appearance_theme: Theme,
+    original_appearance_font_size: f32,
+    original_appearance_ui_heading_level: u8,
+    original_appearance_show_status_icons: bool,
+    original_appearance_status_icons: StatusIconConfig,
+    original_appearance_priority_icons: PriorityIconConfig,
+
     // Project settings form fields
     settings_form_id_format: IdFormat,
     settings_form_numbering: NumberingStrategy,
@@ -1979,6 +1987,12 @@ impl RequirementsApp {
             icon_editor_new_icon: String::new(),
             show_symbol_picker: false,
             symbol_picker_target: None,
+            original_appearance_theme: Theme::default(),
+            original_appearance_font_size: DEFAULT_FONT_SIZE,
+            original_appearance_ui_heading_level: default_ui_heading_level(),
+            original_appearance_show_status_icons: false,
+            original_appearance_status_icons: StatusIconConfig::default(),
+            original_appearance_priority_icons: PriorityIconConfig::default(),
             settings_form_id_format: initial_id_format,
             settings_form_numbering: initial_numbering,
             settings_form_digits: initial_digits,
@@ -2934,6 +2948,15 @@ impl RequirementsApp {
                         self.settings_form_priority_icons =
                             self.user_settings.priority_icons.clone();
                         self.capturing_key_for = None;
+
+                        // Store original appearance settings for Cancel reversion
+                        self.original_appearance_theme = self.user_settings.theme.clone();
+                        self.original_appearance_font_size = self.user_settings.base_font_size;
+                        self.original_appearance_ui_heading_level = self.user_settings.ui_heading_level;
+                        self.original_appearance_show_status_icons = self.user_settings.show_status_icons;
+                        self.original_appearance_status_icons = self.user_settings.status_icons.clone();
+                        self.original_appearance_priority_icons = self.user_settings.priority_icons.clone();
+
                         // Load current project settings into form
                         self.settings_form_id_format = self.store.id_config.format.clone();
                         self.settings_form_numbering = self.store.id_config.numbering.clone();
@@ -3420,6 +3443,14 @@ impl RequirementsApp {
                     }
 
                     if ui.button("❌ Cancel").clicked() {
+                        // Revert appearance settings to original values (live preview cleanup)
+                        self.user_settings.theme = self.original_appearance_theme.clone();
+                        self.user_settings.base_font_size = self.original_appearance_font_size;
+                        self.current_font_size = self.original_appearance_font_size;
+                        self.user_settings.ui_heading_level = self.original_appearance_ui_heading_level;
+                        self.user_settings.show_status_icons = self.original_appearance_show_status_icons;
+                        self.user_settings.status_icons = self.original_appearance_status_icons.clone();
+                        self.user_settings.priority_icons = self.original_appearance_priority_icons.clone();
                         self.show_settings_dialog = false;
                     }
                 });
@@ -3548,6 +3579,7 @@ impl RequirementsApp {
 
                 ui.label("Base Font Size:");
                 ui.horizontal(|ui| {
+                    let old_font_size = self.settings_form_font_size;
                     ui.add(
                         egui::Slider::new(
                             &mut self.settings_form_font_size,
@@ -3559,11 +3591,17 @@ impl RequirementsApp {
                     if ui.button("Reset").clicked() {
                         self.settings_form_font_size = DEFAULT_FONT_SIZE;
                     }
+                    // Apply font size change immediately for live preview
+                    if self.settings_form_font_size != old_font_size {
+                        self.user_settings.base_font_size = self.settings_form_font_size;
+                        self.current_font_size = self.settings_form_font_size;
+                    }
                 });
                 ui.end_row();
 
                 ui.label("UI Title Size:");
                 ui.horizontal(|ui| {
+                    let old_heading_level = self.settings_form_ui_heading_level;
                     egui::ComboBox::from_id_salt("settings_heading_level_combo")
                         .selected_text(format!("H{}", self.settings_form_ui_heading_level))
                         .show_ui(ui, |ui| {
@@ -3577,6 +3615,10 @@ impl RequirementsApp {
                         });
                     if ui.button("Reset").clicked() {
                         self.settings_form_ui_heading_level = default_ui_heading_level();
+                    }
+                    // Apply heading level change immediately for live preview
+                    if self.settings_form_ui_heading_level != old_heading_level {
+                        self.user_settings.ui_heading_level = self.settings_form_ui_heading_level;
                     }
                 });
                 ui.end_row();
@@ -3610,10 +3652,15 @@ impl RequirementsApp {
 
                 ui.label("Status Icons:");
                 ui.horizontal(|ui| {
+                    let old_show_icons = self.settings_form_show_status_icons;
                     ui.checkbox(
                         &mut self.settings_form_show_status_icons,
                         "Show status icons",
                     );
+                    // Apply status icons toggle immediately for live preview
+                    if self.settings_form_show_status_icons != old_show_icons {
+                        self.user_settings.show_status_icons = self.settings_form_show_status_icons;
+                    }
                     if ui.button("Edit Icons...").clicked() {
                         self.show_icon_editor = true;
                     }
@@ -3810,6 +3857,10 @@ impl RequirementsApp {
                 });
 
                 ui.add_space(15.0);
+
+                // Apply icon changes for live preview
+                self.user_settings.status_icons = self.settings_form_status_icons.clone();
+                self.user_settings.priority_icons = self.settings_form_priority_icons.clone();
 
                 // Buttons
                 ui.horizontal(|ui| {

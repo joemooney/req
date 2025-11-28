@@ -632,34 +632,50 @@ requirements:
   spec_id: FR-0022
   title: search textbox should expand as panel is widened
   description: ''
-  status: Draft
+  status: Approved
   priority: Medium
   owner: ''
   feature: 13-STYLE
   created_at: 2025-11-26T01:18:30.246370231Z
-  modified_at: 2025-11-26T01:18:30.246370231Z
+  modified_at: 2025-11-28T21:47:10.480962354Z
   req_type: Functional
   dependencies: []
   tags: []
   relationships:
   - rel_type: Parent
     target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
+  history:
+  - id: 37b60662-98a8-4c96-941c-9fe6ac1ad4b2
+    author: '@joe'
+    timestamp: 2025-11-28T21:47:10.480956863Z
+    changes:
+    - field_name: status
+      old_value: Draft
+      new_value: Approved
 - id: d8fbfd6f-47a7-4f93-94d2-1dc3009e79b0
   spec_id: FR-0023
   title: describe default requirement types
-  description: The user guid should explain what each of the default requireent types are intended for and best practices.
+  description: The user guide should explain what each of the  requirement types are intended for and best practices when how to write such requirements.
   status: Draft
   priority: Medium
   owner: ''
   feature: 15-DOC
   created_at: 2025-11-26T04:28:47.348005694Z
-  modified_at: 2025-11-26T04:28:47.348005694Z
+  modified_at: 2025-11-28T21:11:52.014319045Z
   req_type: Functional
   dependencies: []
   tags: []
   relationships:
   - rel_type: Parent
     target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
+  history:
+  - id: be8846d5-48fe-41fd-a176-0075724fda20
+    author: '@joe'
+    timestamp: 2025-11-28T21:11:52.014315222Z
+    changes:
+    - field_name: description
+      old_value: The user guid should explain what each of the default requireent types are intended for and best practices.
+      new_value: The user guide should explain what each of the  requirement types are intended for and best practices when how to write such requirements.
 - id: 61b19487-4000-4b67-87f0-5fd554bfebfa
   spec_id: FR-0024
   title: In Add or Edit, ESC should cancel
@@ -786,6 +802,8 @@ requirements:
     target_id: cc712910-5468-4c7c-a62d-75d7b8110b76
   - rel_type: Child
     target_id: 1dea6cd9-a23d-43fb-b8bf-e7f51f5be5dd
+  - rel_type: Child
+    target_id: 72cc760e-c566-4bbc-b7fb-82bf027f1eaa
   history:
   - id: e2ba3669-855e-4b99-9b7f-30300da178c5
     author: '@joe'
@@ -879,18 +897,26 @@ requirements:
   spec_id: FR-0034
   title: goggledigook
   description: ''
-  status: Draft
+  status: Rejected
   priority: Medium
   owner: ''
   feature: 20-Uncategorized
   created_at: 2025-11-27T00:54:01.866964924Z
-  modified_at: 2025-11-27T00:54:01.866964924Z
+  modified_at: 2025-11-28T21:13:54.317884729Z
   req_type: Functional
   dependencies: []
   tags: []
   relationships:
   - rel_type: Parent
     target_id: 848840ae-7005-4fab-b478-163f9139359e
+  history:
+  - id: d41dae19-bc02-4e0d-964d-7abd554662f5
+    author: '@joe'
+    timestamp: 2025-11-28T21:13:54.317880527Z
+    changes:
+    - field_name: status
+      old_value: Draft
+      new_value: Rejected
 - id: fa1eaffc-7c05-4d09-95a0-d5e61e9b8529
   spec_id: KEYBOARD-0063
   prefix_override: KEYBOARD
@@ -1153,6 +1179,10 @@ requirements:
     target_id: b1ba8347-d9f7-4aee-a1e2-8c96f0ad5d3c
   - rel_type: Child
     target_id: be94a2c7-6ab1-42d9-822b-d7d841b4c6f0
+  - rel_type: Child
+    target_id: 97431bfb-8b24-4990-aa9f-6c8a4a643dd1
+  - rel_type: Child
+    target_id: a8e0e918-09a1-4b9f-9676-d754db0d1a68
   history:
   - id: c2aa6626-c857-41f9-9851-9306815d33df
     author: '@joe'
@@ -1379,7 +1409,7 @@ requirements:
       old_value: ''
       new_value: Type Definition Editor
 - id: 05a9d563-dc72-4bcd-b69c-6095fd396c28
-  spec_id: CR-0045
+  spec_id: REQ-0090
   title: Arrow keys bad behavior in edit mode
   description: " When I am add/edit and I start editing the desription and I press the up arrow, I think the global key binding is being invoked to move to \nthe previous requirement \nFixed! The issue was that the navigation keybindings (Up/Down arrows) were being processed even when in Add/Edit form view. The fix adds\n  explicit checks for:\n\n\n\n  1. in_form_view - when the current view is Add or Edit\n  2. in_settings - when the settings dialog is open\n\n  When any of these conditions are true (or text_input_focused), the keybinding context is set to KeyContext::Global, which prevents the\n  navigation bindings (which have KeyContext::RequirementsList) from being triggered.\n\n  Committed as 0bfa17c and pushed to GitHub.\n"
   status: Draft
@@ -1387,8 +1417,8 @@ requirements:
   owner: ''
   feature: 23-Uncategorized
   created_at: 2025-11-27T05:38:12.026793995Z
-  modified_at: 2025-11-27T05:57:10.790551730Z
-  req_type: ChangeRequest
+  modified_at: 2025-11-28T21:12:10.250824067Z
+  req_type: Bug
   dependencies: []
   tags: []
   relationships:
@@ -1416,6 +1446,16 @@ requirements:
     - field_name: description
       old_value: " When I am add/edit and I start editing the desription and I press the up arrow, I think the global key binding is being invoked to move to \nthe previous requirement \nFixed! The issue was that the navigation keybindings (Up/Down arrows) were being processed even when in Add/Edit form view. The fix adds\n  explicit checks for:\n\n  1. in_form_view - when the current view is Add or Edit\n  2. in_settings - when the settings dialog is open\n\n  When any of these conditions are true (or text_input_focused), the keybinding context is set to KeyContext::Global, which prevents the\n  navigation bindings (which have KeyContext::RequirementsList) from being triggered.\n\n  Committed as 0bfa17c and pushed to GitHub.\n"
       new_value: " When I am add/edit and I start editing the desription and I press the up arrow, I think the global key binding is being invoked to move to \nthe previous requirement \nFixed! The issue was that the navigation keybindings (Up/Down arrows) were being processed even when in Add/Edit form view. The fix adds\n  explicit checks for:\n\n\n\n  1. in_form_view - when the current view is Add or Edit\n  2. in_settings - when the settings dialog is open\n\n  When any of these conditions are true (or text_input_focused), the keybinding context is set to KeyContext::Global, which prevents the\n  navigation bindings (which have KeyContext::RequirementsList) from being triggered.\n\n  Committed as 0bfa17c and pushed to GitHub.\n"
+  - id: 32fa32a1-df32-4c80-bd8b-9af74cce7687
+    author: '@joe'
+    timestamp: 2025-11-28T21:12:10.250820054Z
+    changes:
+    - field_name: type
+      old_value: ChangeRequest
+      new_value: Bug
+    - field_name: spec_id
+      old_value: CR-0045
+      new_value: REQ-0090
 - id: 0aefc969-49e7-4825-9118-ba20f778636c
   spec_id: FR-0046
   title: Width of Requirements View Panel
@@ -3509,6 +3549,70 @@ requirements:
     - field_name: spec_id
       old_value: FR-0083
       new_value: REQLIST-0084
+- id: f1469587-593e-4e85-b7e7-354fceade5d2
+  spec_id: THEME-0087
+  prefix_override: THEME
+  title: Theme Configuration
+  description: "Theme related requirements. \nAppearance that can be controlled by the theme."
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 37-Uncategorized
+  created_at: 2025-11-28T20:26:36.277550974Z
+  modified_at: 2025-11-28T20:26:36.277550974Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+- id: 97431bfb-8b24-4990-aa9f-6c8a4a643dd1
+  spec_id: FR-0088
+  title: JSON database format support
+  description: Be able to save in JSON or YAML format
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 38-Uncategorized
+  created_at: 2025-11-28T20:46:17.282468579Z
+  modified_at: 2025-11-28T20:46:17.282468579Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: bb81e51e-dd32-48ef-9806-cf26a09643f5
+- id: a8e0e918-09a1-4b9f-9676-d754db0d1a68
+  spec_id: FR-0089
+  title: SQLite format support
+  description: Be able to store requirements in SQLite
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 38-Uncategorized
+  created_at: 2025-11-28T20:47:24.654758521Z
+  modified_at: 2025-11-28T20:47:24.654758521Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: bb81e51e-dd32-48ef-9806-cf26a09643f5
+- id: 72cc760e-c566-4bbc-b7fb-82bf027f1eaa
+  spec_id: FR-0091
+  title: preview appearance changes
+  description: |-
+    When we make a change in appearance, for example "Show status icons" or change theme can we apply that globally temporarily until we click
+      Save or Cancel. That way we can see the preview the changes more easily
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-28T21:59:56.082585533Z
+  modified_at: 2025-11-28T21:59:56.082585533Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
   spec_id: $USER-001
@@ -3549,8 +3653,8 @@ id_config:
     prefix: CR
     description: Change requests for modifications to existing functionality
 features: []
-next_feature_number: 37
-next_spec_number: 87
+next_feature_number: 39
+next_spec_number: 92
 prefix_counters: {}
 relationship_definitions:
 - name: parent
@@ -3784,4 +3888,5 @@ allowed_prefixes:
 - KEYBOARD
 - MOUSE
 - REQLIST
+- THEME
 restrict_prefixes: false
