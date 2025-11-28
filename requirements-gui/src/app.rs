@@ -6509,9 +6509,6 @@ impl RequirementsApp {
                     .requirements
                     .iter()
                     .find(|r| r.id == rel.target_id);
-                let target_has_relationships = target_req
-                    .map(|r| !r.relationships.is_empty())
-                    .unwrap_or(false);
 
                 // Get display name and color from relationship definition
                 let (display_name, color) = self
@@ -6526,6 +6523,18 @@ impl RequirementsApp {
                         t.relationships.iter().any(|tr| ancestor_path.contains(&tr.target_id))
                     })
                     .unwrap_or(false);
+
+                // Check how many expandable children the target actually has
+                // (relationships that don't point back to ancestors or current req)
+                let mut path_with_current = ancestor_path.clone();
+                path_with_current.push(req_id);
+                let expandable_children_count = target_req
+                    .map(|t| {
+                        t.relationships.iter()
+                            .filter(|tr| !path_with_current.contains(&tr.target_id))
+                            .count()
+                    })
+                    .unwrap_or(0);
 
                 // Check if target is shared (has multiple parents via same relationship type)
                 // Count how many requirements have this target as a child
@@ -6553,7 +6562,7 @@ impl RequirementsApp {
                     target_title,
                     display_name,
                     color,
-                    target_has_relationships,
+                    expandable_children_count,
                     is_reciprocal,
                     is_shared,
                     cross_relationship,
@@ -6571,7 +6580,7 @@ impl RequirementsApp {
             target_title,
             display_name,
             color,
-            has_children,
+            expandable_children_count,
             is_reciprocal,
             is_shared,
             cross_relationship,
@@ -6588,15 +6597,15 @@ impl RequirementsApp {
             let collapse_key = (req_id, target_id);
             let is_collapsed = *self.relationship_tree_collapsed.get(&collapse_key).unwrap_or(&true);
 
-            // Determine if we should allow recursion
-            // Don't recurse if: target points back to any ancestor (would show reciprocal)
-            let can_recurse = has_children && !is_reciprocal;
+            // Determine if we should allow recursion and show expand button
+            // Only show expand/collapse if there are actually children to show
+            let has_expandable_children = expandable_children_count > 0 && !is_reciprocal;
 
             ui.horizontal(|ui| {
                 ui.add_space(indent);
 
-                // Show expand/collapse button if target has relationships and can recurse
-                if can_recurse {
+                // Show expand/collapse button only if there are expandable children
+                if has_expandable_children {
                     let icon = if is_collapsed { "▶" } else { "▼" };
                     if ui.small_button(icon).clicked() {
                         self.relationship_tree_collapsed.insert(collapse_key, !is_collapsed);
@@ -6664,8 +6673,8 @@ impl RequirementsApp {
                 }
             });
 
-            // Recursively show children if expanded and allowed
-            if can_recurse && !is_collapsed {
+            // Recursively show children if expanded and there are expandable children
+            if has_expandable_children && !is_collapsed {
                 ancestor_path.push(req_id);
                 self.show_relationships_tree(ui, target_id, depth + 1, ancestor_path);
                 ancestor_path.pop();
