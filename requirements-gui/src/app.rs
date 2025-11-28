@@ -896,6 +896,37 @@ enum FilterTab {
     Children,
 }
 
+/// What fields to include in text search
+#[derive(Default, PartialEq, Clone, Copy)]
+struct SearchScope {
+    title: bool,
+    description: bool,
+    comments: bool,
+    spec_id: bool,
+}
+
+impl SearchScope {
+    /// Default scope searches everything
+    fn all() -> Self {
+        Self {
+            title: true,
+            description: true,
+            comments: true,
+            spec_id: true,
+        }
+    }
+
+    /// Check if all scopes are enabled (for "Everything" display)
+    fn is_all(&self) -> bool {
+        self.title && self.description && self.comments && self.spec_id
+    }
+
+    /// Check if no scopes are enabled
+    fn is_none(&self) -> bool {
+        !self.title && !self.description && !self.comments && !self.spec_id
+    }
+}
+
 #[derive(Default, Debug, PartialEq, Clone)]
 enum View {
     #[default]
@@ -1079,6 +1110,7 @@ pub struct RequirementsApp {
     current_view: View,
     selected_idx: Option<usize>,
     filter_text: String,
+    search_scope: SearchScope,
     active_tab: DetailTab,
 
     // Form state
@@ -1338,6 +1370,7 @@ impl RequirementsApp {
             current_view: View::List,
             selected_idx: None,
             filter_text: String::new(),
+            search_scope: SearchScope::all(),
             active_tab: DetailTab::Description,
             form_title: String::new(),
             form_description: String::new(),
@@ -1607,6 +1640,7 @@ impl RequirementsApp {
         self.filter_types.clear();
         self.filter_features.clear();
         self.filter_text.clear();
+        self.search_scope = SearchScope::all();
         self.active_preset = None;
     }
 
@@ -4579,20 +4613,58 @@ impl RequirementsApp {
         }
     }
 
+    /// Search comments recursively for a search term
+    fn search_comments_recursive(&self, comments: &[Comment], search: &str) -> bool {
+        for comment in comments {
+            // Check comment content
+            if comment.content.to_lowercase().contains(search) {
+                return true;
+            }
+            // Check author name
+            if comment.author.to_lowercase().contains(search) {
+                return true;
+            }
+            // Recursively check replies
+            if self.search_comments_recursive(&comment.replies, search) {
+                return true;
+            }
+        }
+        false
+    }
+
     /// Check if a requirement passes the current filters
     /// `is_root` indicates whether this is a root-level requirement (true) or a child (false)
     fn passes_filters(&self, req: &Requirement, is_root: bool) -> bool {
         // Text search filter (applies to all levels)
-        if !self.filter_text.is_empty() {
+        if !self.filter_text.is_empty() && !self.search_scope.is_none() {
             let search = self.filter_text.to_lowercase();
-            if !req.title.to_lowercase().contains(&search)
-                && !req.description.to_lowercase().contains(&search)
-                && !req
-                    .spec_id
-                    .as_ref()
-                    .map(|s| s.to_lowercase().contains(&search))
-                    .unwrap_or(false)
-            {
+            let mut found = false;
+
+            // Check title if enabled
+            if self.search_scope.title && req.title.to_lowercase().contains(&search) {
+                found = true;
+            }
+
+            // Check description if enabled
+            if !found && self.search_scope.description && req.description.to_lowercase().contains(&search) {
+                found = true;
+            }
+
+            // Check spec_id if enabled
+            if !found && self.search_scope.spec_id {
+                if let Some(ref spec_id) = req.spec_id {
+                    if spec_id.to_lowercase().contains(&search) {
+                        found = true;
+                    }
+                }
+            }
+
+            // Check comments if enabled
+            if !found && self.search_scope.comments {
+                found = self.search_comments_recursive(&req.comments, &search);
+            }
+
+            if !found {
                 return false;
             }
         }
@@ -5123,6 +5195,38 @@ impl RequirementsApp {
     }
 
     fn show_filter_controls(&mut self, ui: &mut egui::Ui) {
+        // Search scope section
+        ui.label("Search In:");
+        ui.horizontal_wrapped(|ui| {
+            // "Everything" toggle - when checked, enables all; when unchecked, clears all
+            let mut everything = self.search_scope.is_all();
+            if ui.checkbox(&mut everything, "Everything").changed() {
+                if everything {
+                    self.search_scope = SearchScope::all();
+                } else {
+                    // When unchecking "Everything", enable only Title as a sensible default
+                    self.search_scope = SearchScope {
+                        title: true,
+                        description: false,
+                        comments: false,
+                        spec_id: false,
+                    };
+                }
+            }
+
+            ui.separator();
+
+            // Individual scope checkboxes (only shown when not "Everything")
+            if !self.search_scope.is_all() {
+                ui.checkbox(&mut self.search_scope.title, "Title");
+                ui.checkbox(&mut self.search_scope.description, "Description");
+                ui.checkbox(&mut self.search_scope.comments, "Comments");
+                ui.checkbox(&mut self.search_scope.spec_id, "ID");
+            }
+        });
+
+        ui.separator();
+
         // Filter tabs: Root and Children
         ui.horizontal(|ui| {
             if ui
