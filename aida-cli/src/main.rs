@@ -7,7 +7,7 @@ use colored::Colorize;
 use std::collections::HashSet;
 use uuid::Uuid;
 
-use requirements_core::{
+use aida_core::{
     determine_requirements_path, export, get_registry_path, Cardinality, Comment, FieldChange,
     IdFormat, NumberingStrategy, Registry, RelationshipDefinition, RelationshipType, Requirement,
     RequirementPriority, RequirementStatus, RequirementType, RequirementsStore, Storage,

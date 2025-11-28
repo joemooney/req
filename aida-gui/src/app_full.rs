@@ -1,5 +1,5 @@
 use eframe::egui;
-use requirements_core::{
+use aida_core::{
     Requirement, RequirementPriority, RequirementStatus, RequirementType,
     RequirementsStore, Storage, RelationshipType, determine_requirements_path,
 };

@@ -1,9 +1,9 @@
 [workspace]
 resolver = "2"
 members = [
-    "requirements-core",
-    "requirements-cli",
-    "requirements-gui",
+    "aida-core",
+    "aida-cli",
+    "aida-gui",
 ]
 
 [workspace.package]

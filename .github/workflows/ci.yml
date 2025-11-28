@@ -57,17 +57,17 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            artifact: req-linux-x86_64
-            cli_binary: req
-            gui_binary: req-gui
+            artifact: aida-linux-x86_64
+            cli_binary: aida
+            gui_binary: aida-gui
           - os: windows-latest
-            artifact: req-windows-x86_64
-            cli_binary: req.exe
-            gui_binary: req-gui.exe
+            artifact: aida-windows-x86_64
+            cli_binary: aida.exe
+            gui_binary: aida-gui.exe
           - os: macos-latest
-            artifact: req-macos-x86_64
-            cli_binary: req
-            gui_binary: req-gui
+            artifact: aida-macos-x86_64
+            cli_binary: aida
+            gui_binary: aida-gui
 
     steps:
       - uses: actions/checkout@v4

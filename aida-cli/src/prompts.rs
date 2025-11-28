@@ -4,13 +4,11 @@ use std::env;
 use std::path::PathBuf;
 use uuid::Uuid;
 
-use requirements_core::project::list_available_projects;
-use requirements_core::{Requirement, RequirementPriority, RequirementStatus, RequirementType};
+use aida_core::project::list_available_projects;
+use aida_core::{Requirement, RequirementPriority, RequirementStatus, RequirementType};
 
 /// Prompts the user for a new requirement
-pub fn prompt_new_requirement(
-    store: &mut requirements_core::RequirementsStore,
-) -> Result<Requirement> {
+pub fn prompt_new_requirement(store: &mut aida_core::RequirementsStore) -> Result<Requirement> {
     // Get basic information
     let title = Text::new("Title:").prompt()?;
 
@@ -147,7 +145,7 @@ pub fn prompt_register_project() -> Result<(String, PathBuf, String, bool)> {
 }
 
 /// Prompts the user for a new feature
-pub fn prompt_new_feature(store: &mut requirements_core::RequirementsStore) -> Result<String> {
+pub fn prompt_new_feature(store: &mut aida_core::RequirementsStore) -> Result<String> {
     // Get feature name
     let name = Text::new("Feature name:").prompt()?;
 

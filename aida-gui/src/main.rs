@@ -13,7 +13,7 @@ fn main() -> Result<(), eframe::Error> {
     };
 
     eframe::run_native(
-        "Requirements Manager",
+        "AIDA - Requirements Manager",
         options,
         Box::new(|cc| Ok(Box::new(app::RequirementsApp::new(cc)))),
     )

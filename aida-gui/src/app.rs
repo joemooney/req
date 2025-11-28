@@ -1,11 +1,11 @@
-use eframe::egui;
-use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
-use requirements_core::{
+use aida_core::{
     determine_requirements_path, Cardinality, Comment, CustomFieldDefinition, CustomFieldType,
     FieldChange, IdFormat, NumberingStrategy, RelationshipDefinition, RelationshipType,
     Requirement, RequirementPriority, RequirementStatus, RequirementType, RequirementsStore,
     Storage, UrlLink,
 };
+use eframe::egui;
+use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
@@ -1286,6 +1286,17 @@ pub struct RequirementsApp {
 
     // Context menu state - stores selection before right-click clears it
     last_text_selection: Option<TextSelection>,
+
+    // Project management
+    show_new_project_dialog: bool,
+    new_project_dir: String,
+    new_project_name: String,
+    new_project_title: String,
+    new_project_description: String,
+    new_project_template: String, // "current" or template name
+    new_project_include_users: bool,
+    show_switch_project_dialog: bool,
+    available_projects: Vec<(String, String, String)>, // (name, path, description)
 }
 
 /// Stores text selection state for context menu operations.
@@ -1503,6 +1514,16 @@ impl RequirementsApp {
             show_markdown_help: false,
             // Context menu
             last_text_selection: None,
+            // Project management
+            show_new_project_dialog: false,
+            new_project_dir: String::new(),
+            new_project_name: String::new(),
+            new_project_title: String::new(),
+            new_project_description: String::new(),
+            new_project_template: "current".to_string(),
+            new_project_include_users: false,
+            show_switch_project_dialog: false,
+            available_projects: Vec::new(),
         }
     }
 
@@ -2074,13 +2095,28 @@ impl RequirementsApp {
     fn show_top_panel(&mut self, ctx: &egui::Context) {
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
+                // Menu dropdown
+                ui.menu_button("☰ Menu", |ui| {
+                    if ui.button("🔄 Reload").clicked() {
+                        self.reload();
+                        ui.close_menu();
+                    }
+                    ui.separator();
+                    if ui.button("📁 Switch Project...").clicked() {
+                        self.load_available_projects();
+                        self.show_switch_project_dialog = true;
+                        ui.close_menu();
+                    }
+                    if ui.button("➕ New Project...").clicked() {
+                        self.clear_new_project_form();
+                        self.show_new_project_dialog = true;
+                        ui.close_menu();
+                    }
+                });
+
                 if ui.button("➕ Add").clicked() {
                     self.clear_form();
                     self.pending_view_change = Some(View::Add);
-                }
-
-                if ui.button("🔄 Reload").clicked() {
-                    self.reload();
                 }
 
                 ui.separator();
@@ -2129,6 +2165,332 @@ impl RequirementsApp {
                 });
             });
         });
+    }
+
+    /// Load available projects from registry
+    fn load_available_projects(&mut self) {
+        self.available_projects.clear();
+        if let Ok(registry_path) = aida_core::get_registry_path() {
+            if registry_path.exists() {
+                if let Ok(registry) = aida_core::Registry::load(&registry_path) {
+                    for (name, project) in &registry.projects {
+                        // Only include projects whose files exist
+                        let path = std::path::Path::new(&project.path);
+                        if path.exists() || path.is_relative() {
+                            self.available_projects.push((
+                                name.clone(),
+                                project.path.clone(),
+                                project.description.clone(),
+                            ));
+                        }
+                    }
+                    // Sort by name
+                    self.available_projects.sort_by(|a, b| a.0.cmp(&b.0));
+                }
+            }
+        }
+    }
+
+    /// Clear the new project form
+    fn clear_new_project_form(&mut self) {
+        self.new_project_dir = dirs::home_dir()
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or_default();
+        self.new_project_name = String::new();
+        self.new_project_title = String::new();
+        self.new_project_description = String::new();
+        self.new_project_template = "current".to_string();
+        self.new_project_include_users = false;
+    }
+
+    /// Switch to a different project
+    fn switch_project(&mut self, path: &str) {
+        let path = std::path::PathBuf::from(path);
+        if path.exists() {
+            self.storage = Storage::new(path.clone());
+            if let Ok(store) = self.storage.load() {
+                self.store = store;
+                self.selected_idx = None;
+                self.current_view = View::List;
+                self.message = Some((format!("Switched to project: {}", path.display()), false));
+            } else {
+                self.message = Some((format!("Failed to load project: {}", path.display()), true));
+            }
+        } else {
+            self.message = Some((format!("Project file not found: {}", path.display()), true));
+        }
+    }
+
+    /// Create a new project from template
+    fn create_new_project(&mut self) -> Result<(), String> {
+        use std::fs;
+        use std::path::PathBuf;
+
+        let dir = PathBuf::from(&self.new_project_dir);
+        if !dir.exists() {
+            return Err(format!("Directory does not exist: {}", dir.display()));
+        }
+
+        let project_file = dir.join("requirements.yaml");
+        if project_file.exists() {
+            return Err(format!(
+                "A requirements.yaml already exists in: {}",
+                dir.display()
+            ));
+        }
+
+        // Create new store from template
+        let mut new_store = if self.new_project_template == "current" {
+            // Copy from current project
+            let mut store = self.store.clone();
+            store.requirements.clear();
+            store.next_spec_number = 1;
+            store.prefix_counters.clear();
+            if !self.new_project_include_users {
+                // Keep only current user
+                let current_user = store
+                    .users
+                    .iter()
+                    .find(|u| {
+                        u.handle == self.user_settings.handle || u.email == self.user_settings.email
+                    })
+                    .cloned();
+                store.users.clear();
+                if let Some(user) = current_user {
+                    store.users.push(user);
+                }
+            }
+            store
+        } else {
+            // Load from template file
+            let templates_dir = aida_core::get_templates_dir().map_err(|e| e.to_string())?;
+            let template_file = templates_dir.join(format!("{}.yaml", self.new_project_template));
+            if template_file.exists() {
+                let content = fs::read_to_string(&template_file)
+                    .map_err(|e| format!("Failed to read template: {}", e))?;
+                serde_yaml::from_str::<RequirementsStore>(&content)
+                    .map_err(|e| format!("Failed to parse template: {}", e))?
+            } else {
+                return Err(format!("Template not found: {}", self.new_project_template));
+            }
+        };
+
+        // Set project title if provided
+        if !self.new_project_title.is_empty() {
+            new_store.title = self.new_project_title.clone();
+        }
+
+        // Save the new project file
+        let content =
+            serde_yaml::to_string(&new_store).map_err(|e| format!("Failed to serialize: {}", e))?;
+        fs::write(&project_file, content).map_err(|e| format!("Failed to write file: {}", e))?;
+
+        // Register in registry
+        if let Ok(registry_path) = aida_core::get_registry_path() {
+            let mut registry = if registry_path.exists() {
+                aida_core::Registry::load(&registry_path).unwrap_or_else(|_| aida_core::Registry {
+                    projects: std::collections::HashMap::new(),
+                    default_project: None,
+                })
+            } else {
+                aida_core::Registry {
+                    projects: std::collections::HashMap::new(),
+                    default_project: None,
+                }
+            };
+
+            registry.register_project(
+                self.new_project_name.clone(),
+                project_file.to_string_lossy().to_string(),
+                self.new_project_description.clone(),
+            );
+
+            if let Err(e) = registry.save(&registry_path) {
+                return Err(format!("Failed to update registry: {}", e));
+            }
+        }
+
+        // Switch to the new project
+        self.switch_project(&project_file.to_string_lossy());
+
+        Ok(())
+    }
+
+    /// Show the switch project dialog
+    fn show_switch_project_dialog(&mut self, ctx: &egui::Context) {
+        if !self.show_switch_project_dialog {
+            return;
+        }
+
+        let mut close_dialog = false;
+        let mut switch_to: Option<String> = None;
+
+        egui::Window::new("📁 Switch Project")
+            .collapsible(false)
+            .resizable(true)
+            .min_width(400.0)
+            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+            .show(ctx, |ui| {
+                ui.heading("Available Projects");
+                ui.add_space(10.0);
+
+                if self.available_projects.is_empty() {
+                    ui.label("No projects found in registry.");
+                } else {
+                    egui::ScrollArea::vertical()
+                        .max_height(300.0)
+                        .show(ui, |ui| {
+                            for (name, path, description) in &self.available_projects {
+                                ui.group(|ui| {
+                                    ui.horizontal(|ui| {
+                                        ui.strong(name);
+                                        if ui.small_button("Open").clicked() {
+                                            switch_to = Some(path.clone());
+                                        }
+                                    });
+                                    ui.label(
+                                        egui::RichText::new(path)
+                                            .small()
+                                            .color(egui::Color32::GRAY),
+                                    );
+                                    if !description.is_empty() {
+                                        ui.label(description);
+                                    }
+                                });
+                            }
+                        });
+                }
+
+                ui.add_space(10.0);
+                ui.separator();
+
+                ui.horizontal(|ui| {
+                    if ui.button("Cancel").clicked() {
+                        close_dialog = true;
+                    }
+                });
+            });
+
+        if let Some(path) = switch_to {
+            self.switch_project(&path);
+            close_dialog = true;
+        }
+
+        if close_dialog {
+            self.show_switch_project_dialog = false;
+        }
+    }
+
+    /// Show the new project dialog
+    fn show_new_project_dialog(&mut self, ctx: &egui::Context) {
+        if !self.show_new_project_dialog {
+            return;
+        }
+
+        let mut close_dialog = false;
+        let mut create_project = false;
+
+        egui::Window::new("➕ New Project")
+            .collapsible(false)
+            .resizable(true)
+            .min_width(450.0)
+            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+            .show(ctx, |ui| {
+                ui.heading("Create New Project");
+                ui.add_space(10.0);
+
+                egui::Grid::new("new_project_grid")
+                    .num_columns(2)
+                    .spacing([10.0, 8.0])
+                    .show(ui, |ui| {
+                        ui.label("Directory:");
+                        ui.horizontal(|ui| {
+                            ui.add(
+                                egui::TextEdit::singleline(&mut self.new_project_dir)
+                                    .desired_width(300.0),
+                            );
+                        });
+                        ui.end_row();
+
+                        ui.label("Project Name:");
+                        ui.add(
+                            egui::TextEdit::singleline(&mut self.new_project_name)
+                                .hint_text("my-project")
+                                .desired_width(200.0),
+                        );
+                        ui.end_row();
+
+                        ui.label("Title:");
+                        ui.add(
+                            egui::TextEdit::singleline(&mut self.new_project_title)
+                                .hint_text("My Project Requirements")
+                                .desired_width(300.0),
+                        );
+                        ui.end_row();
+
+                        ui.label("Description:");
+                        ui.add(
+                            egui::TextEdit::singleline(&mut self.new_project_description)
+                                .hint_text("Brief description")
+                                .desired_width(300.0),
+                        );
+                        ui.end_row();
+
+                        ui.label("Template:");
+                        egui::ComboBox::from_id_salt("template_combo")
+                            .selected_text(&self.new_project_template)
+                            .show_ui(ui, |ui| {
+                                ui.selectable_value(
+                                    &mut self.new_project_template,
+                                    "current".to_string(),
+                                    "Current Project",
+                                );
+                                // TODO: Add templates from ~/.config/aida/templates/
+                            });
+                        ui.end_row();
+
+                        ui.label("Include Users:");
+                        ui.checkbox(
+                            &mut self.new_project_include_users,
+                            "Copy all users from template",
+                        );
+                        ui.end_row();
+                    });
+
+                ui.add_space(15.0);
+                ui.separator();
+
+                ui.horizontal(|ui| {
+                    let can_create =
+                        !self.new_project_dir.is_empty() && !self.new_project_name.is_empty();
+
+                    if ui
+                        .add_enabled(can_create, egui::Button::new("Create"))
+                        .clicked()
+                    {
+                        create_project = true;
+                    }
+                    if ui.button("Cancel").clicked() {
+                        close_dialog = true;
+                    }
+                });
+            });
+
+        if create_project {
+            match self.create_new_project() {
+                Ok(()) => {
+                    self.message = Some(("Project created successfully".to_string(), false));
+                    close_dialog = true;
+                }
+                Err(e) => {
+                    self.message = Some((e, true));
+                }
+            }
+        }
+
+        if close_dialog {
+            self.show_new_project_dialog = false;
+        }
     }
 
     fn show_settings_dialog(&mut self, ctx: &egui::Context) {
@@ -3277,7 +3639,7 @@ impl RequirementsApp {
     }
 
     fn show_settings_reactions_tab(&mut self, ui: &mut egui::Ui) {
-        use requirements_core::ReactionDefinition;
+        use aida_core::ReactionDefinition;
 
         egui::ScrollArea::vertical().show(ui, |ui| {
             ui.heading("Comment Reactions");
@@ -3461,7 +3823,7 @@ impl RequirementsApp {
                 .on_hover_text("Restore built-in reactions")
                 .clicked()
             {
-                self.store.reaction_definitions = requirements_core::default_reaction_definitions();
+                self.store.reaction_definitions = aida_core::default_reaction_definitions();
                 self.save();
             }
         });
@@ -3642,7 +4004,7 @@ impl RequirementsApp {
 
                 // Handle reset action
                 if let Some(name) = type_to_reset {
-                    let defaults = requirements_core::default_type_definitions();
+                    let defaults = aida_core::default_type_definitions();
                     if let Some(default_def) = defaults.iter().find(|t| t.name == name) {
                         if let Some(idx) = self
                             .store
@@ -3687,7 +4049,7 @@ impl RequirementsApp {
                 .on_hover_text("Restore all built-in type definitions")
                 .clicked()
             {
-                self.store.type_definitions = requirements_core::default_type_definitions();
+                self.store.type_definitions = aida_core::default_type_definitions();
                 self.save();
             }
         });
@@ -4116,7 +4478,7 @@ impl RequirementsApp {
     }
 
     fn save_type_definition(&mut self) {
-        use requirements_core::CustomTypeDefinition;
+        use aida_core::CustomTypeDefinition;
 
         let type_def = CustomTypeDefinition {
             name: self.type_def_form_name.clone(),
@@ -8478,6 +8840,10 @@ impl eframe::App for RequirementsApp {
 
         // Show settings dialog (modal overlay)
         self.show_settings_dialog(ctx);
+
+        // Show project dialogs
+        self.show_switch_project_dialog(ctx);
+        self.show_new_project_dialog(ctx);
 
         // Show migration confirmation dialog
         self.show_migration_confirmation_dialog(ctx);

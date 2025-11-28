@@ -45,5 +45,5 @@ pub use models::{
     META_PREFIX_VIEW,
 };
 pub use project::determine_requirements_path;
-pub use registry::{get_registry_path, Registry};
+pub use registry::{get_config_dir, get_registry_path, get_templates_dir, Registry};
 pub use storage::Storage;

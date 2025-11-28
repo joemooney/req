@@ -1650,7 +1650,7 @@ impl Requirement {
 }
 
 /// Collection of all requirements
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RequirementsStore {
     /// Database name (displayed in window title prefix)
     #[serde(default)]

@@ -125,13 +125,40 @@ impl Registry {
 
 /// Gets the path to the registry file
 pub fn get_registry_path() -> Result<PathBuf> {
-    // Check if REQ_REGISTRY_PATH environment variable is set
+    // Check if AIDA_REGISTRY_PATH environment variable is set (also support legacy REQ_REGISTRY_PATH)
+    if let Ok(path) = std::env::var("AIDA_REGISTRY_PATH") {
+        return Ok(PathBuf::from(path));
+    }
     if let Ok(path) = std::env::var("REQ_REGISTRY_PATH") {
         return Ok(PathBuf::from(path));
     }
 
-    // Default to ~/.requirements.config
     let home_dir = dirs::home_dir().context("Failed to determine home directory")?;
 
-    Ok(home_dir.join(".requirements.config"))
+    // Check for new config file first, fall back to legacy if it exists
+    let new_config = home_dir.join(".aida.config");
+    let legacy_config = home_dir.join(".requirements.config");
+
+    if new_config.exists() {
+        Ok(new_config)
+    } else if legacy_config.exists() {
+        // Use legacy config if it exists and new one doesn't
+        Ok(legacy_config)
+    } else {
+        // Default to new config location for new installations
+        Ok(new_config)
+    }
+}
+
+/// Gets the path to the AIDA config directory (~/.config/aida/)
+pub fn get_config_dir() -> Result<PathBuf> {
+    let config_dir = dirs::config_dir()
+        .context("Failed to determine config directory")?
+        .join("aida");
+    Ok(config_dir)
+}
+
+/// Gets the path to the templates directory (~/.config/aida/templates/)
+pub fn get_templates_dir() -> Result<PathBuf> {
+    Ok(get_config_dir()?.join("templates"))
 }

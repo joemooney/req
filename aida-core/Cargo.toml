@@ -1,9 +1,9 @@
 [package]
-name = "requirements-core"
+name = "aida-core"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-description = "Core library for requirements management - shared between CLI and GUI"
+description = "Core library for AIDA requirements management - shared between CLI and GUI"
 
 [dependencies]
 serde = { workspace = true }

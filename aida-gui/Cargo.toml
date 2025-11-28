@@ -1,16 +1,16 @@
 [package]
-name = "requirements-gui"
+name = "aida-gui"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-description = "GUI for requirements management (egui-based)"
+description = "GUI for AIDA requirements management (egui-based)"
 
 [[bin]]
-name = "req-gui"
+name = "aida-gui"
 path = "src/main.rs"
 
 [dependencies]
-requirements-core = { path = "../requirements-core" }
+aida-core = { path = "../aida-core" }
 
 # GUI dependencies
 eframe = { workspace = true }

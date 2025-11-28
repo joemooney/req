@@ -1,16 +1,16 @@
 [package]
-name = "requirements-cli"
+name = "aida-cli"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-description = "CLI for requirements management"
+description = "CLI for AIDA requirements management"
 
 [[bin]]
-name = "req"
+name = "aida"
 path = "src/main.rs"
 
 [dependencies]
-requirements-core = { path = "../requirements-core" }
+aida-core = { path = "../aida-core" }
 
 # CLI-specific dependencies
 clap = { workspace = true }
