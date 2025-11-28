@@ -6330,7 +6330,7 @@ impl RequirementsApp {
             ui.label("No relationships defined");
         } else if self.show_recursive_relationships {
             // Recursive tree view
-            self.show_relationships_tree(ui, req_id, 0, &mut HashSet::new());
+            self.show_relationships_tree(ui, req_id, 0, &mut Vec::new());
         } else {
             // Immediate relationships view (original behavior)
             self.show_immediate_relationships(ui, req_id);
@@ -6457,25 +6457,16 @@ impl RequirementsApp {
     }
 
     /// Show relationships as a recursive tree structure
+    /// `ancestor_path` tracks the path of requirement IDs from root to current node
     fn show_relationships_tree(
         &mut self,
         ui: &mut egui::Ui,
         req_id: Uuid,
         depth: usize,
-        visited: &mut HashSet<Uuid>,
+        ancestor_path: &mut Vec<Uuid>,
     ) {
-        // Cycle protection: if we've already visited this requirement, show indicator and stop
-        if visited.contains(&req_id) {
-            let indent = depth as f32 * 20.0;
-            ui.horizontal(|ui| {
-                ui.add_space(indent);
-                ui.label(egui::RichText::new("↻ (cycle)").italics().weak());
-            });
-            return;
-        }
-
-        // Mark as visited
-        visited.insert(req_id);
+        // Get the root requirement ID (first in path, or current if at root)
+        let root_id = ancestor_path.first().copied().unwrap_or(req_id);
 
         let Some(req) = self.store.requirements.iter().find(|r| r.id == req_id) else {
             return;
@@ -6485,7 +6476,6 @@ impl RequirementsApp {
             if depth == 0 {
                 ui.label("No relationships defined");
             }
-            visited.remove(&req_id);
             return;
         }
 
@@ -6514,11 +6504,12 @@ impl RequirementsApp {
                     .find(|r| r.id == rel.target_id)
                     .map(|r| r.title.clone())
                     .unwrap_or_else(|| "(not found)".to_string());
-                let target_has_relationships = self
+                let target_req = self
                     .store
                     .requirements
                     .iter()
-                    .find(|r| r.id == rel.target_id)
+                    .find(|r| r.id == rel.target_id);
+                let target_has_relationships = target_req
                     .map(|r| !r.relationships.is_empty())
                     .unwrap_or(false);
 
@@ -6529,6 +6520,31 @@ impl RequirementsApp {
                     .map(|def| (def.display_name.clone(), def.color.clone()))
                     .unwrap_or_else(|| (format!("{}", rel.rel_type), None));
 
+                // Check if target has a relationship back to any ancestor (reciprocal)
+                let is_reciprocal = target_req
+                    .map(|t| {
+                        t.relationships.iter().any(|tr| ancestor_path.contains(&tr.target_id))
+                    })
+                    .unwrap_or(false);
+
+                // Check if target is shared (has multiple parents via same relationship type)
+                // Count how many requirements have this target as a child
+                let parent_count = self.store.requirements.iter()
+                    .filter(|r| r.relationships.iter().any(|rel2| rel2.target_id == rel.target_id && rel2.rel_type == rel.rel_type))
+                    .count();
+                let is_shared = parent_count > 1;
+
+                // Check for cross-relationship: target has a relationship to root via different rel type
+                let cross_relationship = if rel.target_id != root_id {
+                    target_req.and_then(|t| {
+                        t.relationships.iter().find(|tr| {
+                            tr.target_id == root_id && tr.rel_type != rel.rel_type
+                        }).map(|tr| tr.rel_type.clone())
+                    })
+                } else {
+                    None
+                };
+
                 (
                     rel.rel_type.clone(),
                     rel.target_id,
@@ -6538,6 +6554,9 @@ impl RequirementsApp {
                     display_name,
                     color,
                     target_has_relationships,
+                    is_reciprocal,
+                    is_shared,
+                    cross_relationship,
                 )
             })
             .collect();
@@ -6553,17 +6572,31 @@ impl RequirementsApp {
             display_name,
             color,
             has_children,
+            is_reciprocal,
+            is_shared,
+            cross_relationship,
         ) in rel_info
         {
+            // Skip if this would show the same requirement that's already in our path
+            // (reciprocal relationship back to an ancestor)
+            if ancestor_path.contains(&target_id) {
+                // Don't show anything - this is just the inverse of an existing relationship
+                continue;
+            }
+
             // Check if this node is collapsed (default: collapsed)
             let collapse_key = (req_id, target_id);
             let is_collapsed = *self.relationship_tree_collapsed.get(&collapse_key).unwrap_or(&true);
 
+            // Determine if we should allow recursion
+            // Don't recurse if: target points back to any ancestor (would show reciprocal)
+            let can_recurse = has_children && !is_reciprocal;
+
             ui.horizontal(|ui| {
                 ui.add_space(indent);
 
-                // Show expand/collapse button if target has relationships
-                if has_children {
+                // Show expand/collapse button if target has relationships and can recurse
+                if can_recurse {
                     let icon = if is_collapsed { "▶" } else { "▼" };
                     if ui.small_button(icon).clicked() {
                         self.relationship_tree_collapsed.insert(collapse_key, !is_collapsed);
@@ -6600,16 +6633,44 @@ impl RequirementsApp {
                         self.pending_view_change = Some(View::Detail);
                     }
                 }
+
+                // Show indicators for special cases
+                if is_shared {
+                    let shared_response = ui.add(
+                        egui::Label::new(egui::RichText::new("↑ shared").small().weak())
+                            .sense(egui::Sense::click())
+                    );
+                    shared_response.on_hover_text("This requirement has multiple parents");
+                }
+
+                // Show cross-relationship indicator (bidirectional via different rel type)
+                if let Some(ref cross_rel_type) = cross_relationship {
+                    let cross_display = self
+                        .store
+                        .get_definition_for_type(cross_rel_type)
+                        .map(|def| def.display_name.clone())
+                        .unwrap_or_else(|| format!("{}", cross_rel_type));
+
+                    let cross_response = ui.add(
+                        egui::Label::new(egui::RichText::new(format!("↔ {}", cross_display)).small().color(egui::Color32::LIGHT_BLUE))
+                            .sense(egui::Sense::click())
+                    );
+                    if cross_response.on_hover_text(format!("Also {} root. Double-click to view.", cross_display.to_lowercase())).double_clicked() {
+                        if let Some(idx) = target_idx {
+                            self.selected_idx = Some(idx);
+                            self.pending_view_change = Some(View::Detail);
+                        }
+                    }
+                }
             });
 
-            // Recursively show children if expanded
-            if has_children && !is_collapsed {
-                self.show_relationships_tree(ui, target_id, depth + 1, visited);
+            // Recursively show children if expanded and allowed
+            if can_recurse && !is_collapsed {
+                ancestor_path.push(req_id);
+                self.show_relationships_tree(ui, target_id, depth + 1, ancestor_path);
+                ancestor_path.pop();
             }
         }
-
-        // Remove from visited when done (to allow visiting via different paths)
-        visited.remove(&req_id);
     }
 
     fn show_url_form_modal(&mut self, ui: &mut egui::Ui, req_id: Uuid) {
