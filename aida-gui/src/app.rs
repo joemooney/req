@@ -5511,7 +5511,8 @@ impl RequirementsApp {
 
     fn show_list_panel(&mut self, ctx: &egui::Context, in_form_view: bool) {
         egui::SidePanel::left("list_panel")
-            .min_width(400.0)
+            .min_width(200.0) // Allow narrower panel
+            .default_width(400.0)
             .show(ctx, |ui| {
                 // Header with optional collapse button
                 ui.horizontal(|ui| {
@@ -5745,8 +5746,10 @@ impl RequirementsApp {
                 }
 
                 // Requirement list (flat or tree) with drag auto-scroll support
-                let mut scroll_area =
-                    egui::ScrollArea::vertical().id_salt("requirements_list_scroll");
+                // Use both() to enable horizontal scrolling when titles are wider than panel
+                let mut scroll_area = egui::ScrollArea::both()
+                    .id_salt("requirements_list_scroll")
+                    .auto_shrink([false, false]); // Don't shrink to content
 
                 // If we need to scroll due to drag, set the scroll offset
                 if scroll_delta_to_apply != 0.0 {
@@ -5756,12 +5759,16 @@ impl RequirementsApp {
                     ui.ctx().request_repaint();
                 }
 
-                let scroll_output = scroll_area.show(ui, |ui| match &self.perspective {
-                    Perspective::Flat => {
-                        self.show_flat_list(ui);
-                    }
-                    _ => {
-                        self.show_tree_list(ui);
+                let scroll_output = scroll_area.show(ui, |ui| {
+                    // Set minimum width for content to prevent text wrapping
+                    ui.set_min_width(300.0);
+                    match &self.perspective {
+                        Perspective::Flat => {
+                            self.show_flat_list(ui);
+                        }
+                        _ => {
+                            self.show_tree_list(ui);
+                        }
                     }
                 });
 

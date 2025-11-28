@@ -60,84 +60,6 @@ requirements:
     target_id: 59d3cc0b-25a5-4076-8966-94b8ef4e36b1
   - rel_type: Parent
     target_id: 4c3bb89e-2d41-4841-b2ff-881bb67fee99
-- id: 5a8cda55-badf-48c6-82c9-b9ea53f3f69f
-  spec_id: REQLIST-0068
-  prefix_override: REQLIST
-  title: relationship view shall how requirements in a tree structure
-  description: relationship was created. But I don't see any way to expand the parent to show the child. I would expect to see a '+'or some indicator for expanding.
-  status: Draft
-  priority: High
-  owner: ''
-  feature: 3-Uncategorized
-  created_at: 2025-11-25T21:02:35.527467685Z
-  modified_at: 2025-11-27T22:40:50.019335345Z
-  req_type: ChangeRequest
-  dependencies: []
-  tags: []
-  relationships:
-  - rel_type: Child
-    target_id: 7897d5c8-0159-4920-8ce4-0bc29c6df517
-  - rel_type: Child
-    target_id: 974e17ec-b270-49f2-8c50-5f54e0cf7e4e
-  - rel_type: Child
-    target_id: 1739a3b3-6508-46a6-8ed1-c256fb7bd3d1
-  - rel_type: Child
-    target_id: 0b6acb18-ebe2-49b4-ab44-158213504f25
-  comments:
-  - id: d4a26b03-f489-4f5f-b24c-223091388caf
-    author: Unknown User
-    content: relationship was created. But I don't see any way to expand the parent to show the child. I would expect to see a '+'or some indicator for expanding.
-    created_at: 2025-11-25T21:05:50.814215220Z
-    modified_at: 2025-11-25T21:05:50.814215220Z
-    replies:
-    - id: cafe82f0-7e5c-4e94-85da-f5db0203b16a
-      author: '@joe'
-      content: this should be displayed nested
-      created_at: 2025-11-25T21:15:08.798361288Z
-      modified_at: 2025-11-25T21:15:08.798361288Z
-      parent_id: d4a26b03-f489-4f5f-b24c-223091388caf
-      replies:
-      - id: 3ef108e6-6fa3-4bba-bc24-0628d0cb6952
-        author: '@joe'
-        content: |
-          a reply content box should be the width of the panel
-        created_at: 2025-11-25T21:27:29.489008478Z
-        modified_at: 2025-11-25T21:27:29.489008478Z
-        parent_id: cafe82f0-7e5c-4e94-85da-f5db0203b16a
-  - id: d7f65f32-71d1-4c6f-a6b6-72f04bf9925c
-    author: '@joe'
-    content: This is a 2nd comment
-    created_at: 2025-11-26T06:25:11.332356938Z
-    modified_at: 2025-11-26T06:25:11.332356938Z
-    reactions:
-    - reaction: resolved
-      author: '@joe'
-      added_at: 2025-11-27T03:42:53.718947646Z
-  history:
-  - id: b7f3da72-a3b3-4317-8848-50f50c65a2c4
-    author: Unknown User
-    timestamp: 2025-11-25T21:05:11.665763983Z
-    changes:
-    - field_name: priority
-      old_value: Medium
-      new_value: High
-  - id: 709b3514-ded3-4711-b027-b5f6a58ce00f
-    author: '@joe'
-    timestamp: 2025-11-25T22:59:34.933874933Z
-    changes:
-    - field_name: type
-      old_value: Functional
-      new_value: ChangeRequest
-  - id: a55b238c-f26f-43ee-8c69-00e1b98af65a
-    author: '@joe'
-    timestamp: 2025-11-27T22:40:50.019331150Z
-    changes:
-    - field_name: prefix_override
-      old_value: ''
-      new_value: REQLIST
-    - field_name: spec_id
-      old_value: CR-0004
-      new_value: REQLIST-0068
 - id: b8621169-8a34-4001-a2e8-936229497c62
   spec_id: FR-0005
   title: Ability to edit existing comment
@@ -451,6 +373,9 @@ requirements:
   req_type: ChangeRequest
   dependencies: []
   tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 61b19487-4000-4b67-87f0-5fd554bfebfa
   history:
   - id: e3075819-c16e-4bbc-ba07-709489dd788c
     author: '@joe'
@@ -527,20 +452,35 @@ requirements:
       new_value: COMMENTS-0027
 - id: 6da186f2-cae3-4b75-bc46-d487ced9e96b
   spec_id: FR-0017
-  title: Double click on link to switch requirement
+  title: In Links tab, double click on link to switch requirement
   description: In the requirement Links tab, double clicking on a requirement should switch to that requirement
-  status: Draft
+  status: Completed
   priority: Medium
   owner: ''
   feature: 7-Uncategorized
   created_at: 2025-11-26T00:42:10.981736725Z
-  modified_at: 2025-11-26T00:42:10.981736725Z
+  modified_at: 2025-11-28T17:51:36.408678342Z
   req_type: Functional
   dependencies: []
   tags: []
   relationships:
   - rel_type: Parent
     target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
+  history:
+  - id: e93c04e8-0bf5-4dd3-8952-0980f15a3e20
+    author: '@joe'
+    timestamp: 2025-11-28T17:51:21.470979908Z
+    changes:
+    - field_name: title
+      old_value: Double click on link to switch requirement
+      new_value: In Links tab, double click on link to switch requirement
+  - id: a9cc3bc6-8343-422b-9735-8f444c1f1b3a
+    author: '@joe'
+    timestamp: 2025-11-28T17:51:36.408674593Z
+    changes:
+    - field_name: status
+      old_value: Draft
+      new_value: Completed
 - id: 02a28ce8-28aa-4e56-88e3-ae29813a3fe0
   spec_id: FR-0018
   title: Break link relationship
@@ -616,21 +556,35 @@ requirements:
   - rel_type: Parent
     target_id: 848840ae-7005-4fab-b478-163f9139359e
 - id: 07f7e655-742d-44c9-ba9d-c77762ae7090
-  spec_id: FR-0021
-  title: scroll wheel changes selected requirement
+  spec_id: CR-0078
+  title: scroll wheel should not change selected requirement
   description: ''
   status: Draft
   priority: Medium
   owner: ''
   feature: 12-Uncategorized
   created_at: 2025-11-26T01:15:26.926247061Z
-  modified_at: 2025-11-26T01:15:26.926247061Z
-  req_type: Functional
+  modified_at: 2025-11-28T17:52:22.918798500Z
+  req_type: ChangeRequest
   dependencies: []
   tags: []
   relationships:
   - rel_type: Parent
     target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
+  history:
+  - id: 17574998-ff09-4a7c-bf46-655118ac8a17
+    author: '@joe'
+    timestamp: 2025-11-28T17:52:22.918793844Z
+    changes:
+    - field_name: title
+      old_value: scroll wheel changes selected requirement
+      new_value: scroll wheel should not change selected requirement
+    - field_name: type
+      old_value: Functional
+      new_value: ChangeRequest
+    - field_name: spec_id
+      old_value: FR-0021
+      new_value: CR-0078
 - id: 967615c7-1128-4f6d-a02e-b13917942460
   spec_id: FR-0022
   title: search textbox should expand as panel is widened
@@ -666,19 +620,60 @@ requirements:
 - id: 61b19487-4000-4b67-87f0-5fd554bfebfa
   spec_id: FR-0024
   title: In Add or Edit, ESC should cancel
-  description: ' if we have not made hand changes, if we have then bring up a confirmation dialog to confirm cancel.'
+  description: |
+    In Add or Edit, ESC should cancel if we have not made any  changes, if we have then bring up a confirmation dialog to confirm cancel.
+
+     ESC key handling for the Add/Edit forms:
+
+      Features:
+      - ESC cancels immediately if no changes have been made to the form
+      - Shows confirmation dialog if there are unsaved changes with options to "Discard Changes" or "Continue Editing"
+      - ESC while dialog is open closes the dialog (continues editing)
+      - The Cancel button uses the same logic as ESC
+
+      The implementation tracks original form values when entering Add/Edit mode and compares them against current values to detect changes. This
+      applies to all form fields: title, description, status, priority, type, owner, feature, tags, prefix, and custom fields.
   status: Draft
   priority: Medium
   owner: ''
   feature: 16-Uncategorized
   created_at: 2025-11-26T05:59:43.548438869Z
-  modified_at: 2025-11-26T05:59:43.548438869Z
+  modified_at: 2025-11-28T04:03:57.307620846Z
   req_type: Functional
   dependencies: []
   tags: []
   relationships:
   - rel_type: Parent
     target_id: 04cff76c-978d-4e3a-845a-1d6f6b885cea
+  - rel_type: Child
+    target_id: b9c26c5d-ab38-4e9b-a493-8f4a84f88019
+  history:
+  - id: 85c8ba87-e9f7-4814-81ed-19b1f46ccf45
+    author: '@joe'
+    timestamp: 2025-11-28T03:59:12.869948849Z
+    changes:
+    - field_name: description
+      old_value: ' if we have not made hand changes, if we have then bring up a confirmation dialog to confirm cancel.'
+      new_value: In Add or Edit, ESC should cancel if we have not made any  changes, if we have then bring up a confirmation dialog to confirm cancel.
+  - id: 838c85aa-f2ba-4be8-97db-fd6ead5ba190
+    author: '@joe'
+    timestamp: 2025-11-28T04:03:57.307615799Z
+    changes:
+    - field_name: description
+      old_value: In Add or Edit, ESC should cancel if we have not made any  changes, if we have then bring up a confirmation dialog to confirm cancel.
+      new_value: |
+        In Add or Edit, ESC should cancel if we have not made any  changes, if we have then bring up a confirmation dialog to confirm cancel.
+
+         ESC key handling for the Add/Edit forms:
+
+          Features:
+          - ESC cancels immediately if no changes have been made to the form
+          - Shows confirmation dialog if there are unsaved changes with options to "Discard Changes" or "Continue Editing"
+          - ESC while dialog is open closes the dialog (continues editing)
+          - The Cancel button uses the same logic as ESC
+
+          The implementation tracks original form values when entering Add/Edit mode and compares them against current values to detect changes. This
+          applies to all form fields: title, description, status, priority, type, owner, feature, tags, prefix, and custom fields.
 - id: 7897d5c8-0159-4920-8ce4-0bc29c6df517
   spec_id: FR-0025
   title: user guide should have requirements best practices
@@ -1111,6 +1106,8 @@ requirements:
     target_id: 25b4e80b-ae19-401f-bd69-dd5636a08944
   - rel_type: Child
     target_id: b1ba8347-d9f7-4aee-a1e2-8c96f0ad5d3c
+  - rel_type: Child
+    target_id: be94a2c7-6ab1-42d9-822b-d7d841b4c6f0
 - id: 5738b675-4fa8-4f10-94a8-e6d16c418c35
   spec_id: FILTER-0042
   prefix_override: FILTER
@@ -3223,7 +3220,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 33-Uncategorized
   created_at: 2025-11-28T03:47:02.328158796Z
   modified_at: 2025-11-28T03:47:02.328158796Z
   req_type: Functional
@@ -3247,7 +3244,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 33-Uncategorized
   created_at: 2025-11-28T03:47:19.429481884Z
   modified_at: 2025-11-28T03:47:19.429481884Z
   req_type: Functional
@@ -3274,7 +3271,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 33-Uncategorized
   created_at: 2025-11-28T03:52:10.460760188Z
   modified_at: 2025-11-28T03:52:20.665666710Z
   req_type: Functional
@@ -3313,6 +3310,49 @@ requirements:
           - Matching requirements: Normal display (full color)
           - Non-matching ancestors: Displayed but greyed out/dimmed, showing the path to the matching child
           - Non-matching siblings/other branches: Hidden (as they are now)
+- id: be94a2c7-6ab1-42d9-822b-d7d841b4c6f0
+  spec_id: FR-0077
+  title: Agile Development support
+  description: |+
+    flexible system with Agile support via templates:
+
+      New Requirement Types Added:
+      - Epic (EPIC) - Large body of work spanning multiple sprints
+      - Story (STORY) - User story completable in a single sprint
+      - Task (TASK) - Technical unit of work for a story
+      - Spike (SPIKE) - Time-boxed research/exploration
+
+      Templates Created in ~/.config/aida/templates/:
+
+      1. agile.yaml - Full Agile workflow:
+        - Epic: Backlog → In Progress → Done
+        - Story: Backlog → Ready → In Progress → Review → Done (+ Story Points, Acceptance Criteria fields)
+        - Task: To Do → In Progress → Done (+ Hours Estimate field)
+        - Spike: Backlog → In Progress → Completed (+ Time Box, Findings fields)
+        - Bug: Open → Confirmed → In Progress → Fixed → Closed (+ Severity, Steps to Reproduce)
+        - Pre-configured features: Product Backlog, Sprint 1, Sprint 2
+      2. traditional.yaml - Classic requirements engineering:
+        - FR, NFR, SR, UR with Draft → Under Review → Approved → Implemented → Verified → Rejected
+        - Change Request with reason/impact fields
+
+      GUI Updates:
+      - Type dropdown now has a separator between traditional and Agile types
+      - All filter controls include the new types
+
+      To create an Agile project: Menu → New Project → select "agile" template.
+
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 34-Uncategorized
+  created_at: 2025-11-28T05:52:20.673612400Z
+  modified_at: 2025-11-28T05:52:20.673612400Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: bb81e51e-dd32-48ef-9806-cf26a09643f5
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
   spec_id: $USER-001
@@ -3353,8 +3393,8 @@ id_config:
     prefix: CR
     description: Change requests for modifications to existing functionality
 features: []
-next_feature_number: 33
-next_spec_number: 77
+next_feature_number: 35
+next_spec_number: 79
 prefix_counters: {}
 relationship_definitions:
 - name: parent
