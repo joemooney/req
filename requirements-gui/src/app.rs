@@ -1268,7 +1268,45 @@ struct TextSelection {
 }
 
 impl RequirementsApp {
-    pub fn new(_cc: &eframe::CreationContext<'_>) -> Self {
+    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
+        // Configure heading styles for markdown rendering
+        // egui_commonmark uses named text styles: "Heading", "Heading2", "Heading3", etc.
+        {
+            let mut style = (*cc.egui_ctx.style()).clone();
+            let base_size = style
+                .text_styles
+                .get(&egui::TextStyle::Body)
+                .map(|f| f.size)
+                .unwrap_or(14.0);
+
+            // Set distinct sizes for each heading level
+            style.text_styles.insert(
+                egui::TextStyle::Name("Heading".into()),
+                egui::FontId::new(base_size * 1.8, egui::FontFamily::Proportional),
+            );
+            style.text_styles.insert(
+                egui::TextStyle::Name("Heading2".into()),
+                egui::FontId::new(base_size * 1.5, egui::FontFamily::Proportional),
+            );
+            style.text_styles.insert(
+                egui::TextStyle::Name("Heading3".into()),
+                egui::FontId::new(base_size * 1.25, egui::FontFamily::Proportional),
+            );
+            style.text_styles.insert(
+                egui::TextStyle::Name("Heading4".into()),
+                egui::FontId::new(base_size * 1.1, egui::FontFamily::Proportional),
+            );
+            style.text_styles.insert(
+                egui::TextStyle::Name("Heading5".into()),
+                egui::FontId::new(base_size * 1.0, egui::FontFamily::Proportional),
+            );
+            style.text_styles.insert(
+                egui::TextStyle::Name("Heading6".into()),
+                egui::FontId::new(base_size * 0.9, egui::FontFamily::Proportional),
+            );
+            cc.egui_ctx.set_style(style);
+        }
+
         let requirements_path = determine_requirements_path(None)
             .unwrap_or_else(|_| std::path::PathBuf::from("requirements.yaml"));
 
@@ -7801,10 +7839,32 @@ impl eframe::App for RequirementsApp {
         // Apply the selected theme
         self.user_settings.theme.apply(ctx);
 
-        // Apply current font size to the context
+        // Apply current font size to the context with distinct heading sizes
         let mut style = (*ctx.style()).clone();
-        for (_text_style, font_id) in style.text_styles.iter_mut() {
-            font_id.size = self.current_font_size;
+        let base = self.current_font_size;
+
+        // Update standard text styles
+        for (text_style, font_id) in style.text_styles.iter_mut() {
+            match text_style {
+                egui::TextStyle::Small => font_id.size = base * 0.85,
+                egui::TextStyle::Body => font_id.size = base,
+                egui::TextStyle::Monospace => font_id.size = base,
+                egui::TextStyle::Button => font_id.size = base,
+                egui::TextStyle::Heading => font_id.size = base * 1.3,
+                egui::TextStyle::Name(name) => {
+                    // Set distinct sizes for markdown heading levels
+                    let name_str: &str = name.as_ref();
+                    match name_str {
+                        "Heading" => font_id.size = base * 1.8,
+                        "Heading2" => font_id.size = base * 1.5,
+                        "Heading3" => font_id.size = base * 1.25,
+                        "Heading4" => font_id.size = base * 1.1,
+                        "Heading5" => font_id.size = base,
+                        "Heading6" => font_id.size = base * 0.9,
+                        _ => font_id.size = base,
+                    }
+                }
+            }
         }
         ctx.set_style(style);
 
