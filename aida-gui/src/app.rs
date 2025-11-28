@@ -5307,9 +5307,9 @@ impl RequirementsApp {
         egui::Window::new("🎨 Theme Editor")
             .collapsible(false)
             .resizable(true)
-            .default_width(850.0)
-            .default_height(550.0)
-            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+            .default_width(900.0)
+            .default_height(500.0)
+            .anchor(egui::Align2::CENTER_CENTER, [0.0, 30.0]) // Offset down to avoid menu bar
             .show(ctx, |ui| {
                 // Use a fixed height area for the main content
                 let available_height = ui.available_height() - 40.0; // Reserve space for buttons
@@ -5701,75 +5701,131 @@ impl RequirementsApp {
     }
 
 
-    /// Show a live preview of the theme
+    /// Show a live preview of the theme with AIDA-specific UI examples
     fn show_theme_preview(theme: &CustomTheme, ui: &mut egui::Ui) {
-        ui.add_space(5.0);
+        ui.set_min_width(280.0);
 
-        // Text preview
-        ui.label("Normal text");
-        ui.hyperlink_to("Hyperlink", "");
-        ui.colored_label(theme.warn_fg.to_egui(), "Warning text");
-        ui.colored_label(theme.error_fg.to_egui(), "Error text");
+        // === Requirements List Preview ===
+        ui.strong("Requirements List");
+        ui.add_space(3.0);
 
-        ui.add_space(10.0);
+        // Simulated requirement list items
+        let list_bg = theme.extreme_bg.to_egui();
+        egui::Frame::none()
+            .fill(list_bg)
+            .inner_margin(4.0)
+            .rounding(2.0)
+            .show(ui, |ui| {
+                // Selected item
+                let selected_rect = ui.available_rect_before_wrap();
+                let selected_rect = egui::Rect::from_min_size(
+                    selected_rect.min,
+                    egui::vec2(ui.available_width(), 20.0),
+                );
+                ui.painter()
+                    .rect_filled(selected_rect, 2.0, theme.selection_bg.to_egui());
+                ui.horizontal(|ui| {
+                    ui.colored_label(theme.selection_fg.to_egui(), "FR-001");
+                    ui.colored_label(theme.selection_fg.to_egui(), "User Authentication");
+                });
+
+                // Normal items
+                ui.horizontal(|ui| {
+                    ui.label("FR-002");
+                    ui.label("Data Export Feature");
+                });
+                ui.horizontal(|ui| {
+                    ui.colored_label(egui::Color32::GRAY, "FR-003");
+                    ui.colored_label(egui::Color32::GRAY, "(filtered parent)");
+                });
+                ui.horizontal(|ui| {
+                    ui.label("NFR-001");
+                    ui.label("Performance Target");
+                });
+            });
+
+        ui.add_space(8.0);
         ui.separator();
         ui.add_space(5.0);
 
-        // Button states
-        ui.label("Buttons:");
-        ui.horizontal(|ui| {
-            let _ = ui.button("Normal");
-            let _ = ui.button("Click me");
-        });
+        // === Detail View Preview ===
+        ui.strong("Detail View");
+        ui.add_space(3.0);
 
-        ui.add_space(10.0);
-
-        // Text input
-        let mut sample_text = "Sample text input".to_string();
-        ui.add(egui::TextEdit::singleline(&mut sample_text));
-
-        ui.add_space(10.0);
-
-        // Checkbox and radio
-        let mut checked = true;
-        ui.checkbox(&mut checked, "Checkbox");
-
-        let mut radio = 0;
-        ui.horizontal(|ui| {
-            ui.radio_value(&mut radio, 0, "Radio A");
-            ui.radio_value(&mut radio, 1, "Radio B");
-        });
-
-        ui.add_space(10.0);
-
-        // Slider
-        let mut slider_val = 50.0_f32;
-        ui.add(egui::Slider::new(&mut slider_val, 0.0..=100.0).text("Slider"));
-
-        ui.add_space(10.0);
-
-        // ComboBox
-        let mut selected = "Option A";
-        egui::ComboBox::from_id_salt("preview_combo")
-            .selected_text(selected)
-            .show_ui(ui, |ui| {
-                ui.selectable_value(&mut selected, "Option A", "Option A");
-                ui.selectable_value(&mut selected, "Option B", "Option B");
+        egui::Frame::none()
+            .fill(theme.panel_fill.to_egui())
+            .inner_margin(6.0)
+            .rounding(4.0)
+            .stroke(egui::Stroke::new(1.0, theme.widget_stroke_color.to_egui()))
+            .show(ui, |ui| {
+                ui.heading("FR-001: User Authentication");
+                ui.add_space(2.0);
+                ui.horizontal(|ui| {
+                    ui.label("Status:");
+                    ui.colored_label(egui::Color32::from_rgb(76, 175, 80), "Approved");
+                    ui.label("Priority:");
+                    ui.colored_label(egui::Color32::from_rgb(244, 67, 54), "High");
+                });
+                ui.add_space(3.0);
+                ui.label("Users must authenticate before accessing the system.");
             });
 
-        ui.add_space(10.0);
+        ui.add_space(8.0);
+        ui.separator();
+        ui.add_space(5.0);
 
-        // Collapsing header
-        ui.collapsing("Collapsing Header", |ui| {
-            ui.label("Nested content");
+        // === Form Preview ===
+        ui.strong("Add/Edit Form");
+        ui.add_space(3.0);
+
+        egui::Grid::new("preview_form_grid")
+            .num_columns(2)
+            .spacing([8.0, 4.0])
+            .show(ui, |ui| {
+                ui.label("Title:");
+                let mut title = "New Requirement".to_string();
+                ui.add(egui::TextEdit::singleline(&mut title).desired_width(150.0));
+                ui.end_row();
+
+                ui.label("Type:");
+                let mut type_sel = "Functional";
+                egui::ComboBox::from_id_salt("preview_type")
+                    .selected_text(type_sel)
+                    .width(150.0)
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(&mut type_sel, "Functional", "Functional");
+                        ui.selectable_value(&mut type_sel, "Non-Functional", "Non-Functional");
+                    });
+                ui.end_row();
+
+                ui.label("Status:");
+                let mut status_sel = "Draft";
+                egui::ComboBox::from_id_salt("preview_status")
+                    .selected_text(status_sel)
+                    .width(150.0)
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(&mut status_sel, "Draft", "Draft");
+                        ui.selectable_value(&mut status_sel, "Approved", "Approved");
+                    });
+                ui.end_row();
+            });
+
+        ui.add_space(5.0);
+        ui.horizontal(|ui| {
+            let _ = ui.button("Save");
+            let _ = ui.button("Cancel");
         });
 
-        ui.add_space(10.0);
+        ui.add_space(8.0);
+        ui.separator();
+        ui.add_space(5.0);
 
-        // Selection preview
-        ui.label("Selection preview:");
-        let mut text = "Select this text".to_string();
-        ui.add(egui::TextEdit::singleline(&mut text));
+        // === Messages Preview ===
+        ui.strong("Messages");
+        ui.add_space(3.0);
+        ui.colored_label(egui::Color32::from_rgb(76, 175, 80), "Saved successfully");
+        ui.colored_label(theme.warn_fg.to_egui(), "Warning: Unsaved changes");
+        ui.colored_label(theme.error_fg.to_egui(), "Error: Failed to load");
     }
 
     fn show_users_table(&mut self, ui: &mut egui::Ui) {
