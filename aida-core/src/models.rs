@@ -51,6 +51,7 @@ pub enum RequirementType {
     System,
     User,
     ChangeRequest,
+    Bug,
 }
 
 impl fmt::Display for RequirementType {
@@ -61,6 +62,7 @@ impl fmt::Display for RequirementType {
             RequirementType::System => write!(f, "System"),
             RequirementType::User => write!(f, "User"),
             RequirementType::ChangeRequest => write!(f, "Change Request"),
+            RequirementType::Bug => write!(f, "Bug"),
         }
     }
 }
@@ -1766,6 +1768,7 @@ impl RequirementsStore {
             RequirementType::System => "System",
             RequirementType::User => "User",
             RequirementType::ChangeRequest => "ChangeRequest",
+            RequirementType::Bug => "Bug",
         };
         self.type_definitions.iter().find(|td| td.name == type_name)
     }
@@ -2265,6 +2268,7 @@ impl RequirementsStore {
             RequirementType::System => "System",
             RequirementType::User => "User",
             RequirementType::ChangeRequest => "Change Request",
+            RequirementType::Bug => "Bug",
         };
         self.id_config
             .get_type_by_name(type_name)
@@ -2380,6 +2384,7 @@ impl RequirementsStore {
                     RequirementType::System => Some("SR".to_string()),
                     RequirementType::User => Some("UR".to_string()),
                     RequirementType::ChangeRequest => Some("CR".to_string()),
+                    RequirementType::Bug => Some("BUG".to_string()),
                 };
                 (i, prefix_override, feature_prefix, type_prefix)
             })
@@ -2547,6 +2552,7 @@ impl RequirementsStore {
                     RequirementType::System => Some("SR".to_string()),
                     RequirementType::User => Some("UR".to_string()),
                     RequirementType::ChangeRequest => Some("CR".to_string()),
+                    RequirementType::Bug => Some("BUG".to_string()),
                 };
                 (i, prefix_override, feature_prefix, type_prefix)
             })

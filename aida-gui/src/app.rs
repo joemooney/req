@@ -5855,6 +5855,7 @@ impl RequirementsApp {
                 (RequirementType::System, "SR"),
                 (RequirementType::User, "UR"),
                 (RequirementType::ChangeRequest, "CR"),
+                (RequirementType::Bug, "BUG"),
             ];
 
             for (req_type, label) in types {
@@ -5999,6 +6000,7 @@ impl RequirementsApp {
                     (RequirementType::System, "SR"),
                     (RequirementType::User, "UR"),
                     (RequirementType::ChangeRequest, "CR"),
+                    (RequirementType::Bug, "BUG"),
                 ];
 
                 for (req_type, label) in types {
@@ -7753,6 +7755,7 @@ impl RequirementsApp {
                         RequirementType::ChangeRequest,
                         "Change Request",
                     );
+                    ui.selectable_value(&mut self.form_type, RequirementType::Bug, "Bug");
                 });
             type_changed = old_type != self.form_type;
 
