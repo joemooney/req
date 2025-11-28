@@ -1176,6 +1176,100 @@ impl KeyBindings {
     }
 }
 
+/// Icon configuration for status indicators
+/// Maps status keywords to display icons
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StatusIconConfig {
+    /// Map of status keyword (lowercase) to icon string
+    pub icons: std::collections::HashMap<String, String>,
+    /// Default icon for unknown statuses
+    pub default_icon: String,
+}
+
+impl Default for StatusIconConfig {
+    fn default() -> Self {
+        let mut icons = std::collections::HashMap::new();
+        // Default ASCII-based markers
+        icons.insert("completed".to_string(), "[x]".to_string());
+        icons.insert("done".to_string(), "[x]".to_string());
+        icons.insert("rejected".to_string(), "[-]".to_string());
+        icons.insert("closed".to_string(), "[-]".to_string());
+        icons.insert("draft".to_string(), "[ ]".to_string());
+        icons.insert("review".to_string(), "[?]".to_string());
+        icons.insert("approved".to_string(), "[+]".to_string());
+        icons.insert("ready".to_string(), "[+]".to_string());
+        icons.insert("progress".to_string(), "[~]".to_string());
+        icons.insert("implement".to_string(), "[~]".to_string());
+        icons.insert("verified".to_string(), "[x]".to_string());
+        icons.insert("backlog".to_string(), "[.]".to_string());
+        icons.insert("open".to_string(), "[!]".to_string());
+        icons.insert("confirmed".to_string(), "[!]".to_string());
+        icons.insert("fixed".to_string(), "[x]".to_string());
+        Self {
+            icons,
+            default_icon: "[*]".to_string(),
+        }
+    }
+}
+
+impl StatusIconConfig {
+    /// Get the icon for a status string
+    pub fn get_icon(&self, status: &str) -> &str {
+        let status_lower = status.to_lowercase();
+        // Check for exact match first
+        if let Some(icon) = self.icons.get(&status_lower) {
+            return icon;
+        }
+        // Check if any key is contained in the status
+        for (key, icon) in &self.icons {
+            if status_lower.contains(key) {
+                return icon;
+            }
+        }
+        &self.default_icon
+    }
+}
+
+/// Icon configuration for priority indicators
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PriorityIconConfig {
+    /// Map of priority keyword (lowercase) to icon string
+    pub icons: std::collections::HashMap<String, String>,
+    /// Default icon for unknown priorities
+    pub default_icon: String,
+}
+
+impl Default for PriorityIconConfig {
+    fn default() -> Self {
+        let mut icons = std::collections::HashMap::new();
+        icons.insert("high".to_string(), "!!!".to_string());
+        icons.insert("critical".to_string(), "!!!".to_string());
+        icons.insert("medium".to_string(), "!!".to_string());
+        icons.insert("low".to_string(), "!".to_string());
+        icons.insert("trivial".to_string(), ".".to_string());
+        Self {
+            icons,
+            default_icon: "".to_string(),
+        }
+    }
+}
+
+impl PriorityIconConfig {
+    /// Get the icon for a priority string
+    pub fn get_icon(&self, priority: &str) -> &str {
+        let priority_lower = priority.to_lowercase();
+        if let Some(icon) = self.icons.get(&priority_lower) {
+            return icon;
+        }
+        for (key, icon) in &self.icons {
+            if priority_lower.contains(key) {
+                return icon;
+            }
+        }
+        &self.default_icon
+    }
+}
+
 /// User settings for the GUI application
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserSettings {
@@ -1209,6 +1303,12 @@ pub struct UserSettings {
     /// Show status icons in requirements list
     #[serde(default)]
     pub show_status_icons: bool,
+    /// Status icon configuration
+    #[serde(default)]
+    pub status_icons: StatusIconConfig,
+    /// Priority icon configuration
+    #[serde(default)]
+    pub priority_icons: PriorityIconConfig,
 }
 
 fn default_font_size() -> f32 {
@@ -1233,6 +1333,8 @@ impl Default for UserSettings {
             view_presets: Vec::new(),
             custom_themes: Vec::new(),
             show_status_icons: false,
+            status_icons: StatusIconConfig::default(),
+            priority_icons: PriorityIconConfig::default(),
         }
     }
 }
@@ -1578,6 +1680,13 @@ pub struct RequirementsApp {
     settings_form_keybindings: KeyBindings,
     capturing_key_for: Option<KeyAction>, // Which action we're capturing a key for
     settings_form_show_status_icons: bool,
+    settings_form_status_icons: StatusIconConfig,
+    settings_form_priority_icons: PriorityIconConfig,
+    show_icon_editor: bool, // Whether to show the icon editor dialog
+    icon_editor_new_keyword: String, // For adding new status/priority keywords
+    icon_editor_new_icon: String, // Icon for new keyword
+    show_symbol_picker: bool, // Whether to show the symbol picker popup
+    symbol_picker_target: Option<String>, // Which field the symbol picker is targeting
 
     // Project settings form fields
     settings_form_id_format: IdFormat,
@@ -1860,6 +1969,13 @@ impl RequirementsApp {
             settings_form_keybindings: KeyBindings::default(),
             capturing_key_for: None,
             settings_form_show_status_icons: false,
+            settings_form_status_icons: StatusIconConfig::default(),
+            settings_form_priority_icons: PriorityIconConfig::default(),
+            show_icon_editor: false,
+            icon_editor_new_keyword: String::new(),
+            icon_editor_new_icon: String::new(),
+            show_symbol_picker: false,
+            symbol_picker_target: None,
             settings_form_id_format: initial_id_format,
             settings_form_numbering: initial_numbering,
             settings_form_digits: initial_digits,
@@ -2786,6 +2902,10 @@ impl RequirementsApp {
                         self.settings_form_keybindings = self.user_settings.keybindings.clone();
                         self.settings_form_show_status_icons =
                             self.user_settings.show_status_icons;
+                        self.settings_form_status_icons =
+                            self.user_settings.status_icons.clone();
+                        self.settings_form_priority_icons =
+                            self.user_settings.priority_icons.clone();
                         self.capturing_key_for = None;
                         // Load current project settings into form
                         self.settings_form_id_format = self.store.id_config.format.clone();
@@ -3225,6 +3345,10 @@ impl RequirementsApp {
                         self.user_settings.keybindings = self.settings_form_keybindings.clone();
                         self.user_settings.show_status_icons =
                             self.settings_form_show_status_icons;
+                        self.user_settings.status_icons =
+                            self.settings_form_status_icons.clone();
+                        self.user_settings.priority_icons =
+                            self.settings_form_priority_icons.clone();
 
                         // Update project settings (stored in requirements file)
                         self.store.id_config.format = self.settings_form_id_format.clone();
@@ -3458,15 +3582,221 @@ impl RequirementsApp {
                 ui.end_row();
 
                 ui.label("Status Icons:");
-                ui.checkbox(
-                    &mut self.settings_form_show_status_icons,
-                    "Show status icons in requirements list",
-                );
+                ui.horizontal(|ui| {
+                    ui.checkbox(
+                        &mut self.settings_form_show_status_icons,
+                        "Show status icons",
+                    );
+                    if ui.button("Edit Icons...").clicked() {
+                        self.show_icon_editor = true;
+                    }
+                });
                 ui.end_row();
             });
 
         ui.add_space(5.0);
         ui.label("Tip: Use Ctrl+MouseWheel or Ctrl+Plus/Minus to zoom");
+    }
+
+    /// Show the icon editor dialog
+    fn show_icon_editor_dialog(&mut self, ctx: &egui::Context) {
+        if !self.show_icon_editor {
+            return;
+        }
+
+        egui::Window::new("Status & Priority Icons")
+            .collapsible(false)
+            .resizable(true)
+            .default_width(600.0)
+            .default_height(500.0)
+            .show(ctx, |ui| {
+                ui.heading("Configure Status Icons");
+                ui.add_space(5.0);
+                ui.label("Define icons for different status keywords. Icons are matched using 'contains' matching.");
+                ui.add_space(10.0);
+
+                // Status icons section
+                ui.group(|ui| {
+                    ui.heading("Status Icons");
+                    ui.add_space(5.0);
+
+                    // Get sorted list of status keywords
+                    let mut status_keys: Vec<String> =
+                        self.settings_form_status_icons.icons.keys().cloned().collect();
+                    status_keys.sort();
+
+                    egui::ScrollArea::vertical()
+                        .id_salt("status_icons_scroll")
+                        .max_height(150.0)
+                        .show(ui, |ui| {
+                            let mut to_remove: Option<String> = None;
+                            egui::Grid::new("status_icons_grid")
+                                .num_columns(3)
+                                .spacing([10.0, 4.0])
+                                .show(ui, |ui| {
+                                    ui.label(egui::RichText::new("Keyword").strong());
+                                    ui.label(egui::RichText::new("Icon").strong());
+                                    ui.label("");
+                                    ui.end_row();
+
+                                    for key in &status_keys {
+                                        ui.label(key);
+                                        if let Some(icon) = self.settings_form_status_icons.icons.get_mut(key) {
+                                            let response = ui.add(
+                                                egui::TextEdit::singleline(icon).desired_width(60.0),
+                                            );
+                                            if response.clicked() {
+                                                self.symbol_picker_target = Some(format!("status:{}", key));
+                                                self.show_symbol_picker = true;
+                                            }
+                                        }
+                                        if ui.small_button("🗑").on_hover_text("Remove").clicked() {
+                                            to_remove = Some(key.clone());
+                                        }
+                                        ui.end_row();
+                                    }
+                                });
+                            if let Some(key) = to_remove {
+                                self.settings_form_status_icons.icons.remove(&key);
+                            }
+                        });
+
+                    ui.add_space(5.0);
+                    ui.horizontal(|ui| {
+                        ui.label("Default:");
+                        ui.add(
+                            egui::TextEdit::singleline(&mut self.settings_form_status_icons.default_icon)
+                                .desired_width(60.0),
+                        );
+                    });
+
+                    ui.add_space(5.0);
+                    ui.horizontal(|ui| {
+                        ui.label("Add new:");
+                        ui.add(
+                            egui::TextEdit::singleline(&mut self.icon_editor_new_keyword)
+                                .desired_width(100.0)
+                                .hint_text("keyword"),
+                        );
+                        ui.add(
+                            egui::TextEdit::singleline(&mut self.icon_editor_new_icon)
+                                .desired_width(60.0)
+                                .hint_text("icon"),
+                        );
+                        if ui.button("Add Status").clicked()
+                            && !self.icon_editor_new_keyword.is_empty()
+                        {
+                            let keyword = self.icon_editor_new_keyword.to_lowercase();
+                            let icon = if self.icon_editor_new_icon.is_empty() {
+                                "[*]".to_string()
+                            } else {
+                                self.icon_editor_new_icon.clone()
+                            };
+                            self.settings_form_status_icons.icons.insert(keyword, icon);
+                            self.icon_editor_new_keyword.clear();
+                            self.icon_editor_new_icon.clear();
+                        }
+                    });
+                });
+
+                ui.add_space(15.0);
+
+                // Priority icons section
+                ui.group(|ui| {
+                    ui.heading("Priority Icons");
+                    ui.add_space(5.0);
+
+                    let mut priority_keys: Vec<String> =
+                        self.settings_form_priority_icons.icons.keys().cloned().collect();
+                    priority_keys.sort();
+
+                    egui::ScrollArea::vertical()
+                        .id_salt("priority_icons_scroll")
+                        .max_height(100.0)
+                        .show(ui, |ui| {
+                            let mut to_remove: Option<String> = None;
+                            egui::Grid::new("priority_icons_grid")
+                                .num_columns(3)
+                                .spacing([10.0, 4.0])
+                                .show(ui, |ui| {
+                                    ui.label(egui::RichText::new("Priority").strong());
+                                    ui.label(egui::RichText::new("Icon").strong());
+                                    ui.label("");
+                                    ui.end_row();
+
+                                    for key in &priority_keys {
+                                        ui.label(key);
+                                        if let Some(icon) = self.settings_form_priority_icons.icons.get_mut(key) {
+                                            ui.add(
+                                                egui::TextEdit::singleline(icon).desired_width(60.0),
+                                            );
+                                        }
+                                        if ui.small_button("🗑").on_hover_text("Remove").clicked() {
+                                            to_remove = Some(key.clone());
+                                        }
+                                        ui.end_row();
+                                    }
+                                });
+                            if let Some(key) = to_remove {
+                                self.settings_form_priority_icons.icons.remove(&key);
+                            }
+                        });
+
+                    ui.add_space(5.0);
+                    ui.horizontal(|ui| {
+                        ui.label("Default:");
+                        ui.add(
+                            egui::TextEdit::singleline(&mut self.settings_form_priority_icons.default_icon)
+                                .desired_width(60.0),
+                        );
+                    });
+                });
+
+                ui.add_space(15.0);
+
+                // Symbol picker section
+                ui.group(|ui| {
+                    ui.heading("Quick Symbols");
+                    ui.label("Click to copy, then paste into an icon field:");
+                    ui.add_space(5.0);
+
+                    // Common symbols organized by category
+                    let symbols = vec![
+                        ("Checkmarks", vec!["✓", "✗", "✔", "✘", "☑", "☐", "☒"]),
+                        ("Shapes", vec!["●", "○", "◆", "◇", "■", "□", "▸", "▹", "◐", "◑"]),
+                        ("Brackets", vec!["[x]", "[ ]", "[-]", "[+]", "[~]", "[?]", "[!]", "[.]", "[*]"]),
+                        ("Arrows", vec!["→", "←", "↑", "↓", "⇒", "⇐", "↔", "⟹"]),
+                        ("Stars", vec!["★", "☆", "✦", "✧", "⭐", "✪"]),
+                        ("Misc", vec!["•", "·", "‣", "⁃", "※", "†", "‡", "§"]),
+                    ];
+
+                    for (category, syms) in symbols {
+                        ui.horizontal(|ui| {
+                            ui.label(format!("{}:", category));
+                            for sym in syms {
+                                if ui.small_button(sym).on_hover_text("Click to copy").clicked() {
+                                    ui.output_mut(|o| o.copied_text = sym.to_string());
+                                }
+                            }
+                        });
+                    }
+                });
+
+                ui.add_space(15.0);
+
+                // Buttons
+                ui.horizontal(|ui| {
+                    if ui.button("Reset to Defaults").clicked() {
+                        self.settings_form_status_icons = StatusIconConfig::default();
+                        self.settings_form_priority_icons = PriorityIconConfig::default();
+                    }
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("Close").clicked() {
+                            self.show_icon_editor = false;
+                        }
+                    });
+                });
+            });
     }
 
     fn show_settings_keybindings_tab(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
@@ -7360,33 +7690,9 @@ impl RequirementsApp {
         }
     }
 
-    /// Get the status icon for a requirement status string
-    fn get_status_icon(status_string: &str) -> &'static str {
-        // Use simple Unicode symbols that render reliably across all fonts
-        let status_lower = status_string.to_lowercase();
-        if status_lower.contains("completed") || status_lower.contains("done") {
-            "✓" // U+2713 Check mark
-        } else if status_lower.contains("rejected") || status_lower.contains("closed") {
-            "✗" // U+2717 Ballot X
-        } else if status_lower.contains("draft") {
-            "○" // U+25CB White circle
-        } else if status_lower.contains("review") {
-            "◐" // U+25D0 Circle with left half black
-        } else if status_lower.contains("approved") || status_lower.contains("ready") {
-            "◆" // U+25C6 Black diamond
-        } else if status_lower.contains("implement") || status_lower.contains("progress") {
-            "●" // U+25CF Black circle
-        } else if status_lower.contains("verified") {
-            "✓" // U+2713 Check mark (same as completed)
-        } else if status_lower.contains("backlog") {
-            "□" // U+25A1 White square
-        } else if status_lower.contains("open") || status_lower.contains("confirmed") {
-            "▸" // U+25B8 Black right-pointing small triangle
-        } else if status_lower.contains("fixed") {
-            "✓" // U+2713 Check mark
-        } else {
-            "•" // U+2022 Bullet
-        }
+    /// Get the status icon for a requirement status string (uses user settings)
+    fn get_status_icon(&self, status_string: &str) -> String {
+        self.user_settings.status_icons.get_icon(status_string).to_string()
     }
 
     /// Check if a status is considered "inactive" (greyed out)
@@ -7424,7 +7730,7 @@ impl RequirementsApp {
 
             // Build the label with optional status icon
             let label = if show_status_icons {
-                let icon = Self::get_status_icon(&status_string);
+                let icon = self.get_status_icon(&status_string);
                 format!("{} {} - {}", icon, spec_id.as_deref().unwrap_or("N/A"), title)
             } else {
                 format!("{} - {}", spec_id.as_deref().unwrap_or("N/A"), title)
@@ -7685,7 +7991,7 @@ impl RequirementsApp {
 
         // Build the label with optional status icon
         let label = if show_status_icons {
-            let icon = Self::get_status_icon(&status_string);
+            let icon = self.get_status_icon(&status_string);
             format!("{} {} - {}", icon, spec_id.as_deref().unwrap_or("N/A"), title)
         } else {
             format!("{} - {}", spec_id.as_deref().unwrap_or("N/A"), title)
@@ -10410,6 +10716,9 @@ impl eframe::App for RequirementsApp {
 
         // Show theme editor dialog
         self.show_theme_editor_dialog(ctx);
+
+        // Show icon editor dialog
+        self.show_icon_editor_dialog(ctx);
 
         // Show project dialogs
         self.show_switch_project_dialog(ctx);
