@@ -1865,6 +1865,9 @@ struct TextSelection {
 
 impl RequirementsApp {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
+        // Configure fonts with better Unicode support
+        Self::configure_fonts(&cc.egui_ctx);
+
         // Configure heading styles for markdown rendering
         // egui_commonmark uses named text styles: "Heading", "Heading2", "Heading3", etc.
         {
@@ -2094,6 +2097,55 @@ impl RequirementsApp {
             original_form_prefix: String::new(),
             original_form_custom_fields: HashMap::new(),
         }
+    }
+
+    /// Configure fonts with better Unicode symbol support
+    fn configure_fonts(ctx: &egui::Context) {
+        let mut fonts = egui::FontDefinitions::default();
+
+        // Try to load system fonts with good Unicode coverage
+        // These are common fonts that support many Unicode symbols
+        let font_paths = [
+            // Linux common paths
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/TTF/DejaVuSans.ttf",
+            "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
+            "/usr/share/fonts/noto/NotoSans-Regular.ttf",
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+            // macOS paths
+            "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
+            "/Library/Fonts/Arial Unicode.ttf",
+            // Windows paths
+            "C:\\Windows\\Fonts\\arial.ttf",
+            "C:\\Windows\\Fonts\\seguisym.ttf",
+        ];
+
+        let mut loaded_font = false;
+        for path in &font_paths {
+            if let Ok(font_data) = std::fs::read(path) {
+                fonts.font_data.insert(
+                    "unicode_font".to_owned(),
+                    egui::FontData::from_owned(font_data).into(),
+                );
+
+                // Add to both proportional and monospace families as highest priority
+                fonts
+                    .families
+                    .entry(egui::FontFamily::Proportional)
+                    .or_default()
+                    .insert(0, "unicode_font".to_owned());
+
+                loaded_font = true;
+                eprintln!("Loaded Unicode font from: {}", path);
+                break;
+            }
+        }
+
+        if !loaded_font {
+            eprintln!("Warning: Could not load a Unicode-supporting font. Some symbols may not display correctly.");
+        }
+
+        ctx.set_fonts(fonts);
     }
 
     /// Increase font size by one step
