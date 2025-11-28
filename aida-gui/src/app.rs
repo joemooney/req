@@ -5807,8 +5807,9 @@ impl RequirementsApp {
                 }
 
                 // Requirement list (flat or tree) with drag auto-scroll support
-                // Use both() to enable horizontal scrolling when titles are wider than panel
-                let mut scroll_area = egui::ScrollArea::both()
+                // Use horizontal() for manual horizontal scrolling (no auto-scroll on selection)
+                // wrapped with vertical() for vertical scrolling with auto-scroll on selection
+                let mut scroll_area = egui::ScrollArea::vertical()
                     .id_salt("requirements_list_scroll")
                     .auto_shrink([false, false]); // Don't shrink to content
 
@@ -5821,16 +5822,23 @@ impl RequirementsApp {
                 }
 
                 let scroll_output = scroll_area.show(ui, |ui| {
-                    // Set minimum width for content to prevent text wrapping
-                    ui.set_min_width(300.0);
-                    match &self.perspective {
-                        Perspective::Flat => {
-                            self.show_flat_list(ui);
-                        }
-                        _ => {
-                            self.show_tree_list(ui);
-                        }
-                    }
+                    // Wrap content in horizontal scroll for wide titles
+                    // This is separate from vertical scroll so scroll_to_me only scrolls vertically
+                    egui::ScrollArea::horizontal()
+                        .id_salt("requirements_list_horizontal_scroll")
+                        .auto_shrink([false, false])
+                        .show(ui, |ui| {
+                            // Set minimum width for content to prevent text wrapping
+                            ui.set_min_width(300.0);
+                            match &self.perspective {
+                                Perspective::Flat => {
+                                    self.show_flat_list(ui);
+                                }
+                                _ => {
+                                    self.show_tree_list(ui);
+                                }
+                            }
+                        });
                 });
 
                 // Update stored offset from actual scroll state (for when user scrolls manually)
