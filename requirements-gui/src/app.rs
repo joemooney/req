@@ -6330,7 +6330,7 @@ impl RequirementsApp {
             ui.label("No relationships defined");
         } else if self.show_recursive_relationships {
             // Recursive tree view
-            self.show_relationships_tree(ui, req_id, 0, &mut Vec::new());
+            self.show_relationships_tree(ui, req_id, 0, &mut Vec::new(), None);
         } else {
             // Immediate relationships view (original behavior)
             self.show_immediate_relationships(ui, req_id);
@@ -6458,12 +6458,14 @@ impl RequirementsApp {
 
     /// Show relationships as a recursive tree structure
     /// `ancestor_path` tracks the path of requirement IDs from root to current node
+    /// `follow_rel_type` if Some, only show relationships of this type (for consistent traversal direction)
     fn show_relationships_tree(
         &mut self,
         ui: &mut egui::Ui,
         req_id: Uuid,
         depth: usize,
         ancestor_path: &mut Vec<Uuid>,
+        follow_rel_type: Option<&RelationshipType>,
     ) {
         // Get the root requirement ID (first in path, or current if at root)
         let root_id = ancestor_path.first().copied().unwrap_or(req_id);
@@ -6472,7 +6474,16 @@ impl RequirementsApp {
             return;
         };
 
-        if req.relationships.is_empty() {
+        // Filter relationships based on whether we're following a specific type
+        let relationships_to_show: Vec<_> = if let Some(rel_type) = follow_rel_type {
+            // When recursing, only show relationships of the same type
+            req.relationships.iter().filter(|r| &r.rel_type == rel_type).collect()
+        } else {
+            // At root (depth 0), show all relationships
+            req.relationships.iter().collect()
+        };
+
+        if relationships_to_show.is_empty() {
             if depth == 0 {
                 ui.label("No relationships defined");
             }
@@ -6480,8 +6491,7 @@ impl RequirementsApp {
         }
 
         // Collect relationship info
-        let rel_info: Vec<_> = req
-            .relationships
+        let rel_info: Vec<_> = relationships_to_show
             .iter()
             .map(|rel| {
                 let target_idx = self
@@ -6517,20 +6527,16 @@ impl RequirementsApp {
                     .map(|def| (def.display_name.clone(), def.color.clone()))
                     .unwrap_or_else(|| (format!("{}", rel.rel_type), None));
 
-                // Check if target has a relationship back to any ancestor (reciprocal)
-                let is_reciprocal = target_req
-                    .map(|t| {
-                        t.relationships.iter().any(|tr| ancestor_path.contains(&tr.target_id))
-                    })
-                    .unwrap_or(false);
-
                 // Check how many expandable children the target actually has
-                // (relationships that don't point back to ancestors or current req)
+                // (relationships of same type that don't point back to ancestors or current req)
                 let mut path_with_current = ancestor_path.clone();
                 path_with_current.push(req_id);
                 let expandable_children_count = target_req
                     .map(|t| {
                         t.relationships.iter()
+                            // Must be same relationship type
+                            .filter(|tr| tr.rel_type == rel.rel_type)
+                            // Must not point back to any ancestor
                             .filter(|tr| !path_with_current.contains(&tr.target_id))
                             .count()
                     })
@@ -6563,7 +6569,6 @@ impl RequirementsApp {
                     display_name,
                     color,
                     expandable_children_count,
-                    is_reciprocal,
                     is_shared,
                     cross_relationship,
                 )
@@ -6573,7 +6578,7 @@ impl RequirementsApp {
         let indent = depth as f32 * 20.0;
 
         for (
-            _rel_type,
+            rel_type,
             target_id,
             target_idx,
             target_label,
@@ -6581,15 +6586,12 @@ impl RequirementsApp {
             display_name,
             color,
             expandable_children_count,
-            is_reciprocal,
             is_shared,
             cross_relationship,
         ) in rel_info
         {
             // Skip if this would show the same requirement that's already in our path
-            // (reciprocal relationship back to an ancestor)
             if ancestor_path.contains(&target_id) {
-                // Don't show anything - this is just the inverse of an existing relationship
                 continue;
             }
 
@@ -6598,8 +6600,8 @@ impl RequirementsApp {
             let is_collapsed = *self.relationship_tree_collapsed.get(&collapse_key).unwrap_or(&true);
 
             // Determine if we should allow recursion and show expand button
-            // Only show expand/collapse if there are actually children to show
-            let has_expandable_children = expandable_children_count > 0 && !is_reciprocal;
+            // expandable_children_count already accounts for same rel type and ancestor filtering
+            let has_expandable_children = expandable_children_count > 0;
 
             ui.horizontal(|ui| {
                 ui.add_space(indent);
@@ -6676,7 +6678,7 @@ impl RequirementsApp {
             // Recursively show children if expanded and there are expandable children
             if has_expandable_children && !is_collapsed {
                 ancestor_path.push(req_id);
-                self.show_relationships_tree(ui, target_id, depth + 1, ancestor_path);
+                self.show_relationships_tree(ui, target_id, depth + 1, ancestor_path, Some(&rel_type));
                 ancestor_path.pop();
             }
         }
