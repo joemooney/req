@@ -7362,29 +7362,30 @@ impl RequirementsApp {
 
     /// Get the status icon for a requirement status string
     fn get_status_icon(status_string: &str) -> &'static str {
+        // Use simple Unicode symbols that render reliably across all fonts
         let status_lower = status_string.to_lowercase();
         if status_lower.contains("completed") || status_lower.contains("done") {
-            "✓"
+            "✓" // U+2713 Check mark
         } else if status_lower.contains("rejected") || status_lower.contains("closed") {
-            "✗"
+            "✗" // U+2717 Ballot X
         } else if status_lower.contains("draft") {
-            "📝"
+            "○" // U+25CB White circle
         } else if status_lower.contains("review") {
-            "👁"
+            "◐" // U+25D0 Circle with left half black
         } else if status_lower.contains("approved") || status_lower.contains("ready") {
-            "✔"
+            "◆" // U+25C6 Black diamond
         } else if status_lower.contains("implement") || status_lower.contains("progress") {
-            "🔧"
+            "●" // U+25CF Black circle
         } else if status_lower.contains("verified") {
-            "✅"
+            "✓" // U+2713 Check mark (same as completed)
         } else if status_lower.contains("backlog") {
-            "📋"
+            "□" // U+25A1 White square
         } else if status_lower.contains("open") || status_lower.contains("confirmed") {
-            "🔴"
+            "▸" // U+25B8 Black right-pointing small triangle
         } else if status_lower.contains("fixed") {
-            "🔧"
+            "✓" // U+2713 Check mark
         } else {
-            "•"
+            "•" // U+2022 Bullet
         }
     }
 
