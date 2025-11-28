@@ -264,6 +264,348 @@ const MAX_FONT_SIZE: f32 = 32.0;
 /// Font size step for zoom in/out
 const FONT_SIZE_STEP: f32 = 1.0;
 
+/// Serializable color wrapper for themes
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct ThemeColor {
+    pub r: u8,
+    pub g: u8,
+    pub b: u8,
+    pub a: u8,
+}
+
+impl ThemeColor {
+    pub const fn new(r: u8, g: u8, b: u8) -> Self {
+        Self { r, g, b, a: 255 }
+    }
+
+    pub const fn with_alpha(r: u8, g: u8, b: u8, a: u8) -> Self {
+        Self { r, g, b, a }
+    }
+
+    pub fn to_egui(self) -> egui::Color32 {
+        egui::Color32::from_rgba_unmultiplied(self.r, self.g, self.b, self.a)
+    }
+
+    pub fn from_egui(color: egui::Color32) -> Self {
+        Self {
+            r: color.r(),
+            g: color.g(),
+            b: color.b(),
+            a: color.a(),
+        }
+    }
+}
+
+impl Default for ThemeColor {
+    fn default() -> Self {
+        Self::new(128, 128, 128)
+    }
+}
+
+/// Helper to show a color picker widget
+fn color_picker_widget(ui: &mut egui::Ui, color: &mut ThemeColor) {
+    let mut color32 = color.to_egui();
+
+    egui::color_picker::color_edit_button_srgba(
+        ui,
+        &mut color32,
+        egui::color_picker::Alpha::Opaque,
+    );
+
+    *color = ThemeColor::from_egui(color32);
+}
+
+/// Custom theme with full visual customization
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CustomTheme {
+    /// Name of this custom theme
+    pub name: String,
+    /// Base theme to extend from
+    pub base: BaseTheme,
+
+    // === Background Colors ===
+    /// Main window background
+    pub window_fill: ThemeColor,
+    /// Panel background color
+    pub panel_fill: ThemeColor,
+    /// Extreme background (e.g., text edit background)
+    pub extreme_bg: ThemeColor,
+    /// Faint background (subtle separators)
+    pub faint_bg: ThemeColor,
+
+    // === Text Colors ===
+    /// Primary text color (None = use widget defaults)
+    pub text_color: Option<ThemeColor>,
+    /// Hyperlink color
+    pub hyperlink_color: ThemeColor,
+    /// Warning text color
+    pub warn_fg: ThemeColor,
+    /// Error text color
+    pub error_fg: ThemeColor,
+
+    // === Widget Colors - Noninteractive ===
+    /// Non-interactive widget background
+    pub widget_bg: ThemeColor,
+    /// Non-interactive widget text/stroke color
+    pub widget_fg: ThemeColor,
+
+    // === Widget Colors - Interactive States ===
+    /// Inactive/default widget background
+    pub widget_inactive_bg: ThemeColor,
+    /// Hovered widget background
+    pub widget_hovered_bg: ThemeColor,
+    /// Active/pressed widget background
+    pub widget_active_bg: ThemeColor,
+    /// Open (expanded) widget background
+    pub widget_open_bg: ThemeColor,
+
+    // === Selection ===
+    /// Selection background
+    pub selection_bg: ThemeColor,
+    /// Selection text color
+    pub selection_fg: ThemeColor,
+
+    // === Strokes & Borders ===
+    /// Widget border width
+    pub widget_stroke_width: f32,
+    /// Widget border color (inactive)
+    pub widget_stroke_color: ThemeColor,
+    /// Widget border color (hovered)
+    pub widget_hovered_stroke_color: ThemeColor,
+    /// Widget border color (active)
+    pub widget_active_stroke_color: ThemeColor,
+
+    // === Rounding ===
+    /// Widget corner rounding
+    pub widget_rounding: f32,
+    /// Window corner rounding
+    pub window_rounding: f32,
+
+    // === Shadows ===
+    /// Window shadow enabled
+    pub window_shadow: bool,
+    /// Popup shadow enabled
+    pub popup_shadow: bool,
+
+    // === Spacing ===
+    /// Item spacing (horizontal, vertical)
+    pub item_spacing: (f32, f32),
+    /// Button padding (horizontal, vertical)
+    pub button_padding: (f32, f32),
+    /// Window padding
+    pub window_padding: (f32, f32),
+
+    // === Miscellaneous ===
+    /// Use dark mode icons/decorations
+    pub dark_mode: bool,
+    /// Scroll bar width
+    pub scroll_bar_width: f32,
+    /// Indent amount for nested items
+    pub indent: f32,
+}
+
+impl Default for CustomTheme {
+    fn default() -> Self {
+        Self::from_base(BaseTheme::Dark, "Custom Dark".to_string())
+    }
+}
+
+impl CustomTheme {
+    /// Create a custom theme based on a built-in base theme
+    pub fn from_base(base: BaseTheme, name: String) -> Self {
+        match base {
+            BaseTheme::Dark => Self::dark_defaults(name),
+            BaseTheme::Light => Self::light_defaults(name),
+        }
+    }
+
+    fn dark_defaults(name: String) -> Self {
+        Self {
+            name,
+            base: BaseTheme::Dark,
+            // Background
+            window_fill: ThemeColor::new(27, 27, 27),
+            panel_fill: ThemeColor::new(27, 27, 27),
+            extreme_bg: ThemeColor::new(10, 10, 10),
+            faint_bg: ThemeColor::new(5, 5, 5),
+            // Text
+            text_color: None,
+            hyperlink_color: ThemeColor::new(90, 170, 255),
+            warn_fg: ThemeColor::new(255, 143, 0),
+            error_fg: ThemeColor::new(255, 0, 0),
+            // Widgets - noninteractive
+            widget_bg: ThemeColor::new(27, 27, 27),
+            widget_fg: ThemeColor::new(140, 140, 140),
+            // Widgets - interactive
+            widget_inactive_bg: ThemeColor::new(60, 60, 60),
+            widget_hovered_bg: ThemeColor::new(70, 70, 70),
+            widget_active_bg: ThemeColor::new(55, 55, 55),
+            widget_open_bg: ThemeColor::new(27, 27, 27),
+            // Selection
+            selection_bg: ThemeColor::new(0, 92, 128),
+            selection_fg: ThemeColor::new(255, 255, 255),
+            // Strokes
+            widget_stroke_width: 1.0,
+            widget_stroke_color: ThemeColor::new(60, 60, 60),
+            widget_hovered_stroke_color: ThemeColor::new(150, 150, 150),
+            widget_active_stroke_color: ThemeColor::new(255, 255, 255),
+            // Rounding
+            widget_rounding: 2.0,
+            window_rounding: 6.0,
+            // Shadows
+            window_shadow: true,
+            popup_shadow: true,
+            // Spacing
+            item_spacing: (8.0, 3.0),
+            button_padding: (4.0, 1.0),
+            window_padding: (6.0, 6.0),
+            // Misc
+            dark_mode: true,
+            scroll_bar_width: 8.0,
+            indent: 18.0,
+        }
+    }
+
+    fn light_defaults(name: String) -> Self {
+        Self {
+            name,
+            base: BaseTheme::Light,
+            // Background
+            window_fill: ThemeColor::new(248, 248, 248),
+            panel_fill: ThemeColor::new(248, 248, 248),
+            extreme_bg: ThemeColor::new(255, 255, 255),
+            faint_bg: ThemeColor::new(245, 245, 245),
+            // Text
+            text_color: None,
+            hyperlink_color: ThemeColor::new(0, 102, 204),
+            warn_fg: ThemeColor::new(255, 100, 0),
+            error_fg: ThemeColor::new(220, 0, 0),
+            // Widgets - noninteractive
+            widget_bg: ThemeColor::new(248, 248, 248),
+            widget_fg: ThemeColor::new(100, 100, 100),
+            // Widgets - interactive
+            widget_inactive_bg: ThemeColor::new(230, 230, 230),
+            widget_hovered_bg: ThemeColor::new(210, 210, 210),
+            widget_active_bg: ThemeColor::new(195, 195, 195),
+            widget_open_bg: ThemeColor::new(235, 235, 235),
+            // Selection
+            selection_bg: ThemeColor::new(144, 209, 255),
+            selection_fg: ThemeColor::new(0, 0, 0),
+            // Strokes
+            widget_stroke_width: 1.0,
+            widget_stroke_color: ThemeColor::new(180, 180, 180),
+            widget_hovered_stroke_color: ThemeColor::new(105, 105, 105),
+            widget_active_stroke_color: ThemeColor::new(0, 0, 0),
+            // Rounding
+            widget_rounding: 2.0,
+            window_rounding: 6.0,
+            // Shadows
+            window_shadow: false,
+            popup_shadow: true,
+            // Spacing
+            item_spacing: (8.0, 3.0),
+            button_padding: (4.0, 1.0),
+            window_padding: (6.0, 6.0),
+            // Misc
+            dark_mode: false,
+            scroll_bar_width: 8.0,
+            indent: 18.0,
+        }
+    }
+
+    /// Apply this custom theme to the egui context
+    pub fn apply(&self, ctx: &egui::Context) {
+        let mut visuals = if self.dark_mode {
+            egui::Visuals::dark()
+        } else {
+            egui::Visuals::light()
+        };
+
+        // Background colors
+        visuals.window_fill = self.window_fill.to_egui();
+        visuals.panel_fill = self.panel_fill.to_egui();
+        visuals.extreme_bg_color = self.extreme_bg.to_egui();
+        visuals.faint_bg_color = self.faint_bg.to_egui();
+
+        // Text colors
+        visuals.override_text_color = self.text_color.map(|c| c.to_egui());
+        visuals.hyperlink_color = self.hyperlink_color.to_egui();
+        visuals.warn_fg_color = self.warn_fg.to_egui();
+        visuals.error_fg_color = self.error_fg.to_egui();
+
+        // Widgets - noninteractive
+        visuals.widgets.noninteractive.bg_fill = self.widget_bg.to_egui();
+        visuals.widgets.noninteractive.fg_stroke =
+            egui::Stroke::new(1.0, self.widget_fg.to_egui());
+
+        // Widgets - interactive states
+        visuals.widgets.inactive.bg_fill = self.widget_inactive_bg.to_egui();
+        visuals.widgets.inactive.bg_stroke =
+            egui::Stroke::new(self.widget_stroke_width, self.widget_stroke_color.to_egui());
+        visuals.widgets.inactive.rounding = egui::Rounding::same(self.widget_rounding);
+
+        visuals.widgets.hovered.bg_fill = self.widget_hovered_bg.to_egui();
+        visuals.widgets.hovered.bg_stroke = egui::Stroke::new(
+            self.widget_stroke_width,
+            self.widget_hovered_stroke_color.to_egui(),
+        );
+        visuals.widgets.hovered.rounding = egui::Rounding::same(self.widget_rounding);
+
+        visuals.widgets.active.bg_fill = self.widget_active_bg.to_egui();
+        visuals.widgets.active.bg_stroke = egui::Stroke::new(
+            self.widget_stroke_width,
+            self.widget_active_stroke_color.to_egui(),
+        );
+        visuals.widgets.active.rounding = egui::Rounding::same(self.widget_rounding);
+
+        visuals.widgets.open.bg_fill = self.widget_open_bg.to_egui();
+        visuals.widgets.open.rounding = egui::Rounding::same(self.widget_rounding);
+
+        // Selection
+        visuals.selection.bg_fill = self.selection_bg.to_egui();
+        visuals.selection.stroke = egui::Stroke::new(1.0, self.selection_fg.to_egui());
+
+        // Window rounding
+        visuals.window_rounding = egui::Rounding::same(self.window_rounding);
+
+        // Shadows
+        if !self.window_shadow {
+            visuals.window_shadow = egui::Shadow::NONE;
+        }
+        if !self.popup_shadow {
+            visuals.popup_shadow = egui::Shadow::NONE;
+        }
+
+        ctx.set_visuals(visuals);
+
+        // Apply spacing settings
+        let mut style = (*ctx.style()).clone();
+        style.spacing.item_spacing = egui::vec2(self.item_spacing.0, self.item_spacing.1);
+        style.spacing.button_padding = egui::vec2(self.button_padding.0, self.button_padding.1);
+        style.spacing.window_margin = egui::Margin::same(self.window_padding.0);
+        style.spacing.scroll.bar_width = self.scroll_bar_width;
+        style.spacing.indent = self.indent;
+        ctx.set_style(style);
+    }
+}
+
+/// Base theme to extend from
+#[derive(Debug, Default, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum BaseTheme {
+    #[default]
+    Dark,
+    Light,
+}
+
+impl BaseTheme {
+    fn label(&self) -> &'static str {
+        match self {
+            BaseTheme::Dark => "Dark",
+            BaseTheme::Light => "Light",
+        }
+    }
+}
+
 /// Available color themes
 #[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
 pub enum Theme {
@@ -278,16 +620,19 @@ pub enum Theme {
     SolarizedDark,
     /// Nord theme
     Nord,
+    /// Custom theme with user-defined colors
+    Custom(Box<CustomTheme>),
 }
 
 impl Theme {
-    fn label(&self) -> &'static str {
+    fn label(&self) -> String {
         match self {
-            Theme::Dark => "Dark",
-            Theme::Light => "Light",
-            Theme::HighContrastDark => "High Contrast Dark",
-            Theme::SolarizedDark => "Solarized Dark",
-            Theme::Nord => "Nord",
+            Theme::Dark => "Dark".to_string(),
+            Theme::Light => "Light".to_string(),
+            Theme::HighContrastDark => "High Contrast Dark".to_string(),
+            Theme::SolarizedDark => "Solarized Dark".to_string(),
+            Theme::Nord => "Nord".to_string(),
+            Theme::Custom(theme) => format!("Custom: {}", theme.name),
         }
     }
 
@@ -298,6 +643,7 @@ impl Theme {
             Theme::HighContrastDark => Theme::SolarizedDark,
             Theme::SolarizedDark => Theme::Nord,
             Theme::Nord => Theme::Dark,
+            Theme::Custom(_) => Theme::Dark, // Cycle back to Dark from Custom
         }
     }
 
@@ -364,7 +710,67 @@ impl Theme {
                 visuals.faint_bg_color = nord1;
                 ctx.set_visuals(visuals);
             }
+            Theme::Custom(custom_theme) => {
+                custom_theme.apply(ctx);
+            }
         }
+    }
+
+    /// Check if this is a custom theme
+    fn is_custom(&self) -> bool {
+        matches!(self, Theme::Custom(_))
+    }
+
+    /// Get the custom theme if this is one
+    fn as_custom(&self) -> Option<&CustomTheme> {
+        match self {
+            Theme::Custom(t) => Some(t),
+            _ => None,
+        }
+    }
+
+    /// Get mutable custom theme if this is one
+    fn as_custom_mut(&mut self) -> Option<&mut CustomTheme> {
+        match self {
+            Theme::Custom(t) => Some(t),
+            _ => None,
+        }
+    }
+}
+
+/// Categories for the theme editor
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ThemeEditorCategory {
+    #[default]
+    Backgrounds,
+    Text,
+    Widgets,
+    Selection,
+    Borders,
+    Spacing,
+}
+
+impl ThemeEditorCategory {
+    fn label(&self) -> &'static str {
+        match self {
+            ThemeEditorCategory::Backgrounds => "Backgrounds",
+            ThemeEditorCategory::Text => "Text",
+            ThemeEditorCategory::Widgets => "Widgets",
+            ThemeEditorCategory::Selection => "Selection",
+            ThemeEditorCategory::Borders => "Borders & Rounding",
+            ThemeEditorCategory::Spacing => "Spacing & Layout",
+        }
+    }
+
+    fn all() -> &'static [ThemeEditorCategory] {
+        &[
+            ThemeEditorCategory::Backgrounds,
+            ThemeEditorCategory::Text,
+            ThemeEditorCategory::Widgets,
+            ThemeEditorCategory::Selection,
+            ThemeEditorCategory::Borders,
+            ThemeEditorCategory::Spacing,
+        ]
     }
 }
 
@@ -1171,6 +1577,11 @@ pub struct RequirementsApp {
     show_migration_dialog: bool,
     pending_migration: Option<(IdFormat, NumberingStrategy, u8)>, // Format, Numbering, Digits
 
+    // Theme editor
+    show_theme_editor: bool,
+    theme_editor_theme: CustomTheme,   // Working copy being edited
+    theme_editor_category: ThemeEditorCategory, // Currently selected category
+
     // User management
     show_user_form: bool,
     editing_user_id: Option<Uuid>,
@@ -1443,6 +1854,9 @@ impl RequirementsApp {
             settings_form_digits: initial_digits,
             show_migration_dialog: false,
             pending_migration: None,
+            show_theme_editor: false,
+            theme_editor_theme: CustomTheme::default(),
+            theme_editor_category: ThemeEditorCategory::default(),
             show_user_form: false,
             editing_user_id: None,
             user_form_name: String::new(),
@@ -2814,35 +3228,66 @@ impl RequirementsApp {
             .spacing([20.0, 10.0])
             .show(ui, |ui| {
                 ui.label("Theme:");
-                egui::ComboBox::from_id_salt("settings_theme_combo")
-                    .selected_text(self.settings_form_theme.label())
-                    .show_ui(ui, |ui| {
-                        ui.selectable_value(
-                            &mut self.settings_form_theme,
-                            Theme::Dark,
-                            Theme::Dark.label(),
-                        );
-                        ui.selectable_value(
-                            &mut self.settings_form_theme,
-                            Theme::Light,
-                            Theme::Light.label(),
-                        );
-                        ui.selectable_value(
-                            &mut self.settings_form_theme,
-                            Theme::HighContrastDark,
-                            Theme::HighContrastDark.label(),
-                        );
-                        ui.selectable_value(
-                            &mut self.settings_form_theme,
-                            Theme::SolarizedDark,
-                            Theme::SolarizedDark.label(),
-                        );
-                        ui.selectable_value(
-                            &mut self.settings_form_theme,
-                            Theme::Nord,
-                            Theme::Nord.label(),
-                        );
-                    });
+                ui.horizontal(|ui| {
+                    egui::ComboBox::from_id_salt("settings_theme_combo")
+                        .selected_text(self.settings_form_theme.label())
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(
+                                &mut self.settings_form_theme,
+                                Theme::Dark,
+                                Theme::Dark.label(),
+                            );
+                            ui.selectable_value(
+                                &mut self.settings_form_theme,
+                                Theme::Light,
+                                Theme::Light.label(),
+                            );
+                            ui.selectable_value(
+                                &mut self.settings_form_theme,
+                                Theme::HighContrastDark,
+                                Theme::HighContrastDark.label(),
+                            );
+                            ui.selectable_value(
+                                &mut self.settings_form_theme,
+                                Theme::SolarizedDark,
+                                Theme::SolarizedDark.label(),
+                            );
+                            ui.selectable_value(
+                                &mut self.settings_form_theme,
+                                Theme::Nord,
+                                Theme::Nord.label(),
+                            );
+                            ui.separator();
+                            // Show any existing custom theme (extract info first to avoid borrow issues)
+                            let custom_theme_copy = if let Theme::Custom(custom) = &self.settings_form_theme {
+                                Some((custom.clone(), custom.name.clone()))
+                            } else {
+                                None
+                            };
+                            if let Some((theme_copy, name)) = custom_theme_copy {
+                                ui.selectable_value(
+                                    &mut self.settings_form_theme,
+                                    Theme::Custom(theme_copy),
+                                    format!("Custom: {}", name),
+                                );
+                            }
+                        });
+                    if ui.button("🎨 Edit Theme...").clicked() {
+                        // Initialize the theme editor with current theme or create new
+                        self.theme_editor_theme = if let Theme::Custom(ref custom) = self.settings_form_theme {
+                            (**custom).clone()
+                        } else {
+                            // Create a new custom theme based on current theme
+                            let base = match self.settings_form_theme {
+                                Theme::Light => BaseTheme::Light,
+                                _ => BaseTheme::Dark,
+                            };
+                            CustomTheme::from_base(base, "My Theme".to_string())
+                        };
+                        self.theme_editor_category = ThemeEditorCategory::default();
+                        self.show_theme_editor = true;
+                    }
+                });
                 ui.end_row();
 
                 ui.label("Base Font Size:");
@@ -4848,6 +5293,458 @@ impl RequirementsApp {
                     ui.end_row();
                 });
         });
+    }
+
+    /// Show the theme editor dialog
+    fn show_theme_editor_dialog(&mut self, ctx: &egui::Context) {
+        if !self.show_theme_editor {
+            return;
+        }
+
+        // Apply the working theme so user sees changes live
+        self.theme_editor_theme.apply(ctx);
+
+        egui::Window::new("🎨 Theme Editor")
+            .collapsible(false)
+            .resizable(true)
+            .min_width(800.0)
+            .min_height(500.0)
+            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+            .show(ctx, |ui| {
+                ui.horizontal(|ui| {
+                    // Left panel: Category selector and color editors
+                    egui::SidePanel::left("theme_editor_categories")
+                        .resizable(false)
+                        .min_width(150.0)
+                        .show_inside(ui, |ui| {
+                            ui.heading("Categories");
+                            ui.add_space(5.0);
+                            for cat in ThemeEditorCategory::all() {
+                                if ui
+                                    .selectable_label(
+                                        self.theme_editor_category == *cat,
+                                        cat.label(),
+                                    )
+                                    .clicked()
+                                {
+                                    self.theme_editor_category = *cat;
+                                }
+                            }
+                            ui.add_space(10.0);
+                            ui.separator();
+                            ui.add_space(5.0);
+
+                            // Base theme selector
+                            ui.label("Base Theme:");
+                            egui::ComboBox::from_id_salt("theme_editor_base")
+                                .selected_text(self.theme_editor_theme.base.label())
+                                .show_ui(ui, |ui| {
+                                    if ui
+                                        .selectable_label(
+                                            self.theme_editor_theme.base == BaseTheme::Dark,
+                                            "Dark",
+                                        )
+                                        .clicked()
+                                    {
+                                        self.theme_editor_theme.base = BaseTheme::Dark;
+                                        self.theme_editor_theme.dark_mode = true;
+                                    }
+                                    if ui
+                                        .selectable_label(
+                                            self.theme_editor_theme.base == BaseTheme::Light,
+                                            "Light",
+                                        )
+                                        .clicked()
+                                    {
+                                        self.theme_editor_theme.base = BaseTheme::Light;
+                                        self.theme_editor_theme.dark_mode = false;
+                                    }
+                                });
+
+                            ui.add_space(10.0);
+                            if ui.button("Reset to Base").clicked() {
+                                let name = self.theme_editor_theme.name.clone();
+                                self.theme_editor_theme =
+                                    CustomTheme::from_base(self.theme_editor_theme.base, name);
+                            }
+                        });
+
+                    // Center panel: Property editors for selected category
+                    egui::CentralPanel::default().show_inside(ui, |ui| {
+                        ui.horizontal(|ui| {
+                            ui.label("Theme Name:");
+                            ui.text_edit_singleline(&mut self.theme_editor_theme.name);
+                        });
+                        ui.add_space(10.0);
+                        ui.separator();
+
+                        egui::ScrollArea::vertical().show(ui, |ui| {
+                            match self.theme_editor_category {
+                                ThemeEditorCategory::Backgrounds => {
+                                    Self::show_theme_backgrounds(&mut self.theme_editor_theme, ui);
+                                }
+                                ThemeEditorCategory::Text => {
+                                    Self::show_theme_text(&mut self.theme_editor_theme, ui);
+                                }
+                                ThemeEditorCategory::Widgets => {
+                                    Self::show_theme_widgets(&mut self.theme_editor_theme, ui);
+                                }
+                                ThemeEditorCategory::Selection => {
+                                    Self::show_theme_selection(&mut self.theme_editor_theme, ui);
+                                }
+                                ThemeEditorCategory::Borders => {
+                                    Self::show_theme_borders(&mut self.theme_editor_theme, ui);
+                                }
+                                ThemeEditorCategory::Spacing => {
+                                    Self::show_theme_spacing(&mut self.theme_editor_theme, ui);
+                                }
+                            }
+                        });
+                    });
+
+                    // Right panel: Live preview
+                    egui::SidePanel::right("theme_preview")
+                        .resizable(false)
+                        .min_width(250.0)
+                        .show_inside(ui, |ui| {
+                            ui.heading("Live Preview");
+                            ui.add_space(5.0);
+                            Self::show_theme_preview(&self.theme_editor_theme, ui);
+                        });
+                });
+
+                ui.add_space(10.0);
+                ui.separator();
+
+                ui.horizontal(|ui| {
+                    if ui.button("✓ Apply & Close").clicked() {
+                        // Save the custom theme
+                        self.settings_form_theme =
+                            Theme::Custom(Box::new(self.theme_editor_theme.clone()));
+                        self.show_theme_editor = false;
+                    }
+                    if ui.button("Cancel").clicked() {
+                        // Revert to previous theme
+                        self.settings_form_theme.apply(ctx);
+                        self.show_theme_editor = false;
+                    }
+                });
+            });
+    }
+
+    /// Show background color editors
+    fn show_theme_backgrounds(theme: &mut CustomTheme, ui: &mut egui::Ui) {
+        ui.heading("Background Colors");
+        ui.add_space(10.0);
+
+        egui::Grid::new("theme_backgrounds_grid")
+            .num_columns(2)
+            .spacing([20.0, 8.0])
+            .show(ui, |ui| {
+                ui.label("Window Fill:");
+                color_picker_widget(ui, &mut theme.window_fill);
+                ui.end_row();
+
+                ui.label("Panel Fill:");
+                color_picker_widget(ui, &mut theme.panel_fill);
+                ui.end_row();
+
+                ui.label("Extreme Background:");
+                ui.label("(text edit backgrounds)");
+                ui.end_row();
+                ui.label("");
+                color_picker_widget(ui, &mut theme.extreme_bg);
+                ui.end_row();
+
+                ui.label("Faint Background:");
+                ui.label("(subtle separators)");
+                ui.end_row();
+                ui.label("");
+                color_picker_widget(ui, &mut theme.faint_bg);
+                ui.end_row();
+            });
+    }
+
+    /// Show text color editors
+    fn show_theme_text(theme: &mut CustomTheme, ui: &mut egui::Ui) {
+        ui.heading("Text Colors");
+        ui.add_space(10.0);
+
+        egui::Grid::new("theme_text_grid")
+            .num_columns(2)
+            .spacing([20.0, 8.0])
+            .show(ui, |ui| {
+                ui.label("Override Text Color:");
+                let mut has_override = theme.text_color.is_some();
+                if ui.checkbox(&mut has_override, "Custom text color").changed() {
+                    if has_override {
+                        theme.text_color = Some(ThemeColor::new(200, 200, 200));
+                    } else {
+                        theme.text_color = None;
+                    }
+                }
+                ui.end_row();
+
+                if let Some(ref mut color) = theme.text_color {
+                    ui.label("");
+                    color_picker_widget(ui, color);
+                    ui.end_row();
+                }
+
+                ui.label("Hyperlink Color:");
+                color_picker_widget(ui, &mut theme.hyperlink_color);
+                ui.end_row();
+
+                ui.label("Warning Color:");
+                color_picker_widget(ui, &mut theme.warn_fg);
+                ui.end_row();
+
+                ui.label("Error Color:");
+                color_picker_widget(ui, &mut theme.error_fg);
+                ui.end_row();
+            });
+    }
+
+    /// Show widget color editors
+    fn show_theme_widgets(theme: &mut CustomTheme, ui: &mut egui::Ui) {
+        ui.heading("Widget Colors");
+        ui.add_space(10.0);
+
+        ui.label("Non-Interactive Widgets:");
+        ui.add_space(5.0);
+        egui::Grid::new("theme_widgets_noninteractive")
+            .num_columns(2)
+            .spacing([20.0, 8.0])
+            .show(ui, |ui| {
+                ui.label("Background:");
+                color_picker_widget(ui, &mut theme.widget_bg);
+                ui.end_row();
+
+                ui.label("Foreground:");
+                color_picker_widget(ui, &mut theme.widget_fg);
+                ui.end_row();
+            });
+
+        ui.add_space(15.0);
+        ui.label("Interactive Widget States:");
+        ui.add_space(5.0);
+        egui::Grid::new("theme_widgets_interactive")
+            .num_columns(2)
+            .spacing([20.0, 8.0])
+            .show(ui, |ui| {
+                ui.label("Inactive Background:");
+                color_picker_widget(ui, &mut theme.widget_inactive_bg);
+                ui.end_row();
+
+                ui.label("Hovered Background:");
+                color_picker_widget(ui, &mut theme.widget_hovered_bg);
+                ui.end_row();
+
+                ui.label("Active Background:");
+                color_picker_widget(ui, &mut theme.widget_active_bg);
+                ui.end_row();
+
+                ui.label("Open Background:");
+                color_picker_widget(ui, &mut theme.widget_open_bg);
+                ui.end_row();
+            });
+    }
+
+    /// Show selection color editors
+    fn show_theme_selection(theme: &mut CustomTheme, ui: &mut egui::Ui) {
+        ui.heading("Selection Colors");
+        ui.add_space(10.0);
+
+        egui::Grid::new("theme_selection_grid")
+            .num_columns(2)
+            .spacing([20.0, 8.0])
+            .show(ui, |ui| {
+                ui.label("Selection Background:");
+                color_picker_widget(ui, &mut theme.selection_bg);
+                ui.end_row();
+
+                ui.label("Selection Foreground:");
+                color_picker_widget(ui, &mut theme.selection_fg);
+                ui.end_row();
+            });
+    }
+
+    /// Show border and rounding editors
+    fn show_theme_borders(theme: &mut CustomTheme, ui: &mut egui::Ui) {
+        ui.heading("Borders & Rounding");
+        ui.add_space(10.0);
+
+        ui.label("Border Colors:");
+        ui.add_space(5.0);
+        egui::Grid::new("theme_borders_colors")
+            .num_columns(2)
+            .spacing([20.0, 8.0])
+            .show(ui, |ui| {
+                ui.label("Inactive Stroke:");
+                color_picker_widget(ui, &mut theme.widget_stroke_color);
+                ui.end_row();
+
+                ui.label("Hovered Stroke:");
+                color_picker_widget(ui, &mut theme.widget_hovered_stroke_color);
+                ui.end_row();
+
+                ui.label("Active Stroke:");
+                color_picker_widget(ui, &mut theme.widget_active_stroke_color);
+                ui.end_row();
+            });
+
+        ui.add_space(15.0);
+        ui.label("Stroke Width & Rounding:");
+        ui.add_space(5.0);
+        egui::Grid::new("theme_borders_sizing")
+            .num_columns(2)
+            .spacing([20.0, 8.0])
+            .show(ui, |ui| {
+                ui.label("Stroke Width:");
+                ui.add(
+                    egui::Slider::new(&mut theme.widget_stroke_width, 0.0..=5.0)
+                        .suffix("px"),
+                );
+                ui.end_row();
+
+                ui.label("Widget Rounding:");
+                ui.add(
+                    egui::Slider::new(&mut theme.widget_rounding, 0.0..=20.0)
+                        .suffix("px"),
+                );
+                ui.end_row();
+
+                ui.label("Window Rounding:");
+                ui.add(
+                    egui::Slider::new(&mut theme.window_rounding, 0.0..=20.0)
+                        .suffix("px"),
+                );
+                ui.end_row();
+            });
+
+        ui.add_space(15.0);
+        ui.label("Shadows:");
+        ui.add_space(5.0);
+        ui.checkbox(&mut theme.window_shadow, "Window Shadow");
+        ui.checkbox(&mut theme.popup_shadow, "Popup Shadow");
+    }
+
+    /// Show spacing and layout editors
+    fn show_theme_spacing(theme: &mut CustomTheme, ui: &mut egui::Ui) {
+        ui.heading("Spacing & Layout");
+        ui.add_space(10.0);
+
+        egui::Grid::new("theme_spacing_grid")
+            .num_columns(2)
+            .spacing([20.0, 8.0])
+            .show(ui, |ui| {
+                ui.label("Item Spacing (H, V):");
+                ui.horizontal(|ui| {
+                    ui.add(egui::DragValue::new(&mut theme.item_spacing.0).speed(0.5));
+                    ui.add(egui::DragValue::new(&mut theme.item_spacing.1).speed(0.5));
+                });
+                ui.end_row();
+
+                ui.label("Button Padding (H, V):");
+                ui.horizontal(|ui| {
+                    ui.add(egui::DragValue::new(&mut theme.button_padding.0).speed(0.5));
+                    ui.add(egui::DragValue::new(&mut theme.button_padding.1).speed(0.5));
+                });
+                ui.end_row();
+
+                ui.label("Window Padding:");
+                ui.horizontal(|ui| {
+                    ui.add(egui::DragValue::new(&mut theme.window_padding.0).speed(0.5));
+                    ui.add(egui::DragValue::new(&mut theme.window_padding.1).speed(0.5));
+                });
+                ui.end_row();
+
+                ui.label("Scroll Bar Width:");
+                ui.add(
+                    egui::Slider::new(&mut theme.scroll_bar_width, 4.0..=20.0)
+                        .suffix("px"),
+                );
+                ui.end_row();
+
+                ui.label("Indent:");
+                ui.add(
+                    egui::Slider::new(&mut theme.indent, 8.0..=40.0)
+                        .suffix("px"),
+                );
+                ui.end_row();
+            });
+    }
+
+
+    /// Show a live preview of the theme
+    fn show_theme_preview(theme: &CustomTheme, ui: &mut egui::Ui) {
+        ui.add_space(5.0);
+
+        // Text preview
+        ui.label("Normal text");
+        ui.hyperlink_to("Hyperlink", "");
+        ui.colored_label(theme.warn_fg.to_egui(), "Warning text");
+        ui.colored_label(theme.error_fg.to_egui(), "Error text");
+
+        ui.add_space(10.0);
+        ui.separator();
+        ui.add_space(5.0);
+
+        // Button states
+        ui.label("Buttons:");
+        ui.horizontal(|ui| {
+            let _ = ui.button("Normal");
+            let _ = ui.button("Click me");
+        });
+
+        ui.add_space(10.0);
+
+        // Text input
+        let mut sample_text = "Sample text input".to_string();
+        ui.add(egui::TextEdit::singleline(&mut sample_text));
+
+        ui.add_space(10.0);
+
+        // Checkbox and radio
+        let mut checked = true;
+        ui.checkbox(&mut checked, "Checkbox");
+
+        let mut radio = 0;
+        ui.horizontal(|ui| {
+            ui.radio_value(&mut radio, 0, "Radio A");
+            ui.radio_value(&mut radio, 1, "Radio B");
+        });
+
+        ui.add_space(10.0);
+
+        // Slider
+        let mut slider_val = 50.0_f32;
+        ui.add(egui::Slider::new(&mut slider_val, 0.0..=100.0).text("Slider"));
+
+        ui.add_space(10.0);
+
+        // ComboBox
+        let mut selected = "Option A";
+        egui::ComboBox::from_id_salt("preview_combo")
+            .selected_text(selected)
+            .show_ui(ui, |ui| {
+                ui.selectable_value(&mut selected, "Option A", "Option A");
+                ui.selectable_value(&mut selected, "Option B", "Option B");
+            });
+
+        ui.add_space(10.0);
+
+        // Collapsing header
+        ui.collapsing("Collapsing Header", |ui| {
+            ui.label("Nested content");
+        });
+
+        ui.add_space(10.0);
+
+        // Selection preview
+        ui.label("Selection preview:");
+        let mut text = "Select this text".to_string();
+        ui.add(egui::TextEdit::singleline(&mut text));
     }
 
     fn show_users_table(&mut self, ui: &mut egui::Ui) {
@@ -9214,6 +10111,9 @@ impl eframe::App for RequirementsApp {
 
         // Show settings dialog (modal overlay)
         self.show_settings_dialog(ctx);
+
+        // Show theme editor dialog
+        self.show_theme_editor_dialog(ctx);
 
         // Show project dialogs
         self.show_switch_project_dialog(ctx);

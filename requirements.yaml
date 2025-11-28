@@ -1084,8 +1084,8 @@ requirements:
       old_value: "Filters should also include custom PREFIXes. All of the unique ID Prefix that are entered can be stored in a list. These can also be used to\n filter which requirements are shown. This should be listed in the project administration as well. Possibly, this could be a project admin \nrestricted capability (boolean) whereby the ID Prefix would only from a set of prefixes that the project admin controls and it would be a \ndropdown in the edit/add requirement. But by default a regular user should be able to enter a new one. "
       new_value: "Filters should also include custom PREFIXes. All of the unique ID Prefix that are entered can be stored in a list. These can also be used to\n filter which requirements are shown. This should be listed in the project administration as well. Possibly, this could be a project admin \nrestricted capability (boolean) whereby the ID Prefix would only from a set of prefixes that the project admin controls and it would be a \ndropdown in the edit/add requirement. But by default a regular user should be able to enter a new one. \n  ID Prefix Filtering and Management:\n\n  1. Core Model Updates (requirements-core/src/models.rs):\n    - Added allowed_prefixes: Vec<String> - list of allowed/known prefixes\n    - Added restrict_prefixes: bool - when true, users must select from allowed list\n    - Added helper methods:\n        - get_used_prefixes() - gets all unique prefixes from existing requirements\n      - get_all_prefixes() - combines allowed + used prefixes\n      - add_allowed_prefix(), remove_allowed_prefix(), is_prefix_allowed()\n  2. GUI Filter Panel:\n    - Added filter_prefixes: HashSet<String> for prefix-based filtering\n    - Updated passes_filters() to check prefix filter\n    - Added \"ID Prefix Filters\" section with checkboxes for each unique prefix\n    - Updated ViewPreset to save/restore prefix filters\n  3. Admin Settings (Settings > Admin > ID Prefix Management):\n    - Toggle to restrict prefixes to allowed list\n    - Shows prefixes currently in use\n    - Add new allowed prefixes with validation (uppercase letters only)\n    - Remove prefixes from allowed list (shows if in use)\n  4. Add/Edit Form:\n    - When restrict_prefixes is enabled: shows dropdown with only allowed prefixes\n    - When unrestricted: shows combo box with existing prefixes + text input for new ones\n    - Auto-adds new prefixes to allowed list when used (unless restricted)\n"
 - id: bb81e51e-dd32-48ef-9806-cf26a09643f5
-  spec_id: SCHEMA-0040
-  prefix_override: SCHEMA
+  spec_id: DB-0086
+  prefix_override: DB
   title: Database definition
   description: Object types, relationships, etc.
   status: Draft
@@ -1093,7 +1093,7 @@ requirements:
   owner: ''
   feature: 22-Uncategorized
   created_at: 2025-11-27T03:36:41.058576375Z
-  modified_at: 2025-11-27T03:36:41.058576375Z
+  modified_at: 2025-11-28T20:10:41.815586505Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -1110,6 +1110,17 @@ requirements:
     target_id: b1ba8347-d9f7-4aee-a1e2-8c96f0ad5d3c
   - rel_type: Child
     target_id: be94a2c7-6ab1-42d9-822b-d7d841b4c6f0
+  history:
+  - id: c2aa6626-c857-41f9-9851-9306815d33df
+    author: '@joe'
+    timestamp: 2025-11-28T20:10:41.815580320Z
+    changes:
+    - field_name: prefix_override
+      old_value: SCHEMA
+      new_value: DB
+    - field_name: spec_id
+      old_value: SCHEMA-0040
+      new_value: DB-0086
 - id: 5738b675-4fa8-4f10-94a8-e6d16c418c35
   spec_id: FILTER-0042
   prefix_override: FILTER
@@ -3068,8 +3079,6 @@ requirements:
   relationships:
   - rel_type: Child
     target_id: c4f0e8c6-c59f-4926-8d02-2bb569a5a2da
-  - rel_type: Child
-    target_id: 97aa0bdd-cecf-464a-9670-eb31965ce497
 - id: c4f0e8c6-c59f-4926-8d02-2bb569a5a2da
   spec_id: FR-0071
   title: Drag requirement in requirements list should scroll
@@ -3103,7 +3112,7 @@ requirements:
   - rel_type: Parent
     target_id: cb0cb997-723e-4605-a306-1c1b2296e121
 - id: 97aa0bdd-cecf-464a-9670-eb31965ce497
-  spec_id: FR-0073
+  spec_id: FR-0085
   title: scollbar sync with mouse wheel
   description: |2
 
@@ -3131,13 +3140,13 @@ requirements:
   owner: ''
   feature: 32-Uncategorized
   created_at: 2025-11-27T23:08:44.110738408Z
-  modified_at: 2025-11-28T00:03:45.376376185Z
+  modified_at: 2025-11-28T20:10:04.516909006Z
   req_type: Functional
   dependencies: []
   tags: []
   relationships:
   - rel_type: Parent
-    target_id: 0b904a04-4422-4767-a7b6-28b9a721a1b9
+    target_id: 65b0251d-7cc2-4d66-9115-bd5c1f221a60
   history:
   - id: 294ff48c-6727-4d76-8608-a65a2ab1dfdd
     author: '@joe'
@@ -3216,6 +3225,26 @@ requirements:
           - PageUp/PageDown: Navigate selection by page
           - Home/End: Jump to first/last item
           - Click: Select an item
+  - id: db6841ff-b679-43d6-a8ec-50ebfec141a9
+    author: '@joe'
+    timestamp: 2025-11-28T20:08:07.408352555Z
+    changes:
+    - field_name: prefix_override
+      old_value: ''
+      new_value: REQLIST
+    - field_name: spec_id
+      old_value: FR-0073
+      new_value: REQLIST-0080
+  - id: 9c628775-3240-475f-b3b3-dac8c686a691
+    author: '@joe'
+    timestamp: 2025-11-28T20:10:04.516902552Z
+    changes:
+    - field_name: prefix_override
+      old_value: REQLIST
+      new_value: ''
+    - field_name: spec_id
+      old_value: REQLIST-0080
+      new_value: FR-0085
 - id: 25b4e80b-ae19-401f-bd69-dd5636a08944
   spec_id: FR-0074
   title: Switch Project
@@ -3380,7 +3409,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 35-Uncategorized
   created_at: 2025-11-28T18:19:53.122343216Z
   modified_at: 2025-11-28T18:19:53.122343216Z
   req_type: Functional
@@ -3389,6 +3418,54 @@ requirements:
   relationships:
   - rel_type: Parent
     target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
+- id: 65b0251d-7cc2-4d66-9115-bd5c1f221a60
+  spec_id: REQLIST-0084
+  prefix_override: REQLIST
+  title: Requirements List requirements
+  description: Requirements List related requirements
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-28T20:09:08.123728063Z
+  modified_at: 2025-11-28T20:09:56.102148636Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Child
+    target_id: 97aa0bdd-cecf-464a-9670-eb31965ce497
+  history:
+  - id: 3ab7395d-b2eb-49d1-8d88-c34abd15e952
+    author: '@joe'
+    timestamp: 2025-11-28T20:09:26.466069668Z
+    changes:
+    - field_name: prefix_override
+      old_value: ''
+      new_value: REQLIST
+    - field_name: spec_id
+      old_value: FR-0081
+      new_value: REQLIST-0082
+  - id: 08124bb2-2916-41b4-994d-655d271f99d1
+    author: '@joe'
+    timestamp: 2025-11-28T20:09:45.506246352Z
+    changes:
+    - field_name: prefix_override
+      old_value: REQLIST
+      new_value: ''
+    - field_name: spec_id
+      old_value: REQLIST-0082
+      new_value: FR-0083
+  - id: e32be64d-e4dc-477f-a1d5-9f7a2db67e40
+    author: '@joe'
+    timestamp: 2025-11-28T20:09:56.102146276Z
+    changes:
+    - field_name: prefix_override
+      old_value: ''
+      new_value: REQLIST
+    - field_name: spec_id
+      old_value: FR-0083
+      new_value: REQLIST-0084
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
   spec_id: $USER-001
@@ -3429,8 +3506,8 @@ id_config:
     prefix: CR
     description: Change requests for modifications to existing functionality
 features: []
-next_feature_number: 35
-next_spec_number: 80
+next_feature_number: 36
+next_spec_number: 87
 prefix_counters: {}
 relationship_definitions:
 - name: parent
@@ -3656,6 +3733,7 @@ type_definitions:
   color: '#9333ea'
 allowed_prefixes:
 - ADDREQ
+- DB
 - DETAILVIEW
 - DOC
 - FILTER
