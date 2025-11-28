@@ -804,7 +804,7 @@ fn default_font_size() -> f32 {
 }
 
 fn default_ui_heading_level() -> u8 {
-    3 // H3 by default
+    5 // H5 by default
 }
 
 impl Default for UserSettings {
