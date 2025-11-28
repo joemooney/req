@@ -901,9 +901,9 @@ enum View {
 #[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
 pub(crate) enum Perspective {
     /// Simple flat list of all requirements
-    #[default]
     Flat,
-    /// Tree view based on Parent/Child relationships
+    /// Tree view based on Parent/Child relationships (default)
+    #[default]
     ParentChild,
     /// Tree view based on Verifies/VerifiedBy relationships
     Verification,
@@ -1590,9 +1590,9 @@ impl RequirementsApp {
         }
     }
 
-    /// Reset to default view (Flat, TopDown, no filters)
+    /// Reset to default view (user's preferred perspective, TopDown, no filters)
     fn reset_to_default_view(&mut self) {
-        self.perspective = Perspective::Flat;
+        self.perspective = self.user_settings.preferred_perspective.clone();
         self.perspective_direction = PerspectiveDirection::TopDown;
         self.filter_types.clear();
         self.filter_features.clear();
