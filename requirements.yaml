@@ -1362,7 +1362,7 @@ requirements:
 - id: baf7ce9a-b022-41d6-9781-c8b5d1c32acd
   spec_id: FR-0047
   title: Markdown help
-  description: |+
+  description: |
     The "Supports Markdown" when clicked should show a modal of help or open a browswer page with help on what markdown is supported with
       examples.
 
@@ -1380,12 +1380,77 @@ requirements:
 
       The modal is a centered, resizable window with a scrollable content area and a Close button.
 
+     Markdown Heading Sizes:
+      - H1 (# Heading): 1.8× base font size
+      - H2 (## Heading): 1.5× base font size
+      - H3 (### Heading): 1.25× base font size
+      - H4 (#### Heading): 1.1× base font size
+      - H5 (##### Heading): 1× base font size
+      - H6 (###### Heading): 0.9× base font size
+
+      The heading sizes scale proportionally when you zoom in/out using Ctrl+/- or Ctrl+MouseWheel. The implementation registers custom named text
+       styles ("Heading", "Heading2", etc.) that egui_commonmark uses for rendering markdown headings.
+
+
+    ---
+
+    Headers
+    # Heading 1
+    ## Heading 2
+    ### Heading 3
+
+    Text Formatting
+    **bold** → bold
+    *italic* → italic
+    ~~strikethrough~~ → strikethrough
+    `inline code` → inline code
+
+    Lists
+    Unordered:
+    - Item 1
+    - Item 2
+      - Nested item
+    Ordered:
+    1. First
+    2. Second
+    3. Third
+
+    Links
+    [Link text](https://example.com)
+
+    Code Blocks
+    ```
+    code block
+    multiple lines
+    ```
+    With language:
+    ```rust
+    fn main() {
+        println!("Hello");
+    }
+    ```
+
+    Blockquotes
+    > This is a quote
+    > Multiple lines
+
+    Horizontal Rule
+    ---
+
+    Tables
+    | Header 1 | Header 2 |
+    |----------|----------|
+    | Cell 1   | Cell 2   |
+
+    Task Lists
+    - [ ] Unchecked task
+    - [x] Completed task
   status: Draft
   priority: Medium
   owner: ''
   feature: 25-Uncategorized
   created_at: 2025-11-27T06:16:17.007809398Z
-  modified_at: 2025-11-27T06:19:14.430193705Z
+  modified_at: 2025-11-28T00:12:47.839568822Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -1419,6 +1484,259 @@ requirements:
 
           The modal is a centered, resizable window with a scrollable content area and a Close button.
 
+  - id: 5624f32f-a8e8-4ceb-94ee-b82d5bcef4f1
+    author: '@joe'
+    timestamp: 2025-11-28T00:05:45.545507376Z
+    changes:
+    - field_name: description
+      old_value: |+
+        The "Supports Markdown" when clicked should show a modal of help or open a browswer page with help on what markdown is supported with
+          examples.
+
+        implemented a Markdown help modal that appears when you click the "Supports Markdown" link in the form view. The modal includes:
+
+          - Headers - #, ##, ### syntax
+          - Text Formatting - bold, italic, strikethrough, inline code with visual examples showing the rendered result
+          - Lists - ordered and unordered, with nesting support
+          - Links - [text](url) syntax
+          - Code Blocks - with and without language specification for syntax highlighting
+          - Blockquotes - > syntax
+          - Horizontal Rules - --- syntax
+          - Tables - pipe-based table syntax
+          - Task Lists - - [ ] and - [x] checkbox syntax
+
+          The modal is a centered, resizable window with a scrollable content area and a Close button.
+
+      new_value: |
+        The "Supports Markdown" when clicked should show a modal of help or open a browswer page with help on what markdown is supported with
+          examples.
+
+        implemented a Markdown help modal that appears when you click the "Supports Markdown" link in the form view. The modal includes:
+
+          - Headers - #, ##, ### syntax
+          - Text Formatting - bold, italic, strikethrough, inline code with visual examples showing the rendered result
+          - Lists - ordered and unordered, with nesting support
+          - Links - [text](url) syntax
+          - Code Blocks - with and without language specification for syntax highlighting
+          - Blockquotes - > syntax
+          - Horizontal Rules - --- syntax
+          - Tables - pipe-based table syntax
+          - Task Lists - - [ ] and - [x] checkbox syntax
+
+          The modal is a centered, resizable window with a scrollable content area and a Close button.
+
+        ---
+
+        Headers
+        # Heading 1
+        ## Heading 2
+        ### Heading 3
+
+        Text Formatting
+        **bold** → bold
+        *italic* → italic
+        ~~strikethrough~~ → strikethrough
+        `inline code` → inline code
+
+        Lists
+        Unordered:
+        - Item 1
+        - Item 2
+          - Nested item
+        Ordered:
+        1. First
+        2. Second
+        3. Third
+
+        Links
+        [Link text](https://example.com)
+
+        Code Blocks
+        ```
+        code block
+        multiple lines
+        ```
+        With language:
+        ```rust
+        fn main() {
+            println!("Hello");
+        }
+        ```
+
+        Blockquotes
+        > This is a quote
+        > Multiple lines
+
+        Horizontal Rule
+        ---
+
+        Tables
+        | Header 1 | Header 2 |
+        |----------|----------|
+        | Cell 1   | Cell 2   |
+
+        Task Lists
+        - [ ] Unchecked task
+        - [x] Completed task
+  - id: 9ab77002-7fc5-4f4f-9233-d00617c2e375
+    author: '@joe'
+    timestamp: 2025-11-28T00:12:47.839565370Z
+    changes:
+    - field_name: description
+      old_value: |
+        The "Supports Markdown" when clicked should show a modal of help or open a browswer page with help on what markdown is supported with
+          examples.
+
+        implemented a Markdown help modal that appears when you click the "Supports Markdown" link in the form view. The modal includes:
+
+          - Headers - #, ##, ### syntax
+          - Text Formatting - bold, italic, strikethrough, inline code with visual examples showing the rendered result
+          - Lists - ordered and unordered, with nesting support
+          - Links - [text](url) syntax
+          - Code Blocks - with and without language specification for syntax highlighting
+          - Blockquotes - > syntax
+          - Horizontal Rules - --- syntax
+          - Tables - pipe-based table syntax
+          - Task Lists - - [ ] and - [x] checkbox syntax
+
+          The modal is a centered, resizable window with a scrollable content area and a Close button.
+
+        ---
+
+        Headers
+        # Heading 1
+        ## Heading 2
+        ### Heading 3
+
+        Text Formatting
+        **bold** → bold
+        *italic* → italic
+        ~~strikethrough~~ → strikethrough
+        `inline code` → inline code
+
+        Lists
+        Unordered:
+        - Item 1
+        - Item 2
+          - Nested item
+        Ordered:
+        1. First
+        2. Second
+        3. Third
+
+        Links
+        [Link text](https://example.com)
+
+        Code Blocks
+        ```
+        code block
+        multiple lines
+        ```
+        With language:
+        ```rust
+        fn main() {
+            println!("Hello");
+        }
+        ```
+
+        Blockquotes
+        > This is a quote
+        > Multiple lines
+
+        Horizontal Rule
+        ---
+
+        Tables
+        | Header 1 | Header 2 |
+        |----------|----------|
+        | Cell 1   | Cell 2   |
+
+        Task Lists
+        - [ ] Unchecked task
+        - [x] Completed task
+      new_value: |
+        The "Supports Markdown" when clicked should show a modal of help or open a browswer page with help on what markdown is supported with
+          examples.
+
+        implemented a Markdown help modal that appears when you click the "Supports Markdown" link in the form view. The modal includes:
+
+          - Headers - #, ##, ### syntax
+          - Text Formatting - bold, italic, strikethrough, inline code with visual examples showing the rendered result
+          - Lists - ordered and unordered, with nesting support
+          - Links - [text](url) syntax
+          - Code Blocks - with and without language specification for syntax highlighting
+          - Blockquotes - > syntax
+          - Horizontal Rules - --- syntax
+          - Tables - pipe-based table syntax
+          - Task Lists - - [ ] and - [x] checkbox syntax
+
+          The modal is a centered, resizable window with a scrollable content area and a Close button.
+
+         Markdown Heading Sizes:
+          - H1 (# Heading): 1.8× base font size
+          - H2 (## Heading): 1.5× base font size
+          - H3 (### Heading): 1.25× base font size
+          - H4 (#### Heading): 1.1× base font size
+          - H5 (##### Heading): 1× base font size
+          - H6 (###### Heading): 0.9× base font size
+
+          The heading sizes scale proportionally when you zoom in/out using Ctrl+/- or Ctrl+MouseWheel. The implementation registers custom named text
+           styles ("Heading", "Heading2", etc.) that egui_commonmark uses for rendering markdown headings.
+
+
+        ---
+
+        Headers
+        # Heading 1
+        ## Heading 2
+        ### Heading 3
+
+        Text Formatting
+        **bold** → bold
+        *italic* → italic
+        ~~strikethrough~~ → strikethrough
+        `inline code` → inline code
+
+        Lists
+        Unordered:
+        - Item 1
+        - Item 2
+          - Nested item
+        Ordered:
+        1. First
+        2. Second
+        3. Third
+
+        Links
+        [Link text](https://example.com)
+
+        Code Blocks
+        ```
+        code block
+        multiple lines
+        ```
+        With language:
+        ```rust
+        fn main() {
+            println!("Hello");
+        }
+        ```
+
+        Blockquotes
+        > This is a quote
+        > Multiple lines
+
+        Horizontal Rule
+        ---
+
+        Tables
+        | Header 1 | Header 2 |
+        |----------|----------|
+        | Cell 1   | Cell 2   |
+
+        Task Lists
+        - [ ] Unchecked task
+        - [x] Completed task
 - id: 2c0c3c1a-aa65-4cce-8d03-3898775b3ac2
   spec_id: FR-0048
   title: textboxes should show a right click menu with Copy, Paste , Cut (optional)
@@ -2339,19 +2657,117 @@ requirements:
 - id: 97aa0bdd-cecf-464a-9670-eb31965ce497
   spec_id: FR-0073
   title: scollbar sync with mouse wheel
-  description: "in reqlist the mouse scrollwheel and the scrollbar are scolling at different rates so that the selected req is lagging. We need to leap \nforward if the selected req falls behind\n\n The reqlist now keeps the selected requirement visible when scrolling:\n\n  - When you scroll using the mouse wheel or scrollbar, if the selected requirement goes outside the visible area, it automatically snaps back\n   into view\n  - Uses TOP alignment when scrolling down (selected item above viewport)\n  - Uses BOTTOM alignment when scrolling up (selected item below viewport)\n\n  This prevents the selection from \"lagging behind\" the scroll position.\n\n"
+  description: |2
+
+
+    ~~in reqlist the mouse scrollwheel and the scrollbar are scolling at different rates so that the selected req is lagging. We need to leap ~~
+    forward if the selected req falls behind
+
+     The reqlist now keeps the selected requirement visible when scrolling:
+
+      - When you scroll using the mouse wheel or scrollbar, if the selected requirement goes outside the visible area, it automatically snaps back
+       into view
+      - Uses TOP alignment when scrolling down (selected item above viewport)
+      - Uses BOTTOM alignment when scrolling up (selected item below viewport)
+
+      This prevents the selection from "lagging behind" the scroll position.
+
+
+      - Mouse wheel: Scrolls the reqlist view without changing selection (standard behavior)
+      - Up/Down arrows: Navigate selection and scroll selected item into view
+      - PageUp/PageDown: Navigate selection by page
+      - Home/End: Jump to first/last item
+      - Click: Select an item
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 32-Uncategorized
   created_at: 2025-11-27T23:08:44.110738408Z
-  modified_at: 2025-11-27T23:08:44.110738408Z
+  modified_at: 2025-11-28T00:03:45.376376185Z
   req_type: Functional
   dependencies: []
   tags: []
   relationships:
   - rel_type: Parent
     target_id: 0b904a04-4422-4767-a7b6-28b9a721a1b9
+  history:
+  - id: 294ff48c-6727-4d76-8608-a65a2ab1dfdd
+    author: '@joe'
+    timestamp: 2025-11-28T00:02:12.016709468Z
+    changes:
+    - field_name: description
+      old_value: "in reqlist the mouse scrollwheel and the scrollbar are scolling at different rates so that the selected req is lagging. We need to leap \nforward if the selected req falls behind\n\n The reqlist now keeps the selected requirement visible when scrolling:\n\n  - When you scroll using the mouse wheel or scrollbar, if the selected requirement goes outside the visible area, it automatically snaps back\n   into view\n  - Uses TOP alignment when scrolling down (selected item above viewport)\n  - Uses BOTTOM alignment when scrolling up (selected item below viewport)\n\n  This prevents the selection from \"lagging behind\" the scroll position.\n\n"
+      new_value: "~~in reqlist the mouse scrollwheel and the scrollbar are scolling at different rates so that the selected req is lagging. We need to leap \nforward if the selected req falls behind\n\n The reqlist now keeps the selected requirement visible when scrolling:\n\n  - When you scroll using the mouse wheel or scrollbar, if the selected requirement goes outside the visible area, it automatically snaps back\n   into view\n  - Uses TOP alignment when scrolling down (selected item above viewport)\n  - Uses BOTTOM alignment when scrolling up (selected item below viewport)\n\n  This prevents the selection from \"lagging behind\" the scroll position.~~\n\n\n  - Mouse wheel: Scrolls the reqlist view without changing selection (standard behavior)\n  - Up/Down arrows: Navigate selection and scroll selected item into view\n  - PageUp/PageDown: Navigate selection by page\n  - Home/End: Jump to first/last item\n  - Click: Select an item\n"
+  - id: 49746af3-b881-440e-9dbc-ad0374f8ed99
+    author: '@joe'
+    timestamp: 2025-11-28T00:02:56.208566904Z
+    changes:
+    - field_name: description
+      old_value: "~~in reqlist the mouse scrollwheel and the scrollbar are scolling at different rates so that the selected req is lagging. We need to leap \nforward if the selected req falls behind\n\n The reqlist now keeps the selected requirement visible when scrolling:\n\n  - When you scroll using the mouse wheel or scrollbar, if the selected requirement goes outside the visible area, it automatically snaps back\n   into view\n  - Uses TOP alignment when scrolling down (selected item above viewport)\n  - Uses BOTTOM alignment when scrolling up (selected item below viewport)\n\n  This prevents the selection from \"lagging behind\" the scroll position.~~\n\n\n  - Mouse wheel: Scrolls the reqlist view without changing selection (standard behavior)\n  - Up/Down arrows: Navigate selection and scroll selected item into view\n  - PageUp/PageDown: Navigate selection by page\n  - Home/End: Jump to first/last item\n  - Click: Select an item\n"
+      new_value: |
+        ~~in reqlist the mouse scrollwheel and the scrollbar are scolling at different rates so that the selected req is lagging. We need to leap ~~
+        forward if the selected req falls behind
+
+         The reqlist now keeps the selected requirement visible when scrolling:
+
+          - When you scroll using the mouse wheel or scrollbar, if the selected requirement goes outside the visible area, it automatically snaps back
+           into view
+          - Uses TOP alignment when scrolling down (selected item above viewport)
+          - Uses BOTTOM alignment when scrolling up (selected item below viewport)
+
+          This prevents the selection from "lagging behind" the scroll position.
+
+
+          - Mouse wheel: Scrolls the reqlist view without changing selection (standard behavior)
+          - Up/Down arrows: Navigate selection and scroll selected item into view
+          - PageUp/PageDown: Navigate selection by page
+          - Home/End: Jump to first/last item
+          - Click: Select an item
+  - id: 8f328244-ef53-4f55-a87b-9a194164785c
+    author: '@joe'
+    timestamp: 2025-11-28T00:03:45.376372648Z
+    changes:
+    - field_name: description
+      old_value: |
+        ~~in reqlist the mouse scrollwheel and the scrollbar are scolling at different rates so that the selected req is lagging. We need to leap ~~
+        forward if the selected req falls behind
+
+         The reqlist now keeps the selected requirement visible when scrolling:
+
+          - When you scroll using the mouse wheel or scrollbar, if the selected requirement goes outside the visible area, it automatically snaps back
+           into view
+          - Uses TOP alignment when scrolling down (selected item above viewport)
+          - Uses BOTTOM alignment when scrolling up (selected item below viewport)
+
+          This prevents the selection from "lagging behind" the scroll position.
+
+
+          - Mouse wheel: Scrolls the reqlist view without changing selection (standard behavior)
+          - Up/Down arrows: Navigate selection and scroll selected item into view
+          - PageUp/PageDown: Navigate selection by page
+          - Home/End: Jump to first/last item
+          - Click: Select an item
+      new_value: |2
+
+
+        ~~in reqlist the mouse scrollwheel and the scrollbar are scolling at different rates so that the selected req is lagging. We need to leap ~~
+        forward if the selected req falls behind
+
+         The reqlist now keeps the selected requirement visible when scrolling:
+
+          - When you scroll using the mouse wheel or scrollbar, if the selected requirement goes outside the visible area, it automatically snaps back
+           into view
+          - Uses TOP alignment when scrolling down (selected item above viewport)
+          - Uses BOTTOM alignment when scrolling up (selected item below viewport)
+
+          This prevents the selection from "lagging behind" the scroll position.
+
+
+          - Mouse wheel: Scrolls the reqlist view without changing selection (standard behavior)
+          - Up/Down arrows: Navigate selection and scroll selected item into view
+          - PageUp/PageDown: Navigate selection by page
+          - Home/End: Jump to first/last item
+          - Click: Select an item
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
   spec_id: $USER-001
@@ -2392,7 +2808,7 @@ id_config:
     prefix: CR
     description: Change requests for modifications to existing functionality
 features: []
-next_feature_number: 32
+next_feature_number: 33
 next_spec_number: 74
 prefix_counters: {}
 relationship_definitions:

@@ -4853,7 +4853,7 @@ impl RequirementsApp {
                     ui.label("🔍");
                     ui.add(
                         egui::TextEdit::singleline(&mut self.filter_text)
-                            .hint_text("Search...")
+                            .hint_text("Search (case-insensitive)...")
                             .desired_width(150.0),
                     );
 
