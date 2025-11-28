@@ -1180,7 +1180,7 @@ pub struct RequirementsApp {
     show_archived_users: bool,
 
     // Relationships view
-    show_recursive_relationships: bool,                      // Toggle for recursive tree view
+    show_recursive_relationships: bool, // Toggle for recursive tree view
     relationship_tree_collapsed: HashMap<(Uuid, Uuid), bool>, // Track collapsed relationship tree nodes (source_id, target_id)
 
     // Font size (runtime, can differ from saved base)
@@ -1210,7 +1210,7 @@ pub struct RequirementsApp {
     drag_source: Option<usize>, // Index of requirement being dragged
     drop_target: Option<usize>, // Index of requirement being hovered over
     pending_relationship: Option<(usize, usize)>, // (source_idx, target_idx) to create relationship
-    drag_scroll_delta: f32, // Accumulated scroll delta during drag (for auto-scroll)
+    drag_scroll_delta: f32,     // Accumulated scroll delta during drag (for auto-scroll)
 
     // Markdown rendering
     markdown_cache: CommonMarkCache,
@@ -4306,7 +4306,12 @@ impl RequirementsApp {
             ui.add_space(5.0);
 
             let total_reqs = self.store.requirements.len();
-            let archived_reqs = self.store.requirements.iter().filter(|r| r.archived).count();
+            let archived_reqs = self
+                .store
+                .requirements
+                .iter()
+                .filter(|r| r.archived)
+                .count();
             let active_reqs = total_reqs - archived_reqs;
             let total_users = self.store.users.len();
             let archived_users = self.store.users.iter().filter(|u| u.archived).count();
@@ -4646,7 +4651,10 @@ impl RequirementsApp {
             }
 
             // Check description if enabled
-            if !found && self.search_scope.description && req.description.to_lowercase().contains(&search) {
+            if !found
+                && self.search_scope.description
+                && req.description.to_lowercase().contains(&search)
+            {
                 found = true;
             }
 
@@ -5148,21 +5156,27 @@ impl RequirementsApp {
                         let edge_zone = 50.0; // Pixels from edge to start scrolling
                         let scroll_speed = 10.0; // Pixels per frame
 
-                        if pointer_pos.y < available_rect.top() + edge_zone && pointer_pos.y >= available_rect.top() {
+                        if pointer_pos.y < available_rect.top() + edge_zone
+                            && pointer_pos.y >= available_rect.top()
+                        {
                             // Near top - scroll up
-                            let intensity = 1.0 - (pointer_pos.y - available_rect.top()) / edge_zone;
+                            let intensity =
+                                1.0 - (pointer_pos.y - available_rect.top()) / edge_zone;
                             scroll_delta_to_apply = -scroll_speed * intensity;
-                        } else if pointer_pos.y > available_rect.bottom() - edge_zone && pointer_pos.y <= available_rect.bottom() {
+                        } else if pointer_pos.y > available_rect.bottom() - edge_zone
+                            && pointer_pos.y <= available_rect.bottom()
+                        {
                             // Near bottom - scroll down
-                            let intensity = 1.0 - (available_rect.bottom() - pointer_pos.y) / edge_zone;
+                            let intensity =
+                                1.0 - (available_rect.bottom() - pointer_pos.y) / edge_zone;
                             scroll_delta_to_apply = scroll_speed * intensity;
                         }
                     }
                 }
 
                 // Requirement list (flat or tree) with drag auto-scroll support
-                let mut scroll_area = egui::ScrollArea::vertical()
-                    .id_salt("requirements_list_scroll");
+                let mut scroll_area =
+                    egui::ScrollArea::vertical().id_salt("requirements_list_scroll");
 
                 // If we need to scroll due to drag, set the scroll offset
                 if scroll_delta_to_apply != 0.0 {
@@ -5172,14 +5186,12 @@ impl RequirementsApp {
                     ui.ctx().request_repaint();
                 }
 
-                let scroll_output = scroll_area.show(ui, |ui| {
-                    match &self.perspective {
-                        Perspective::Flat => {
-                            self.show_flat_list(ui);
-                        }
-                        _ => {
-                            self.show_tree_list(ui);
-                        }
+                let scroll_output = scroll_area.show(ui, |ui| match &self.perspective {
+                    Perspective::Flat => {
+                        self.show_flat_list(ui);
+                    }
+                    _ => {
+                        self.show_tree_list(ui);
                     }
                 });
 
@@ -6322,7 +6334,9 @@ impl RequirementsApp {
             ui.heading("Relationships");
             ui.add_space(20.0);
             ui.checkbox(&mut self.show_recursive_relationships, "Recursive")
-                .on_hover_text("Show relationships as a tree, recursively expanding related requirements");
+                .on_hover_text(
+                    "Show relationships as a tree, recursively expanding related requirements",
+                );
         });
         ui.add_space(10.0);
 
@@ -6390,15 +6404,8 @@ impl RequirementsApp {
 
         let mut relationship_to_remove: Option<(RelationshipType, Uuid)> = None;
 
-        for (
-            rel_type,
-            target_id,
-            target_idx,
-            target_label,
-            target_title,
-            display_name,
-            color,
-        ) in rel_info
+        for (rel_type, target_id, target_idx, target_label, target_title, display_name, color) in
+            rel_info
         {
             ui.horizontal(|ui| {
                 // Break link button
@@ -6413,8 +6420,8 @@ impl RequirementsApp {
                 // Show color indicator if defined
                 if let Some(ref hex_color) = color {
                     if let Some(c) = parse_hex_color(hex_color) {
-                        let (rect, _) = ui
-                            .allocate_exact_size(egui::vec2(12.0, 12.0), egui::Sense::hover());
+                        let (rect, _) =
+                            ui.allocate_exact_size(egui::vec2(12.0, 12.0), egui::Sense::hover());
                         ui.painter().rect_filled(rect, 2.0, c);
                     }
                 }
@@ -6477,7 +6484,10 @@ impl RequirementsApp {
         // Filter relationships based on whether we're following a specific type
         let relationships_to_show: Vec<_> = if let Some(rel_type) = follow_rel_type {
             // When recursing, only show relationships of the same type
-            req.relationships.iter().filter(|r| &r.rel_type == rel_type).collect()
+            req.relationships
+                .iter()
+                .filter(|r| &r.rel_type == rel_type)
+                .collect()
         } else {
             // At root (depth 0), show all relationships
             req.relationships.iter().collect()
@@ -6533,7 +6543,8 @@ impl RequirementsApp {
                 path_with_current.push(req_id);
                 let expandable_children_count = target_req
                     .map(|t| {
-                        t.relationships.iter()
+                        t.relationships
+                            .iter()
                             // Must be same relationship type
                             .filter(|tr| tr.rel_type == rel.rel_type)
                             // Must not point back to any ancestor
@@ -6544,17 +6555,25 @@ impl RequirementsApp {
 
                 // Check if target is shared (has multiple parents via same relationship type)
                 // Count how many requirements have this target as a child
-                let parent_count = self.store.requirements.iter()
-                    .filter(|r| r.relationships.iter().any(|rel2| rel2.target_id == rel.target_id && rel2.rel_type == rel.rel_type))
+                let parent_count = self
+                    .store
+                    .requirements
+                    .iter()
+                    .filter(|r| {
+                        r.relationships.iter().any(|rel2| {
+                            rel2.target_id == rel.target_id && rel2.rel_type == rel.rel_type
+                        })
+                    })
                     .count();
                 let is_shared = parent_count > 1;
 
                 // Check for cross-relationship: target has a relationship to root via different rel type
                 let cross_relationship = if rel.target_id != root_id {
                     target_req.and_then(|t| {
-                        t.relationships.iter().find(|tr| {
-                            tr.target_id == root_id && tr.rel_type != rel.rel_type
-                        }).map(|tr| tr.rel_type.clone())
+                        t.relationships
+                            .iter()
+                            .find(|tr| tr.target_id == root_id && tr.rel_type != rel.rel_type)
+                            .map(|tr| tr.rel_type.clone())
                     })
                 } else {
                     None
@@ -6597,7 +6616,10 @@ impl RequirementsApp {
 
             // Check if this node is collapsed (default: collapsed)
             let collapse_key = (req_id, target_id);
-            let is_collapsed = *self.relationship_tree_collapsed.get(&collapse_key).unwrap_or(&true);
+            let is_collapsed = *self
+                .relationship_tree_collapsed
+                .get(&collapse_key)
+                .unwrap_or(&true);
 
             // Determine if we should allow recursion and show expand button
             // expandable_children_count already accounts for same rel type and ancestor filtering
@@ -6610,7 +6632,8 @@ impl RequirementsApp {
                 if has_expandable_children {
                     let icon = if is_collapsed { "▶" } else { "▼" };
                     if ui.small_button(icon).clicked() {
-                        self.relationship_tree_collapsed.insert(collapse_key, !is_collapsed);
+                        self.relationship_tree_collapsed
+                            .insert(collapse_key, !is_collapsed);
                     }
                 } else {
                     // Placeholder for alignment
@@ -6620,8 +6643,8 @@ impl RequirementsApp {
                 // Show color indicator if defined
                 if let Some(ref hex_color) = color {
                     if let Some(c) = parse_hex_color(hex_color) {
-                        let (rect, _) = ui
-                            .allocate_exact_size(egui::vec2(12.0, 12.0), egui::Sense::hover());
+                        let (rect, _) =
+                            ui.allocate_exact_size(egui::vec2(12.0, 12.0), egui::Sense::hover());
                         ui.painter().rect_filled(rect, 2.0, c);
                     }
                 }
@@ -6649,7 +6672,7 @@ impl RequirementsApp {
                 if is_shared {
                     let shared_response = ui.add(
                         egui::Label::new(egui::RichText::new("↑ shared").small().weak())
-                            .sense(egui::Sense::click())
+                            .sense(egui::Sense::click()),
                     );
                     shared_response.on_hover_text("This requirement has multiple parents");
                 }
@@ -6663,10 +6686,20 @@ impl RequirementsApp {
                         .unwrap_or_else(|| format!("{}", cross_rel_type));
 
                     let cross_response = ui.add(
-                        egui::Label::new(egui::RichText::new(format!("↔ {}", cross_display)).small().color(egui::Color32::LIGHT_BLUE))
-                            .sense(egui::Sense::click())
+                        egui::Label::new(
+                            egui::RichText::new(format!("↔ {}", cross_display))
+                                .small()
+                                .color(egui::Color32::LIGHT_BLUE),
+                        )
+                        .sense(egui::Sense::click()),
                     );
-                    if cross_response.on_hover_text(format!("Also {} root. Double-click to view.", cross_display.to_lowercase())).double_clicked() {
+                    if cross_response
+                        .on_hover_text(format!(
+                            "Also {} root. Double-click to view.",
+                            cross_display.to_lowercase()
+                        ))
+                        .double_clicked()
+                    {
                         if let Some(idx) = target_idx {
                             self.selected_idx = Some(idx);
                             self.pending_view_change = Some(View::Detail);
@@ -6678,7 +6711,13 @@ impl RequirementsApp {
             // Recursively show children if expanded and there are expandable children
             if has_expandable_children && !is_collapsed {
                 ancestor_path.push(req_id);
-                self.show_relationships_tree(ui, target_id, depth + 1, ancestor_path, Some(&rel_type));
+                self.show_relationships_tree(
+                    ui,
+                    target_id,
+                    depth + 1,
+                    ancestor_path,
+                    Some(&rel_type),
+                );
                 ancestor_path.pop();
             }
         }
