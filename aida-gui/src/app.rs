@@ -1205,6 +1205,7 @@ pub struct RequirementsApp {
     tree_collapsed: HashMap<Uuid, bool>, // Track collapsed tree nodes
     show_filter_panel: bool,     // Toggle filter panel visibility
     show_archived: bool,         // Whether to show archived requirements
+    show_filtered_parents: bool, // Show greyed-out parents of filtered items in tree view
 
     // Drag and drop for relationships
     drag_source: Option<usize>, // Index of requirement being dragged
@@ -1467,6 +1468,7 @@ impl RequirementsApp {
             tree_collapsed: HashMap::new(),
             show_filter_panel: false,
             show_archived: false,
+            show_filtered_parents: true, // Default to showing parents
             drag_source: None,
             drop_target: None,
             pending_relationship: None,
@@ -5835,7 +5837,13 @@ impl RequirementsApp {
         }
 
         ui.add_space(5.0);
-        ui.checkbox(&mut self.show_archived, "Show Archived");
+        ui.horizontal(|ui| {
+            ui.checkbox(&mut self.show_archived, "Show Archived");
+            ui.checkbox(&mut self.show_filtered_parents, "Show Parents")
+                .on_hover_text(
+                    "Show greyed-out parent requirements for filtered items in tree views",
+                );
+        });
     }
 
     fn show_root_filter_controls(&mut self, ui: &mut egui::Ui) {
@@ -6267,7 +6275,12 @@ impl RequirementsApp {
         };
 
         // Compute ancestors that should be shown (greyed out) because they have matching descendants
-        let ancestors_to_show = self.compute_ancestor_ids_to_show(&outgoing_type);
+        // Only compute if the "Show Parents" toggle is enabled
+        let ancestors_to_show = if self.show_filtered_parents {
+            self.compute_ancestor_ids_to_show(&outgoing_type)
+        } else {
+            HashSet::new()
+        };
 
         match self.perspective_direction {
             PerspectiveDirection::TopDown => {
@@ -6289,7 +6302,7 @@ impl RequirementsApp {
             }
             PerspectiveDirection::BottomUp => {
                 // Find roots (requirements that are not children of anyone)
-                // Include ancestors that have matching descendants (shown greyed out)
+                // Include ancestors that have matching descendants (shown greyed out) if toggle is enabled
                 let roots = self.find_tree_roots_with_ancestors(&outgoing_type, &ancestors_to_show);
 
                 if roots.is_empty() {
