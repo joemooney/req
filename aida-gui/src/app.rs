@@ -1297,6 +1297,19 @@ pub struct RequirementsApp {
     new_project_include_users: bool,
     show_switch_project_dialog: bool,
     available_projects: Vec<(String, String, String)>, // (name, path, description)
+
+    // Form cancel confirmation
+    show_cancel_confirm_dialog: bool, // Show confirmation dialog when canceling with unsaved changes
+    original_form_title: String,      // Original values when entering Add/Edit mode
+    original_form_description: String,
+    original_form_status_string: String,
+    original_form_priority: RequirementPriority,
+    original_form_type: RequirementType,
+    original_form_owner: String,
+    original_form_feature: String,
+    original_form_tags: String,
+    original_form_prefix: String,
+    original_form_custom_fields: HashMap<String, String>,
 }
 
 /// Stores text selection state for context menu operations.
@@ -1524,6 +1537,18 @@ impl RequirementsApp {
             new_project_include_users: false,
             show_switch_project_dialog: false,
             available_projects: Vec::new(),
+            // Form cancel confirmation
+            show_cancel_confirm_dialog: false,
+            original_form_title: String::new(),
+            original_form_description: String::new(),
+            original_form_status_string: String::new(),
+            original_form_priority: RequirementPriority::Medium,
+            original_form_type: RequirementType::Functional,
+            original_form_owner: String::new(),
+            original_form_feature: String::new(),
+            original_form_tags: String::new(),
+            original_form_prefix: String::new(),
+            original_form_custom_fields: HashMap::new(),
         }
     }
 
@@ -1759,6 +1784,9 @@ impl RequirementsApp {
             .selected_idx
             .and_then(|idx| self.store.requirements.get(idx))
             .map(|req| req.id);
+
+        // Store original values for change detection
+        self.store_original_form_values();
     }
 
     fn load_form_from_requirement(&mut self, idx: usize) {
@@ -1777,6 +1805,52 @@ impl RequirementsApp {
             self.form_prefix = req.prefix_override.clone().unwrap_or_default();
             self.show_description_preview = false;
         }
+        // Store original values for change detection
+        self.store_original_form_values();
+    }
+
+    /// Store current form values as original values (for change detection on cancel)
+    fn store_original_form_values(&mut self) {
+        self.original_form_title = self.form_title.clone();
+        self.original_form_description = self.form_description.clone();
+        self.original_form_status_string = self.form_status_string.clone();
+        self.original_form_priority = self.form_priority.clone();
+        self.original_form_type = self.form_type.clone();
+        self.original_form_owner = self.form_owner.clone();
+        self.original_form_feature = self.form_feature.clone();
+        self.original_form_tags = self.form_tags.clone();
+        self.original_form_prefix = self.form_prefix.clone();
+        self.original_form_custom_fields = self.form_custom_fields.clone();
+    }
+
+    /// Check if form has unsaved changes compared to original values
+    fn form_has_changes(&self) -> bool {
+        self.form_title != self.original_form_title
+            || self.form_description != self.original_form_description
+            || self.form_status_string != self.original_form_status_string
+            || self.form_priority != self.original_form_priority
+            || self.form_type != self.original_form_type
+            || self.form_owner != self.original_form_owner
+            || self.form_feature != self.original_form_feature
+            || self.form_tags != self.original_form_tags
+            || self.form_prefix != self.original_form_prefix
+            || self.form_custom_fields != self.original_form_custom_fields
+    }
+
+    /// Handle cancel request - either cancel immediately or show confirmation dialog
+    fn request_form_cancel(&mut self, is_edit: bool) {
+        if self.form_has_changes() {
+            self.show_cancel_confirm_dialog = true;
+        } else {
+            self.cancel_form(is_edit);
+        }
+    }
+
+    /// Actually cancel the form and return to previous view
+    fn cancel_form(&mut self, is_edit: bool) {
+        self.clear_form();
+        self.show_cancel_confirm_dialog = false;
+        self.pending_view_change = Some(if is_edit { View::Detail } else { View::List });
     }
 
     fn add_requirement(&mut self) {
@@ -8096,6 +8170,10 @@ impl RequirementsApp {
             self.pending_save = false;
         }
 
+        // Check for ESC key to cancel (only if confirmation dialog is not open)
+        let esc_pressed =
+            !self.show_cancel_confirm_dialog && ui.input(|i| i.key_pressed(egui::Key::Escape));
+
         ui.horizontal(|ui| {
             if ui.button("💾 Save").clicked() || should_save {
                 if is_edit {
@@ -8106,11 +8184,33 @@ impl RequirementsApp {
                     self.add_requirement();
                 }
             }
-            if ui.button("❌ Cancel").clicked() {
-                self.clear_form();
-                self.pending_view_change = Some(if is_edit { View::Detail } else { View::List });
+            if ui.button("❌ Cancel").clicked() || esc_pressed {
+                self.request_form_cancel(is_edit);
             }
         });
+
+        // Show cancel confirmation dialog if there are unsaved changes
+        if self.show_cancel_confirm_dialog {
+            // ESC while dialog is open should close the dialog (continue editing)
+            let dialog_esc = ui.input(|i| i.key_pressed(egui::Key::Escape));
+
+            egui::Window::new("Unsaved Changes")
+                .collapsible(false)
+                .resizable(false)
+                .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+                .show(ui.ctx(), |ui| {
+                    ui.label("You have unsaved changes. Are you sure you want to cancel?");
+                    ui.add_space(10.0);
+                    ui.horizontal(|ui| {
+                        if ui.button("Discard Changes").clicked() {
+                            self.cancel_form(is_edit);
+                        }
+                        if ui.button("Continue Editing").clicked() || dialog_esc {
+                            self.show_cancel_confirm_dialog = false;
+                        }
+                    });
+                });
+        }
     }
 
     fn show_comment_form(&mut self, ui: &mut egui::Ui, _req_idx: usize) {
