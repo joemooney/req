@@ -3634,8 +3634,8 @@ impl RequirementsApp {
         egui::Window::new("Status & Priority Icons")
             .collapsible(false)
             .resizable(true)
-            .default_width(600.0)
-            .default_height(500.0)
+            .default_width(650.0)
+            .default_height(700.0)
             .show(ctx, |ui| {
                 ui.heading("Configure Status Icons");
                 ui.add_space(5.0);
@@ -3654,7 +3654,7 @@ impl RequirementsApp {
 
                     egui::ScrollArea::vertical()
                         .id_salt("status_icons_scroll")
-                        .max_height(150.0)
+                        .max_height(250.0)
                         .show(ui, |ui| {
                             let mut to_remove: Option<String> = None;
                             egui::Grid::new("status_icons_grid")
@@ -3739,7 +3739,7 @@ impl RequirementsApp {
 
                     egui::ScrollArea::vertical()
                         .id_salt("priority_icons_scroll")
-                        .max_height(100.0)
+                        .max_height(200.0)
                         .show(ui, |ui| {
                             let mut to_remove: Option<String> = None;
                             egui::Grid::new("priority_icons_grid")
