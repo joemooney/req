@@ -7490,7 +7490,7 @@ impl RequirementsApp {
         // Header with button to restore detail panel
         ui.horizontal(|ui| {
             if ui
-                .button("◀ Show Detail")
+                .button("◀")
                 .on_hover_text("Show detail panel")
                 .clicked()
             {
