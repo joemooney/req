@@ -681,3 +681,30 @@ A chronological record of development sessions and changes made to the Requireme
     - Sets verification timestamp if URL was verified
   - Updated Links tab count to show total of relationships + URLs
   - Updated user-guide.md with Links Tab documentation
+
+### Detail View Title Bar Styling
+- **Prompt**: "Requirement title (bar) should have configurable background/font color/font size to make it stand out more"
+- **Solution**: Added configurable title bar styling with themed backgrounds
+- **Actions**:
+  - Added to CustomTheme struct:
+    - `title_bar_bg: ThemeColor` - background color
+    - `title_bar_text: Option<ThemeColor>` - optional text color override
+    - `title_bar_font_size: f32` - font size multiplier (default 1.0)
+  - Added defaults for dark theme: RGB(45, 45, 50) - slightly lighter than panel
+  - Added defaults for light theme: RGB(220, 220, 225) - slightly darker than panel
+  - Added helper methods to Theme enum:
+    - `title_bar_bg()` - returns appropriate background for theme
+    - `title_bar_text()` - returns optional text color
+    - `title_bar_font_size()` - returns font size multiplier
+  - Refactored title bar in `show_detail_view_internal()`:
+    - Wrapped in `egui::Frame::none()` with styled background
+    - Applied `.fill()`, `.inner_margin()`, and `.rounding()`
+    - Changed `ui.heading()` to `ui.label()` with `egui::RichText`
+    - Title text uses configurable size (18.0 * multiplier) and bold
+    - Optional custom text color support
+  - Built-in theme colors:
+    - Dark: RGB(45, 45, 50)
+    - Light: RGB(220, 220, 225)
+    - HighContrastDark: RGB(35, 35, 40)
+    - SolarizedDark: RGB(7, 54, 66) (base02)
+    - Nord: RGB(59, 66, 82) (nord1)
