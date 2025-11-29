@@ -402,6 +402,14 @@ pub struct CustomTheme {
     pub scroll_bar_width: f32,
     /// Indent amount for nested items
     pub indent: f32,
+
+    // === Detail View Title Bar ===
+    /// Title bar background color
+    pub title_bar_bg: ThemeColor,
+    /// Title bar text color (None = use default heading color)
+    pub title_bar_text: Option<ThemeColor>,
+    /// Title bar font size multiplier (1.0 = default heading size)
+    pub title_bar_font_size: f32,
 }
 
 impl Default for CustomTheme {
@@ -463,6 +471,10 @@ impl CustomTheme {
             dark_mode: true,
             scroll_bar_width: 8.0,
             indent: 18.0,
+            // Title bar - slightly lighter than panel for dark theme
+            title_bar_bg: ThemeColor::new(45, 45, 50),
+            title_bar_text: None,
+            title_bar_font_size: 1.0,
         }
     }
 
@@ -510,6 +522,10 @@ impl CustomTheme {
             dark_mode: false,
             scroll_bar_width: 8.0,
             indent: 18.0,
+            // Title bar - slightly darker than panel for light theme
+            title_bar_bg: ThemeColor::new(220, 220, 225),
+            title_bar_text: None,
+            title_bar_font_size: 1.0,
         }
     }
 
@@ -734,6 +750,35 @@ impl Theme {
         match self {
             Theme::Custom(t) => Some(t),
             _ => None,
+        }
+    }
+
+    /// Get the title bar background color for this theme
+    fn title_bar_bg(&self) -> egui::Color32 {
+        match self {
+            Theme::Custom(t) => t.title_bar_bg.to_egui(),
+            Theme::Light => egui::Color32::from_rgb(220, 220, 225),
+            // Dark themes
+            Theme::Dark => egui::Color32::from_rgb(45, 45, 50),
+            Theme::HighContrastDark => egui::Color32::from_rgb(35, 35, 40),
+            Theme::SolarizedDark => egui::Color32::from_rgb(7, 54, 66), // base02
+            Theme::Nord => egui::Color32::from_rgb(59, 66, 82), // nord1
+        }
+    }
+
+    /// Get the title bar text color for this theme (None = use default)
+    fn title_bar_text(&self) -> Option<egui::Color32> {
+        match self {
+            Theme::Custom(t) => t.title_bar_text.map(|c| c.to_egui()),
+            _ => None, // Use default heading color
+        }
+    }
+
+    /// Get the title bar font size multiplier for this theme
+    fn title_bar_font_size(&self) -> f32 {
+        match self {
+            Theme::Custom(t) => t.title_bar_font_size,
+            _ => 1.0, // Default size
         }
     }
 }
@@ -9510,87 +9555,109 @@ impl RequirementsApp {
                 let current_priority = req.priority.clone();
                 let current_status = req.status.clone();
 
-                ui.horizontal(|ui| {
-                    ui.heading(&req.title);
-                    if is_archived {
-                        ui.label("(Archived)");
-                    }
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        // Close button (rightmost)
-                        if show_close {
-                            if ui.button("✕").on_hover_text("Close details").clicked() {
-                                close_details = true;
+                // Get title bar styling from theme
+                let title_bar_bg = self.user_settings.theme.title_bar_bg();
+                let title_bar_text = self.user_settings.theme.title_bar_text();
+                let title_bar_font_size = self.user_settings.theme.title_bar_font_size();
+
+                // Title bar with styled background
+                egui::Frame::none()
+                    .fill(title_bar_bg)
+                    .inner_margin(egui::Margin::symmetric(8.0, 4.0))
+                    .rounding(2.0)
+                    .show(ui, |ui| {
+                        ui.horizontal(|ui| {
+                            // Title text with optional custom color and size
+                            let title_text = egui::RichText::new(&req.title)
+                                .size(18.0 * title_bar_font_size)
+                                .strong();
+                            let title_text = if let Some(color) = title_bar_text {
+                                title_text.color(color)
+                            } else {
+                                title_text
+                            };
+                            ui.label(title_text);
+
+                            if is_archived {
+                                ui.label("(Archived)");
                             }
-                        }
-
-                        if ui.button("✏ Edit").clicked() {
-                            load_edit = true;
-                        }
-
-                        // Quick Actions dropdown menu
-                        ui.menu_button("⚡ Actions", |ui| {
-                            // Priority submenu
-                            ui.menu_button("Priority", |ui| {
-                                let priorities = [
-                                    RequirementPriority::High,
-                                    RequirementPriority::Medium,
-                                    RequirementPriority::Low,
-                                ];
-                                for priority in priorities {
-                                    let label = if priority == current_priority {
-                                        format!("✓ {}", priority)
-                                    } else {
-                                        format!("  {}", priority)
-                                    };
-                                    if ui.button(label).clicked() {
-                                        new_priority = Some(priority);
-                                        ui.close_menu();
-                                    }
-                                }
-                            });
-
-                            // Status submenu
-                            ui.menu_button("Status", |ui| {
-                                let statuses = [
-                                    RequirementStatus::Draft,
-                                    RequirementStatus::Approved,
-                                    RequirementStatus::Completed,
-                                    RequirementStatus::Rejected,
-                                ];
-                                for status in statuses {
-                                    let label = if status == current_status {
-                                        format!("✓ {}", status)
-                                    } else {
-                                        format!("  {}", status)
-                                    };
-                                    if ui.button(label).clicked() {
-                                        new_status = Some(status);
-                                        ui.close_menu();
+                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                // Close button (rightmost)
+                                if show_close {
+                                    if ui.button("✕").on_hover_text("Close details").clicked() {
+                                        close_details = true;
                                     }
                                 }
 
-                                ui.separator();
-
-                                // Archive/Unarchive action
-                                let archive_label = if is_archived {
-                                    "↩ Unarchive"
-                                } else {
-                                    "📁 Archive"
-                                };
-                                if ui.button(archive_label).clicked() {
-                                    toggle_archive = true;
-                                    ui.close_menu();
+                                if ui.button("✏ Edit").clicked() {
+                                    load_edit = true;
                                 }
 
-                                // Delete action
-                                if ui.button("🗑 Delete").clicked() {
-                                    delete_req = true;
-                                    ui.close_menu();
-                                }
+                                // Quick Actions dropdown menu
+                                ui.menu_button("⚡ Actions", |ui| {
+                                    // Priority submenu
+                                    ui.menu_button("Priority", |ui| {
+                                        let priorities = [
+                                            RequirementPriority::High,
+                                            RequirementPriority::Medium,
+                                            RequirementPriority::Low,
+                                        ];
+                                        for priority in priorities {
+                                            let label = if priority == current_priority {
+                                                format!("✓ {}", priority)
+                                            } else {
+                                                format!("  {}", priority)
+                                            };
+                                            if ui.button(label).clicked() {
+                                                new_priority = Some(priority);
+                                                ui.close_menu();
+                                            }
+                                        }
+                                    });
+
+                                    // Status submenu
+                                    ui.menu_button("Status", |ui| {
+                                        let statuses = [
+                                            RequirementStatus::Draft,
+                                            RequirementStatus::Approved,
+                                            RequirementStatus::Completed,
+                                            RequirementStatus::Rejected,
+                                        ];
+                                        for status in statuses {
+                                            let label = if status == current_status {
+                                                format!("✓ {}", status)
+                                            } else {
+                                                format!("  {}", status)
+                                            };
+                                            if ui.button(label).clicked() {
+                                                new_status = Some(status);
+                                                ui.close_menu();
+                                            }
+                                        }
+                                    });
+
+                                    ui.separator();
+
+                                    // Archive/Unarchive action
+                                    let archive_label = if is_archived {
+                                        "↩ Unarchive"
+                                    } else {
+                                        "📁 Archive"
+                                    };
+                                    if ui.button(archive_label).clicked() {
+                                        toggle_archive = true;
+                                        ui.close_menu();
+                                    }
+
+                                    // Delete action
+                                    if ui.button("🗑 Delete").clicked() {
+                                        delete_req = true;
+                                        ui.close_menu();
+                                    }
+                                });
                             });
                         });
                     });
-                });
 
                 if load_edit {
                     self.load_form_from_requirement(idx);
