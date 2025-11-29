@@ -11618,16 +11618,22 @@ impl RequirementsApp {
             !self.show_cancel_confirm_dialog && ui.input(|i| i.key_pressed(egui::Key::Escape));
 
         // === TITLE BAR ===
+        // Calculate button widths to reserve space (Save + Cancel + spacing)
+        let button_space = 180.0; // Approximate space for buttons
+
         egui::Frame::none()
             .fill(title_bar_bg)
             .inner_margin(egui::Margin::symmetric(8.0, 4.0))
             .rounding(2.0)
             .show(ui, |ui| {
+                let available = ui.available_width();
                 ui.horizontal(|ui| {
-                    // Editable title
+                    // Editable title - use same font size as Detail View (18.0 * multiplier)
+                    // Take all available width minus button space
+                    let title_width = (available - button_space).max(200.0);
                     let title_response = egui::TextEdit::singleline(&mut self.form_title)
-                        .font(egui::TextStyle::Heading)
-                        .desired_width(available_width * 0.6)
+                        .font(egui::FontId::proportional(18.0 * title_bar_font_size))
+                        .desired_width(title_width)
                         .hint_text("Enter requirement title...")
                         .show(ui);
 
@@ -11655,10 +11661,6 @@ impl RequirementsApp {
                                 self.add_requirement();
                             }
                         }
-
-                        // Mode indicator
-                        let mode_text = if is_edit { "Edit" } else { "New" };
-                        ui.label(egui::RichText::new(mode_text).size(14.0 * title_bar_font_size).italics());
                     });
                 });
             });
@@ -11939,17 +11941,22 @@ impl RequirementsApp {
             !self.show_cancel_confirm_dialog && ui.input(|i| i.key_pressed(egui::Key::Escape));
 
         // === TITLE BAR ===
-        let available_width = ui.available_width();
+        // Calculate button widths to reserve space (Save + Cancel + spacing)
+        let button_space = 180.0; // Approximate space for buttons
+
         egui::Frame::none()
             .fill(title_bar_bg)
             .inner_margin(egui::Margin::symmetric(8.0, 4.0))
             .rounding(2.0)
             .show(ui, |ui| {
+                let available = ui.available_width();
                 ui.horizontal(|ui| {
-                    // Editable title
+                    // Editable title - use same font size as Detail View (18.0 * multiplier)
+                    // Take all available width minus button space
+                    let title_width = (available - button_space).max(200.0);
                     let title_response = egui::TextEdit::singleline(&mut self.form_title)
-                        .font(egui::TextStyle::Heading)
-                        .desired_width(available_width * 0.6)
+                        .font(egui::FontId::proportional(18.0 * title_bar_font_size))
+                        .desired_width(title_width)
                         .hint_text("Enter requirement title...")
                         .show(ui);
 
@@ -11977,10 +11984,6 @@ impl RequirementsApp {
                                 self.add_requirement();
                             }
                         }
-
-                        // Mode indicator
-                        let mode_text = if is_edit { "Edit" } else { "New" };
-                        ui.label(egui::RichText::new(mode_text).size(14.0 * title_bar_font_size).italics());
                     });
                 });
             });
