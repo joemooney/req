@@ -2399,6 +2399,61 @@ impl RequirementsApp {
         }
     }
 
+    /// Opens a new window (spawns another instance of the application)
+    fn open_new_window() {
+        let exe_path = std::env::current_exe().ok();
+        let args: Vec<String> = std::env::args().collect();
+
+        // Detect if we're running from a cargo target directory
+        let is_cargo_run = exe_path
+            .as_ref()
+            .map(|p| {
+                let path_str = p.to_string_lossy();
+                path_str.contains("/target/debug/") || path_str.contains("/target/release/")
+            })
+            .unwrap_or(false);
+
+        if is_cargo_run {
+            // Running via cargo - use cargo run
+            let bin_name = exe_path
+                .as_ref()
+                .and_then(|p| p.file_name())
+                .and_then(|n| n.to_str())
+                .unwrap_or("aida-gui");
+
+            let is_release = exe_path
+                .as_ref()
+                .map(|p| p.to_string_lossy().contains("/target/release/"))
+                .unwrap_or(false);
+
+            let mut cmd = std::process::Command::new("cargo");
+            cmd.arg("run").arg("--bin").arg(bin_name);
+
+            if is_release {
+                cmd.arg("--release");
+            }
+
+            // Pass through any additional arguments (skip the exe name)
+            if args.len() > 1 {
+                cmd.arg("--").args(&args[1..]);
+            }
+
+            // Spawn the new process detached
+            let _ = cmd.spawn();
+        } else if let Some(exe) = exe_path {
+            // Direct executable - just launch it
+            let mut cmd = std::process::Command::new(&exe);
+
+            // Pass through any arguments (skip the exe name)
+            if args.len() > 1 {
+                cmd.args(&args[1..]);
+            }
+
+            // Spawn the new process detached
+            let _ = cmd.spawn();
+        }
+    }
+
     fn reload(&mut self) {
         if let Ok(store) = self.storage.load() {
             self.store = store;
@@ -2909,6 +2964,10 @@ impl RequirementsApp {
                     if ui.button("➕ New Project...").clicked() {
                         self.clear_new_project_form();
                         self.show_new_project_dialog = true;
+                        ui.close_menu();
+                    }
+                    if ui.button("🪟 New Window").clicked() {
+                        Self::open_new_window();
                         ui.close_menu();
                     }
                     ui.separator();
