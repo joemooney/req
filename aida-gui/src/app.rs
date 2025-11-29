@@ -2593,6 +2593,8 @@ impl RequirementsApp {
         req.tags = tags;
         // Copy custom field values
         req.custom_fields = self.form_custom_fields.clone();
+        // Set created_by to current user
+        req.created_by = Some(self.user_settings.display_name());
 
         // Set prefix override if specified
         let prefix_trimmed = self.form_prefix.trim();
@@ -2627,11 +2629,12 @@ impl RequirementsApp {
         // Create parent relationship if specified
         if let Some(parent_id) = parent_id {
             // New requirement (child) stores Parent relationship pointing to parent
-            let _ = self.store.add_relationship(
+            let _ = self.store.add_relationship_with_creator(
                 &new_req_id,
                 RelationshipType::Parent,
                 &parent_id,
                 true, // bidirectional
+                Some(self.user_settings.display_name()),
             );
         }
 
@@ -7089,11 +7092,12 @@ impl RequirementsApp {
                 // source stores the relationship pointing to target
                 // Use inverse from definitions to determine bidirectionality
                 let bidirectional = self.store.get_inverse_type(&rel_type).is_some();
-                match self.store.set_relationship(
+                match self.store.set_relationship_with_creator(
                     &source_id,
                     rel_type.clone(),
                     &target_id,
                     bidirectional,
+                    Some(self.user_settings.display_name()),
                 ) {
                     Ok(()) => {
                         self.save();
@@ -8400,6 +8404,21 @@ impl RequirementsApp {
                             ui.label(tags_vec.join(", "));
                             ui.end_row();
                         }
+
+                        // Created by and timestamps
+                        if let Some(ref created_by) = req.created_by {
+                            ui.label("Created By:");
+                            ui.label(created_by);
+                            ui.end_row();
+                        }
+
+                        ui.label("Created:");
+                        ui.label(req.created_at.format("%Y-%m-%d %H:%M").to_string());
+                        ui.end_row();
+
+                        ui.label("Modified:");
+                        ui.label(req.modified_at.format("%Y-%m-%d %H:%M").to_string());
+                        ui.end_row();
                     });
 
                 ui.separator();
@@ -8704,6 +8723,10 @@ impl RequirementsApp {
                     .map(|def| (def.display_name.clone(), def.color.clone()))
                     .unwrap_or_else(|| (format!("{}", rel.rel_type), None));
 
+                // Get created_by and created_at for tooltip
+                let rel_created_by = rel.created_by.clone();
+                let rel_created_at = rel.created_at;
+
                 (
                     rel.rel_type.clone(),
                     rel.target_id,
@@ -8712,13 +8735,15 @@ impl RequirementsApp {
                     target_title,
                     display_name,
                     color,
+                    rel_created_by,
+                    rel_created_at,
                 )
             })
             .collect();
 
         let mut relationship_to_remove: Option<(RelationshipType, Uuid)> = None;
 
-        for (rel_type, target_id, target_idx, target_label, target_title, display_name, color) in
+        for (rel_type, target_id, target_idx, target_label, target_title, display_name, color, rel_created_by, rel_created_at) in
             rel_info
         {
             ui.horizontal(|ui| {
@@ -8745,11 +8770,20 @@ impl RequirementsApp {
 
                 let response = ui.add(egui::Label::new(&label).sense(egui::Sense::click()));
 
+                // Build tooltip with creator info
+                let mut tooltip = "Double-click to view".to_string();
+                if let Some(ref created_by) = rel_created_by {
+                    tooltip.push_str(&format!("\nCreated by: {}", created_by));
+                }
+                if let Some(created_at) = rel_created_at {
+                    tooltip.push_str(&format!("\nCreated: {}", created_at.format("%Y-%m-%d %H:%M")));
+                }
+
                 // Show hover cursor and tooltip
                 if response.hovered() {
                     ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
                 }
-                response.clone().on_hover_text("Double-click to view");
+                response.clone().on_hover_text(tooltip);
 
                 // Navigate on double-click
                 if response.double_clicked() {
@@ -9336,11 +9370,12 @@ impl RequirementsApp {
 
     /// Create a References relationship between two requirements
     fn create_reference_relationship(&mut self, source_id: Uuid, target_id: Uuid) {
-        match self.store.add_relationship(
+        match self.store.add_relationship_with_creator(
             &source_id,
             RelationshipType::References,
             &target_id,
             false, // Not bidirectional for References
+            Some(self.user_settings.display_name()),
         ) {
             Ok(_) => {
                 self.save();

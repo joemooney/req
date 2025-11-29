@@ -976,6 +976,12 @@ pub struct Relationship {
     pub rel_type: RelationshipType,
     /// The target requirement ID
     pub target_id: Uuid,
+    /// When this relationship was created
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub created_at: Option<DateTime<Utc>>,
+    /// Who created this relationship
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub created_by: Option<String>,
 }
 
 /// Represents a field change in a requirement's history
@@ -1429,6 +1435,10 @@ pub struct Requirement {
     /// When the requirement was created
     pub created_at: DateTime<Utc>,
 
+    /// Who created this requirement
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub created_by: Option<String>,
+
     /// When the requirement was last modified
     pub modified_at: DateTime<Utc>,
 
@@ -1491,6 +1501,7 @@ impl Requirement {
             owner: String::new(),
             feature: default_feature,
             created_at: now,
+            created_by: None,
             modified_at: now,
             req_type: RequirementType::Functional,
             dependencies: Vec::new(),
@@ -2642,6 +2653,18 @@ impl RequirementsStore {
         target_id: &Uuid,
         bidirectional: bool,
     ) -> anyhow::Result<()> {
+        self.add_relationship_with_creator(source_id, rel_type, target_id, bidirectional, None)
+    }
+
+    /// Add a relationship between two requirements with optional creator info
+    pub fn add_relationship_with_creator(
+        &mut self,
+        source_id: &Uuid,
+        rel_type: RelationshipType,
+        target_id: &Uuid,
+        bidirectional: bool,
+        created_by: Option<String>,
+    ) -> anyhow::Result<()> {
         // Validate both requirements exist
         if !self.requirements.iter().any(|r| r.id == *source_id) {
             anyhow::bail!("Source requirement not found: {}", source_id);
@@ -2673,9 +2696,12 @@ impl RequirementsStore {
             );
         }
 
+        let now = Utc::now();
         source_req.relationships.push(Relationship {
             rel_type: rel_type.clone(),
             target_id: *target_id,
+            created_at: Some(now),
+            created_by: created_by.clone(),
         });
 
         // Add inverse relationship if bidirectional and inverse exists
@@ -2694,6 +2720,8 @@ impl RequirementsStore {
                     target_req.relationships.push(Relationship {
                         rel_type: inverse_type,
                         target_id: *source_id,
+                        created_at: Some(now),
+                        created_by: created_by.clone(),
                     });
                 }
             }
@@ -2710,6 +2738,18 @@ impl RequirementsStore {
         rel_type: RelationshipType,
         target_id: &Uuid,
         bidirectional: bool,
+    ) -> anyhow::Result<()> {
+        self.set_relationship_with_creator(source_id, rel_type, target_id, bidirectional, None)
+    }
+
+    /// Set a unique relationship with creator info, removing any existing relationship of the same type first
+    pub fn set_relationship_with_creator(
+        &mut self,
+        source_id: &Uuid,
+        rel_type: RelationshipType,
+        target_id: &Uuid,
+        bidirectional: bool,
+        created_by: Option<String>,
     ) -> anyhow::Result<()> {
         // Validate both requirements exist
         if !self.requirements.iter().any(|r| r.id == *source_id) {
@@ -2756,7 +2796,7 @@ impl RequirementsStore {
         }
 
         // Now add the new relationship
-        self.add_relationship(source_id, rel_type, target_id, bidirectional)
+        self.add_relationship_with_creator(source_id, rel_type, target_id, bidirectional, created_by)
     }
 
     /// Remove a relationship between two requirements
