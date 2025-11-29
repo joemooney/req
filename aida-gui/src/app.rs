@@ -3091,7 +3091,7 @@ impl RequirementsApp {
                 }
 
                 // Layout cycle button (only show in List/Detail view, not in Add/Edit forms)
-                // Quick click cycles, long press (hold) shows menu
+                // Quick click cycles, long press (hold) or double-click shows menu
                 let in_form_view = self.current_view == View::Add || self.current_view == View::Edit;
                 if !in_form_view {
                     ui.separator();
@@ -3102,8 +3102,9 @@ impl RequirementsApp {
                     let layout_button = ui.button("⊞")
                         .on_hover_text(&layout_tooltip);
 
-                    // Check for double-click to show menu
-                    if layout_button.double_clicked() {
+                    // Check for double-click to show menu (and skip cycling)
+                    let double_clicked = layout_button.double_clicked();
+                    if double_clicked {
                         self.show_layout_menu = true;
                     }
 
@@ -3121,8 +3122,11 @@ impl RequirementsApp {
                     } else {
                         // Button released
                         if let Some(start) = self.layout_button_press_start.take() {
-                            // If it was a quick click (< 300ms) and menu isn't showing, cycle
-                            if start.elapsed() < std::time::Duration::from_millis(300) && !self.show_layout_menu {
+                            // If it was a quick click (< 300ms), menu isn't showing, and not a double-click, cycle
+                            if start.elapsed() < std::time::Duration::from_millis(300)
+                                && !self.show_layout_menu
+                                && !double_clicked
+                            {
                                 self.layout_mode = self.layout_mode.next();
                             }
                         }
@@ -9188,7 +9192,7 @@ impl RequirementsApp {
             .show(ctx, |ui| {
                 egui::Frame::popup(ui.style())
                     .show(ui, |ui| {
-                        ui.set_min_width(150.0);
+                        ui.set_min_width(200.0);
                         for mode in LayoutMode::all_modes() {
                             let is_current = *mode == self.layout_mode;
                             let label = if is_current {
@@ -9209,7 +9213,7 @@ impl RequirementsApp {
             // Check if click was inside the popup area - approximate bounds check
             let popup_rect = egui::Rect::from_min_size(
                 popup_pos,
-                egui::vec2(160.0, 120.0), // Approximate popup size
+                egui::vec2(210.0, 120.0), // Approximate popup size
             );
             if let Some(pos) = ctx.input(|i| i.pointer.interact_pos()) {
                 if !popup_rect.contains(pos) && !button_rect.contains(pos) {
