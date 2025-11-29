@@ -7459,14 +7459,16 @@ impl RequirementsApp {
 
                     // Filter toggle button
                     let filter_active =
-                        !self.filter_types.is_empty() || !self.filter_features.is_empty();
+                        !self.filter_types.is_empty() || !self.filter_features.is_empty()
+                        || !self.filter_prefixes.is_empty() || !self.filter_statuses.is_empty()
+                        || !self.filter_priorities.is_empty();
                     let filter_btn_text = if filter_active {
                         "🔽 Filters ●"
                     } else {
                         "🔽 Filters"
                     };
                     if ui.button(filter_btn_text).clicked() {
-                        self.show_filter_panel = !self.show_filter_panel;
+                        self.show_filter_dialog_list1 = !self.show_filter_dialog_list1;
                     }
                 });
 
@@ -7747,14 +7749,17 @@ impl RequirementsApp {
 
                     // Filter toggle
                     let filter_active = !self.split_filter_types.is_empty()
-                        || !self.split_filter_features.is_empty();
+                        || !self.split_filter_features.is_empty()
+                        || !self.split_filter_prefixes.is_empty()
+                        || !self.split_filter_statuses.is_empty()
+                        || !self.split_filter_priorities.is_empty();
                     let filter_btn_text = if filter_active {
                         "🔽 ●"
                     } else {
                         "🔽"
                     };
                     if ui.button(filter_btn_text).on_hover_text("Filters").clicked() {
-                        self.split_show_filter_panel = !self.split_show_filter_panel;
+                        self.show_filter_dialog_list2 = !self.show_filter_dialog_list2;
                     }
                 });
 
@@ -8017,14 +8022,16 @@ impl RequirementsApp {
             );
 
             // Filter toggle button
-            let filter_active = !self.filter_types.is_empty() || !self.filter_features.is_empty();
+            let filter_active = !self.filter_types.is_empty() || !self.filter_features.is_empty()
+                || !self.filter_prefixes.is_empty() || !self.filter_statuses.is_empty()
+                || !self.filter_priorities.is_empty();
             let filter_btn_text = if filter_active {
                 "🔽 Filters ●"
             } else {
                 "🔽 Filters"
             };
             if ui.button(filter_btn_text).clicked() {
-                self.show_filter_panel = !self.show_filter_panel;
+                self.show_filter_dialog_list1 = !self.show_filter_dialog_list1;
             }
         });
 
@@ -9314,10 +9321,12 @@ impl RequirementsApp {
             );
 
             // Filter toggle button
-            let filter_active = !self.filter_types.is_empty() || !self.filter_features.is_empty();
+            let filter_active = !self.filter_types.is_empty() || !self.filter_features.is_empty()
+                || !self.filter_prefixes.is_empty() || !self.filter_statuses.is_empty()
+                || !self.filter_priorities.is_empty();
             let filter_btn_text = if filter_active { "🔽 ●" } else { "🔽" };
             if ui.button(filter_btn_text).on_hover_text("Filters").clicked() {
-                self.show_filter_panel = !self.show_filter_panel;
+                self.show_filter_dialog_list1 = !self.show_filter_dialog_list1;
             }
         });
 
@@ -9342,10 +9351,12 @@ impl RequirementsApp {
             );
 
             // Filter toggle
-            let filter_active = !self.split_filter_types.is_empty() || !self.split_filter_features.is_empty();
+            let filter_active = !self.split_filter_types.is_empty() || !self.split_filter_features.is_empty()
+                || !self.split_filter_prefixes.is_empty() || !self.split_filter_statuses.is_empty()
+                || !self.split_filter_priorities.is_empty();
             let filter_btn_text = if filter_active { "🔽 ●" } else { "🔽" };
             if ui.button(filter_btn_text).on_hover_text("Filters").clicked() {
-                self.split_show_filter_panel = !self.split_show_filter_panel;
+                self.show_filter_dialog_list2 = !self.show_filter_dialog_list2;
             }
         });
 
