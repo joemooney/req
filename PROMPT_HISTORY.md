@@ -834,3 +834,18 @@ A chronological record of development sessions and changes made to the Requireme
   - Apply `ui.set_clip_rect()` to prevent overflow
   - Use `egui::Label::new(title_text).truncate()` to truncate with ellipsis
 - **Result**: Long titles are now truncated with ellipsis, keeping Actions, Edit, and Close buttons visible
+
+### Edit View Layout Gap Fix (ListDetailsSide Mode)
+- **Prompt**: User screenshot showing black gap between list panel and Edit form panel
+- **Root Cause**: Architectural mismatch between Detail View and Edit View layouts:
+  - Detail View used `CentralPanel` with `ui.columns(2, ...)` for 50/50 split
+  - Edit View used `SidePanel::left("list_panel_simple")` + `CentralPanel` - different approach!
+  - The different panel IDs and layout mechanisms caused a visual gap
+- **Solution**: Make Edit View use identical layout approach as Detail View for `ListDetailsSide` mode
+- **Implementation** (in form view code around line 13983):
+  - For `ListDetailsSide`: Use `CentralPanel` with `ui.columns(2, ...)` for Edit/Add views
+  - Left column renders list content (search bar, filter button, tree list)
+  - Right column renders the form via `show_form_vertical()`
+  - Uses same scroll area ID (`"list_side_scroll"`) as Detail View for consistency
+  - Other layout modes (ListDetailsStacked, SplitListDetails, etc.) continue using SidePanel
+- **Result**: Seamless transition between Detail View and Edit View with no visual gaps
