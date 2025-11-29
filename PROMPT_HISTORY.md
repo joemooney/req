@@ -789,3 +789,12 @@ A chronological record of development sessions and changes made to the Requireme
   - Description editor with markdown preview toggle
   - Custom fields support
   - Cancel confirmation dialog
+
+### Seamless Detail-to-Edit View Transition
+- **Prompt**: "When we switch to Edit we should not adjust the relative width of the panels, the Details View and the Edit View should remain the same width - it is a little jarring to jump in size. Also the font size for the title should remain the same. No need to have the word 'Edit' to the right of the textbox for the title during edit, and make the title textbox is not expanding to use all available width, we should do that."
+- **Solution**: Made transitions between Detail View and Edit View seamless
+- **Changes to both `show_form_vertical()` and `show_form_stacked()`**:
+  1. **Title font size**: Changed from `egui::TextStyle::Heading` to `egui::FontId::proportional(18.0 * title_bar_font_size)` to match Detail View exactly
+  2. **Title width**: Changed from `available_width * 0.6` to `(available - button_space).max(200.0)` where `button_space = 180.0`, making title expand to use all available width
+  3. **Removed mode indicator**: Removed the "Edit"/"New" label that appeared next to the title, reducing visual clutter
+- **Result**: Switching between Detail View and Edit View now feels seamless with consistent sizing and appearance
