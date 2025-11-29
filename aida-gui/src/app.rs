@@ -8446,6 +8446,19 @@ impl RequirementsApp {
                         self.show_history_tab(ui, &req);
                     }
                 });
+
+                // Double-click on background area to edit (when no modal is open)
+                if !self.show_url_form
+                    && !self.show_reference_picker
+                    && !self.show_add_comment
+                {
+                    #[allow(deprecated)]
+                    let bg_response = ui.interact_bg(egui::Sense::click());
+                    if bg_response.double_clicked() {
+                        self.load_form_from_requirement(idx);
+                        self.pending_view_change = Some(View::Edit);
+                    }
+                }
             }
         } else {
             ui.vertical_centered(|ui| {
