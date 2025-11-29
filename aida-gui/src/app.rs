@@ -1760,6 +1760,18 @@ pub struct RequirementsApp {
     detail_panel_collapsed: bool, // Whether detail panel is collapsed (list-only mode)
     list_panel_collapsed: bool,   // Whether list panel is collapsed (detail-only mode)
 
+    // Split panel (second requirements list)
+    split_panel_open: bool,
+    split_perspective: Perspective,
+    split_perspective_direction: PerspectiveDirection,
+    split_filter_text: String,
+    split_filter_types: HashSet<RequirementType>,
+    split_filter_features: HashSet<String>,
+    split_show_filter_panel: bool,
+    split_tree_collapsed: HashMap<Uuid, bool>,
+    split_selected_idx: Option<usize>,
+    split_active_preset: Option<String>,
+
     // Relationship definition editing
     editing_rel_def: Option<String>, // Name of relationship def being edited (None = adding new)
     rel_def_form_name: String,
@@ -2044,6 +2056,16 @@ impl RequirementsApp {
             left_panel_collapsed: false,
             detail_panel_collapsed: false,
             list_panel_collapsed: false,
+            split_panel_open: false,
+            split_perspective: Perspective::default(),
+            split_perspective_direction: PerspectiveDirection::default(),
+            split_filter_text: String::new(),
+            split_filter_types: HashSet::new(),
+            split_filter_features: HashSet::new(),
+            split_show_filter_panel: false,
+            split_tree_collapsed: HashMap::new(),
+            split_selected_idx: None,
+            split_active_preset: None,
             editing_rel_def: None,
             rel_def_form_name: String::new(),
             rel_def_form_display_name: String::new(),
@@ -7220,6 +7242,16 @@ impl RequirementsApp {
                             {
                                 self.list_panel_collapsed = true;
                             }
+                            // Split panel toggle
+                            let split_icon = if self.split_panel_open { "⊟" } else { "⊞" };
+                            let split_tooltip = if self.split_panel_open {
+                                "Close split panel"
+                            } else {
+                                "Open split panel (second list view)"
+                            };
+                            if ui.button(split_icon).on_hover_text(split_tooltip).clicked() {
+                                self.split_panel_open = !self.split_panel_open;
+                            }
                         }
                     });
                 });
@@ -7483,6 +7515,247 @@ impl RequirementsApp {
 
                 // Selection remains fixed when scrolling - user must click to change selection
             });
+    }
+
+    /// Show split panel (second requirements list) on the right side
+    fn show_split_panel(&mut self, ctx: &egui::Context) {
+        egui::SidePanel::right("split_panel")
+            .min_width(200.0)
+            .default_width(350.0)
+            .show(ctx, |ui| {
+                // Header with close button
+                ui.horizontal(|ui| {
+                    ui.heading("Requirements");
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui
+                            .button("⊟")
+                            .on_hover_text("Close split panel")
+                            .clicked()
+                        {
+                            self.split_panel_open = false;
+                        }
+                    });
+                });
+                ui.separator();
+
+                // Search bar
+                ui.horizontal(|ui| {
+                    ui.label("🔍");
+                    ui.add(
+                        egui::TextEdit::singleline(&mut self.split_filter_text)
+                            .hint_text("Search...")
+                            .desired_width(120.0),
+                    );
+
+                    // Filter toggle
+                    let filter_active = !self.split_filter_types.is_empty()
+                        || !self.split_filter_features.is_empty();
+                    let filter_btn_text = if filter_active {
+                        "🔽 ●"
+                    } else {
+                        "🔽"
+                    };
+                    if ui.button(filter_btn_text).on_hover_text("Filters").clicked() {
+                        self.split_show_filter_panel = !self.split_show_filter_panel;
+                    }
+                });
+
+                // Perspective selector
+                ui.horizontal(|ui| {
+                    ui.label("View:");
+                    let selected_text = self.split_perspective.label().to_string();
+
+                    egui::ComboBox::from_id_salt("split_perspective_combo")
+                        .selected_text(&selected_text)
+                        .show_ui(ui, |ui| {
+                            if ui
+                                .selectable_label(
+                                    self.split_perspective == Perspective::Flat,
+                                    Perspective::Flat.label(),
+                                )
+                                .clicked()
+                            {
+                                self.split_perspective = Perspective::Flat;
+                            }
+                            if ui
+                                .selectable_label(
+                                    self.split_perspective == Perspective::ParentChild,
+                                    Perspective::ParentChild.label(),
+                                )
+                                .clicked()
+                            {
+                                self.split_perspective = Perspective::ParentChild;
+                            }
+                            if ui
+                                .selectable_label(
+                                    self.split_perspective == Perspective::Verification,
+                                    Perspective::Verification.label(),
+                                )
+                                .clicked()
+                            {
+                                self.split_perspective = Perspective::Verification;
+                            }
+                            if ui
+                                .selectable_label(
+                                    self.split_perspective == Perspective::References,
+                                    Perspective::References.label(),
+                                )
+                                .clicked()
+                            {
+                                self.split_perspective = Perspective::References;
+                            }
+                        });
+
+                    // Direction for hierarchical views
+                    if matches!(
+                        self.split_perspective,
+                        Perspective::ParentChild | Perspective::Verification | Perspective::References
+                    ) {
+                        egui::ComboBox::from_id_salt("split_direction_combo")
+                            .selected_text(self.split_perspective_direction.label())
+                            .show_ui(ui, |ui| {
+                                ui.selectable_value(
+                                    &mut self.split_perspective_direction,
+                                    PerspectiveDirection::TopDown,
+                                    "↓",
+                                );
+                                ui.selectable_value(
+                                    &mut self.split_perspective_direction,
+                                    PerspectiveDirection::BottomUp,
+                                    "↑",
+                                );
+                            });
+                    }
+                });
+
+                ui.separator();
+
+                // Requirements list
+                egui::ScrollArea::vertical()
+                    .id_salt("split_panel_scroll")
+                    .auto_shrink([false, false])
+                    .show(ui, |ui| {
+                        egui::ScrollArea::horizontal()
+                            .id_salt("split_panel_horizontal_scroll")
+                            .auto_shrink([false, false])
+                            .show(ui, |ui| {
+                                ui.set_min_width(250.0);
+                                self.show_split_list(ui);
+                            });
+                    });
+            });
+    }
+
+    /// Show the requirements list in the split panel
+    fn show_split_list(&mut self, ui: &mut egui::Ui) {
+        // Get filtered requirements for split panel
+        let filter_text = self.split_filter_text.to_lowercase();
+
+        // Filter requirements
+        let filtered_indices: Vec<usize> = self
+            .store
+            .requirements
+            .iter()
+            .enumerate()
+            .filter(|(_, req)| {
+                // Skip archived
+                if req.archived && !self.show_archived {
+                    return false;
+                }
+                // Text filter
+                if !filter_text.is_empty() {
+                    let matches = req.title.to_lowercase().contains(&filter_text)
+                        || req.description.to_lowercase().contains(&filter_text);
+                    if !matches {
+                        return false;
+                    }
+                }
+                // Type filter
+                if !self.split_filter_types.is_empty()
+                    && !self.split_filter_types.contains(&req.req_type)
+                {
+                    return false;
+                }
+                // Feature filter
+                if !self.split_filter_features.is_empty()
+                    && !self.split_filter_features.contains(&req.feature)
+                {
+                    return false;
+                }
+                true
+            })
+            .map(|(idx, _)| idx)
+            .collect();
+
+        // Display based on perspective
+        match self.split_perspective {
+            Perspective::Flat => {
+                for &idx in &filtered_indices {
+                    let req = &self.store.requirements[idx];
+                    let is_selected = self.split_selected_idx == Some(idx);
+                    let status_string = format!("{}", req.status);
+                    let display = format!(
+                        "{} {} - {}",
+                        self.get_status_icon(&status_string),
+                        req.spec_id.as_deref().unwrap_or("?"),
+                        req.title
+                    );
+
+                    let response = ui.selectable_label(is_selected, &display);
+                    if response.clicked() {
+                        self.split_selected_idx = Some(idx);
+                        // Also update main selection to show in detail view
+                        self.selected_idx = Some(idx);
+                    }
+                    if response.double_clicked() {
+                        // Switch to edit mode on double-click
+                        self.selected_idx = Some(idx);
+                        self.load_form_from_requirement(idx);
+                        self.pending_view_change = Some(View::Edit);
+                    }
+                }
+            }
+            _ => {
+                // For tree views, show a simplified flat list with hierarchy indication
+                // Full tree implementation would require more complex state management
+                for &idx in &filtered_indices {
+                    let req = &self.store.requirements[idx];
+                    let is_selected = self.split_selected_idx == Some(idx);
+
+                    // Show relationship count as indicator
+                    let rel_count = req.relationships.len();
+                    let rel_indicator = if rel_count > 0 {
+                        format!(" [{}]", rel_count)
+                    } else {
+                        String::new()
+                    };
+
+                    let status_string = format!("{}", req.status);
+                    let display = format!(
+                        "{} {} - {}{}",
+                        self.get_status_icon(&status_string),
+                        req.spec_id.as_deref().unwrap_or("?"),
+                        req.title,
+                        rel_indicator
+                    );
+
+                    let response = ui.selectable_label(is_selected, &display);
+                    if response.clicked() {
+                        self.split_selected_idx = Some(idx);
+                        self.selected_idx = Some(idx);
+                    }
+                    if response.double_clicked() {
+                        self.selected_idx = Some(idx);
+                        self.load_form_from_requirement(idx);
+                        self.pending_view_change = Some(View::Edit);
+                    }
+                }
+            }
+        }
+
+        if filtered_indices.is_empty() {
+            ui.label("No matching requirements");
+        }
     }
 
     /// Show list in the central panel when detail view is collapsed (list-only mode)
@@ -11341,6 +11614,11 @@ impl eframe::App for RequirementsApp {
 
         if show_left_panel {
             self.show_list_panel(ctx, in_form_view);
+        }
+
+        // Show split panel (second list view) on the right if open
+        if self.split_panel_open && !in_form_view && !self.detail_panel_collapsed {
+            self.show_split_panel(ctx);
         }
 
         egui::CentralPanel::default().show(ctx, |ui| {
