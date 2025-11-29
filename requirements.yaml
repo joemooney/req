@@ -874,6 +874,10 @@ requirements:
     target_id: 01cb13e7-36e9-4dc1-900c-46d22087db4e
     created_at: 2025-11-29T00:59:16.590242076Z
     created_by: '@joe'
+  - rel_type: Child
+    target_id: dc023952-b424-400e-830f-17854d032800
+    created_at: 2025-11-29T04:33:51.842489368Z
+    created_by: '@joe'
   history:
   - id: e2ba3669-855e-4b99-9b7f-30300da178c5
     author: '@joe'
@@ -3986,6 +3990,25 @@ requirements:
     target_id: 9aec2046-225d-40e4-aadf-609045e8ab45
     created_at: 2025-11-29T01:51:21.249120875Z
     created_by: '@joe'
+- id: dc023952-b424-400e-830f-17854d032800
+  spec_id: FR-0099
+  title: Shared split panel navigation lock/unlock
+  description: "I will want to optionally lock navigation in both lists and as we move we should keep the selected requirement in the center (vertical) of \nthe panel for ease of visualization. Place a little loced/unlocked icon to the left of the 'x' on List 2 to incidcate naviation is locked \nbetween both lists."
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-29T04:33:51.842450784Z
+  created_by: '@joe'
+  modified_at: 2025-11-29T04:33:51.842450784Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
+    created_at: 2025-11-29T04:33:51.842489368Z
+    created_by: '@joe'
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
   spec_id: $USER-001
@@ -4039,7 +4062,7 @@ id_config:
     description: Change requests for modifications to existing functionality
 features: []
 next_feature_number: 46
-next_spec_number: 99
+next_spec_number: 100
 prefix_counters: {}
 relationship_definitions:
 - name: parent

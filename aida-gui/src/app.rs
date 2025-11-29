@@ -1749,7 +1749,8 @@ pub struct RequirementsApp {
     pending_comment_delete: Option<Uuid>,
     pending_reaction_toggle: Option<(Uuid, String)>, // (comment_id, reaction_name)
     show_reaction_picker: Option<Uuid>,              // Comment ID to show reaction picker for
-    scroll_to_requirement: Option<Uuid>,             // Requirement ID to scroll into view
+    scroll_to_requirement: Option<Uuid>,             // Requirement ID to scroll into view (List 1)
+    split_scroll_to_requirement: Option<Uuid>,       // Requirement ID to scroll into view (List 2)
 
     // Settings
     user_settings: UserSettings,
@@ -1858,6 +1859,8 @@ pub struct RequirementsApp {
     split_selected_idx: Option<usize>,
     split_active_preset: Option<String>,
     focused_list: FocusedList,  // Which list has focus for keyboard navigation
+    navigation_locked: bool,    // Lock navigation between both lists (sync selection)
+    scroll_to_center: bool,     // When true, scroll to center the selected item
 
     // Relationship definition editing
     editing_rel_def: Option<String>, // Name of relationship def being edited (None = adding new)
@@ -2072,6 +2075,7 @@ impl RequirementsApp {
             pending_reaction_toggle: None,
             show_reaction_picker: None,
             scroll_to_requirement: None,
+            split_scroll_to_requirement: None,
             current_font_size: initial_font_size,
             user_settings,
             show_settings_dialog: false,
@@ -2155,6 +2159,8 @@ impl RequirementsApp {
             split_selected_idx: None,
             split_active_preset: None,
             focused_list: FocusedList::default(),
+            navigation_locked: false,
+            scroll_to_center: false,
             editing_rel_def: None,
             rel_def_form_name: String::new(),
             rel_def_form_display_name: String::new(),
@@ -7849,7 +7855,9 @@ impl RequirementsApp {
             Perspective::Flat => {
                 for &idx in &filtered_indices {
                     let req = &self.store.requirements[idx];
+                    let req_id = req.id;
                     let is_selected = self.split_selected_idx == Some(idx);
+                    let should_scroll = self.split_scroll_to_requirement == Some(req_id);
                     let status_string = format!("{}", req.status);
                     let display = format!(
                         "{} {} - {}",
@@ -7859,9 +7867,22 @@ impl RequirementsApp {
                     );
 
                     let response = ui.selectable_label(is_selected, &display);
+
+                    // Scroll to center if requested
+                    if should_scroll {
+                        response.scroll_to_me(Some(egui::Align::Center));
+                        self.split_scroll_to_requirement = None;
+                    }
+
                     if response.clicked() {
                         self.split_selected_idx = Some(idx);
                         self.focused_list = FocusedList::List2;
+                        // Sync List 1 when navigation is locked
+                        if self.navigation_locked {
+                            self.selected_idx = Some(idx);
+                            self.scroll_to_requirement = Some(req_id);
+                            self.pending_view_change = Some(View::Detail);
+                        }
                     }
                     if response.double_clicked() {
                         // Switch to edit mode on double-click
@@ -7878,7 +7899,9 @@ impl RequirementsApp {
                 // Full tree implementation would require more complex state management
                 for &idx in &filtered_indices {
                     let req = &self.store.requirements[idx];
+                    let req_id = req.id;
                     let is_selected = self.split_selected_idx == Some(idx);
+                    let should_scroll = self.split_scroll_to_requirement == Some(req_id);
 
                     // Show relationship count as indicator
                     let rel_count = req.relationships.len();
@@ -7898,9 +7921,22 @@ impl RequirementsApp {
                     );
 
                     let response = ui.selectable_label(is_selected, &display);
+
+                    // Scroll to center if requested
+                    if should_scroll {
+                        response.scroll_to_me(Some(egui::Align::Center));
+                        self.split_scroll_to_requirement = None;
+                    }
+
                     if response.clicked() {
                         self.split_selected_idx = Some(idx);
                         self.focused_list = FocusedList::List2;
+                        // Sync List 1 when navigation is locked
+                        if self.navigation_locked {
+                            self.selected_idx = Some(idx);
+                            self.scroll_to_requirement = Some(req_id);
+                            self.pending_view_change = Some(View::Detail);
+                        }
                     }
                     if response.double_clicked() {
                         self.split_selected_idx = Some(idx);
@@ -8636,6 +8672,11 @@ impl RequirementsApp {
                 self.selected_idx = Some(idx);
                 self.focused_list = FocusedList::List1;
                 self.pending_view_change = Some(View::Detail);
+                // Sync List 2 when navigation is locked
+                if self.navigation_locked {
+                    self.split_selected_idx = Some(idx);
+                    self.split_scroll_to_requirement = Some(req_id);
+                }
             }
 
             // Drag handling
@@ -9134,12 +9175,26 @@ impl RequirementsApp {
 
     /// Show split list content in a column (for side-by-side splits)
     fn show_split_list_content_in_column(&mut self, ui: &mut egui::Ui) {
-        // Header with close button
+        // Header with lock and close buttons
         ui.horizontal(|ui| {
             ui.heading("List 2");
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if ui.button("✕").on_hover_text("Close this list").clicked() {
                     self.layout_mode = self.layout_mode.without_split();
+                }
+                // Navigation lock toggle
+                let lock_icon = if self.navigation_locked { "🔒" } else { "🔓" };
+                let lock_tooltip = if self.navigation_locked {
+                    "Navigation locked: lists scroll together. Click to unlock."
+                } else {
+                    "Navigation unlocked: lists scroll independently. Click to lock."
+                };
+                if ui.button(lock_icon).on_hover_text(lock_tooltip).clicked() {
+                    self.navigation_locked = !self.navigation_locked;
+                    if self.navigation_locked {
+                        // When locking, trigger scroll to center
+                        self.scroll_to_center = true;
+                    }
                 }
             });
         });
@@ -11987,16 +12042,30 @@ impl eframe::App for RequirementsApp {
                             if Some(new_sel) != self.selected_idx {
                                 self.selected_idx = Some(new_sel);
                                 self.pending_view_change = Some(View::Detail);
-                                // Scroll the newly selected item into view
+                                // Scroll the newly selected item into view (centered)
                                 if let Some(req) = self.store.requirements.get(new_sel) {
                                     self.scroll_to_requirement = Some(req.id);
+                                    // Sync List 2 when navigation is locked
+                                    if self.navigation_locked {
+                                        self.split_selected_idx = Some(new_sel);
+                                        self.split_scroll_to_requirement = Some(req.id);
+                                    }
                                 }
                             }
                         }
                         FocusedList::List2 => {
                             if Some(new_sel) != self.split_selected_idx {
                                 self.split_selected_idx = Some(new_sel);
-                                // Don't change view, but scroll into view if we add split scroll support
+                                // Scroll into view (centered)
+                                if let Some(req) = self.store.requirements.get(new_sel) {
+                                    self.split_scroll_to_requirement = Some(req.id);
+                                    // Sync List 1 when navigation is locked
+                                    if self.navigation_locked {
+                                        self.selected_idx = Some(new_sel);
+                                        self.scroll_to_requirement = Some(req.id);
+                                        self.pending_view_change = Some(View::Detail);
+                                    }
+                                }
                             }
                         }
                     }
