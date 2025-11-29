@@ -554,14 +554,14 @@ requirements:
       new_value: COMMENTS-0027
 - id: 6da186f2-cae3-4b75-bc46-d487ced9e96b
   spec_id: FR-0017
-  title: In Links tab, double click on link to switch requirement
+  title: In Links tab, double click on link to jump to requirement
   description: In the requirement Links tab, double clicking on a requirement should switch to that requirement
   status: Completed
   priority: Medium
   owner: ''
   feature: 7-Uncategorized
   created_at: 2025-11-26T00:42:10.981736725Z
-  modified_at: 2025-11-28T17:51:36.408678342Z
+  modified_at: 2025-11-29T04:44:09.507107255Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -583,6 +583,20 @@ requirements:
     - field_name: status
       old_value: Draft
       new_value: Completed
+  - id: 56727211-b81b-4cff-b811-067e57544126
+    author: '@joe'
+    timestamp: 2025-11-29T04:43:56.408947923Z
+    changes:
+    - field_name: title
+      old_value: In Links tab, double click on link to switch requirement
+      new_value: In Links tab, double click on link to jump tp requirement
+  - id: a2f2c40c-2e5d-4e28-a4d6-a74fb9e65f42
+    author: '@joe'
+    timestamp: 2025-11-29T04:44:09.507102567Z
+    changes:
+    - field_name: title
+      old_value: In Links tab, double click on link to jump tp requirement
+      new_value: In Links tab, double click on link to jump to requirement
 - id: 02a28ce8-28aa-4e56-88e3-ae29813a3fe0
   spec_id: FR-0018
   title: Break link relationship
@@ -877,6 +891,10 @@ requirements:
   - rel_type: Child
     target_id: dc023952-b424-400e-830f-17854d032800
     created_at: 2025-11-29T04:33:51.842489368Z
+    created_by: '@joe'
+  - rel_type: Child
+    target_id: d0650db4-0021-4496-8620-f7f6bf8dbc87
+    created_at: 2025-11-29T04:39:50.207480269Z
     created_by: '@joe'
   history:
   - id: e2ba3669-855e-4b99-9b7f-30300da178c5
@@ -3993,14 +4011,14 @@ requirements:
 - id: dc023952-b424-400e-830f-17854d032800
   spec_id: FR-0099
   title: Shared split panel navigation lock/unlock
-  description: "I will want to optionally lock navigation in both lists and as we move we should keep the selected requirement in the center (vertical) of \nthe panel for ease of visualization. Place a little loced/unlocked icon to the left of the 'x' on List 2 to incidcate naviation is locked \nbetween both lists."
+  description: "I will want to optionally lock navigation in both lists and as we move we should keep the selected requirement in the center (vertical) of \nthe panel for ease of visualization. Place a little loced/unlocked icon to the left of the 'x' on List 2 to incidcate naviation is locked \nbetween both lists.\n\n\n Navigation Lock Feature:\n\n  - Added a lock/unlock icon button (🔒/🔓) to the List 2 header, positioned to the left of the close (✕) button\n  - When locked:\n    - Selecting a requirement in either list automatically selects and scrolls to the same requirement in the other list\n    - Both lists center the selected item vertically for easy visualization\n    - Works with keyboard navigation (arrow keys, Page Up/Down) and mouse clicks\n  - When unlocked:\n    - Lists operate independently as before\n\n  The icon shows:\n  - 🔒 (locked padlock) when navigation is synced\n  - 🔓 (unlocked padlock) when navigation is independent\n\n\n"
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 46-Uncategorized
   created_at: 2025-11-29T04:33:51.842450784Z
   created_by: '@joe'
-  modified_at: 2025-11-29T04:33:51.842450784Z
+  modified_at: 2025-11-29T04:42:35.799379972Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -4008,6 +4026,33 @@ requirements:
   - rel_type: Parent
     target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
     created_at: 2025-11-29T04:33:51.842489368Z
+    created_by: '@joe'
+  history:
+  - id: c0f1c1f1-162f-454a-b50a-19996feabd56
+    author: '@joe'
+    timestamp: 2025-11-29T04:42:35.799376489Z
+    changes:
+    - field_name: description
+      old_value: "I will want to optionally lock navigation in both lists and as we move we should keep the selected requirement in the center (vertical) of \nthe panel for ease of visualization. Place a little loced/unlocked icon to the left of the 'x' on List 2 to incidcate naviation is locked \nbetween both lists."
+      new_value: "I will want to optionally lock navigation in both lists and as we move we should keep the selected requirement in the center (vertical) of \nthe panel for ease of visualization. Place a little loced/unlocked icon to the left of the 'x' on List 2 to incidcate naviation is locked \nbetween both lists.\n\n\n Navigation Lock Feature:\n\n  - Added a lock/unlock icon button (🔒/🔓) to the List 2 header, positioned to the left of the close (✕) button\n  - When locked:\n    - Selecting a requirement in either list automatically selects and scrolls to the same requirement in the other list\n    - Both lists center the selected item vertically for easy visualization\n    - Works with keyboard navigation (arrow keys, Page Up/Down) and mouse clicks\n  - When unlocked:\n    - Lists operate independently as before\n\n  The icon shows:\n  - 🔒 (locked padlock) when navigation is synced\n  - 🔓 (unlocked padlock) when navigation is independent\n\n\n"
+- id: d0650db4-0021-4496-8620-f7f6bf8dbc87
+  spec_id: FR-0100
+  title: Details View layout
+  description: Details View Panel should display with the tabs (Description. Links etc.) at the bottome of the paned whe the Details View panel is displayed on the right. But if the Details View panel is display at the bottom then a better use of space is to split the layout so that the Type, Status and other fields are displayed in a vertical column on the left and the right side of the panel shows the tabs.
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 46-Uncategorized
+  created_at: 2025-11-29T04:39:50.207441032Z
+  created_by: '@joe'
+  modified_at: 2025-11-29T04:39:50.207441032Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
+    created_at: 2025-11-29T04:39:50.207480269Z
     created_by: '@joe'
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
@@ -4061,8 +4106,8 @@ id_config:
     prefix: CR
     description: Change requests for modifications to existing functionality
 features: []
-next_feature_number: 46
-next_spec_number: 100
+next_feature_number: 47
+next_spec_number: 101
 prefix_counters: {}
 relationship_definitions:
 - name: parent

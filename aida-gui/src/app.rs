@@ -7850,7 +7850,7 @@ impl RequirementsApp {
             .map(|(idx, _)| idx)
             .collect();
 
-        // Display based on perspective
+        // Display based on perspective - use custom rendering like List 1 (no hover effect)
         match self.split_perspective {
             Perspective::Flat => {
                 for &idx in &filtered_indices {
@@ -7859,20 +7859,43 @@ impl RequirementsApp {
                     let is_selected = self.split_selected_idx == Some(idx);
                     let should_scroll = self.split_scroll_to_requirement == Some(req_id);
                     let status_string = format!("{}", req.status);
-                    let display = format!(
+                    let label = format!(
                         "{} {} - {}",
                         self.get_status_icon(&status_string),
                         req.spec_id.as_deref().unwrap_or("?"),
                         req.title
                     );
 
-                    let response = ui.selectable_label(is_selected, &display);
+                    // Custom rendering like List 1 - no hover highlight
+                    let text = egui::WidgetText::from(&label);
+                    let galley = text.into_galley(
+                        ui,
+                        Some(egui::TextWrapMode::Extend),
+                        f32::INFINITY,
+                        egui::TextStyle::Body,
+                    );
+                    let desired_size = galley.size() + egui::vec2(8.0, 4.0);
+                    let (rect, response) = ui.allocate_exact_size(desired_size, egui::Sense::click());
 
                     // Scroll to center if requested
                     if should_scroll {
                         response.scroll_to_me(Some(egui::Align::Center));
                         self.split_scroll_to_requirement = None;
                     }
+
+                    // Paint background only when selected
+                    if is_selected {
+                        ui.painter().rect_filled(rect, 2.0, ui.visuals().selection.bg_fill);
+                    }
+
+                    // Paint text
+                    let text_pos = rect.min + egui::vec2(4.0, 2.0);
+                    let text_color = if is_selected {
+                        ui.visuals().selection.stroke.color
+                    } else {
+                        ui.visuals().text_color()
+                    };
+                    ui.painter().galley(text_pos, galley, text_color);
 
                     if response.clicked() {
                         self.split_selected_idx = Some(idx);
@@ -7912,7 +7935,7 @@ impl RequirementsApp {
                     };
 
                     let status_string = format!("{}", req.status);
-                    let display = format!(
+                    let label = format!(
                         "{} {} - {}{}",
                         self.get_status_icon(&status_string),
                         req.spec_id.as_deref().unwrap_or("?"),
@@ -7920,13 +7943,36 @@ impl RequirementsApp {
                         rel_indicator
                     );
 
-                    let response = ui.selectable_label(is_selected, &display);
+                    // Custom rendering like List 1 - no hover highlight
+                    let text = egui::WidgetText::from(&label);
+                    let galley = text.into_galley(
+                        ui,
+                        Some(egui::TextWrapMode::Extend),
+                        f32::INFINITY,
+                        egui::TextStyle::Body,
+                    );
+                    let desired_size = galley.size() + egui::vec2(8.0, 4.0);
+                    let (rect, response) = ui.allocate_exact_size(desired_size, egui::Sense::click());
 
                     // Scroll to center if requested
                     if should_scroll {
                         response.scroll_to_me(Some(egui::Align::Center));
                         self.split_scroll_to_requirement = None;
                     }
+
+                    // Paint background only when selected
+                    if is_selected {
+                        ui.painter().rect_filled(rect, 2.0, ui.visuals().selection.bg_fill);
+                    }
+
+                    // Paint text
+                    let text_pos = rect.min + egui::vec2(4.0, 2.0);
+                    let text_color = if is_selected {
+                        ui.visuals().selection.stroke.color
+                    } else {
+                        ui.visuals().text_color()
+                    };
+                    ui.painter().galley(text_pos, galley, text_color);
 
                     if response.clicked() {
                         self.split_selected_idx = Some(idx);
