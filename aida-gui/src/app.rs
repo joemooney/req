@@ -264,6 +264,28 @@ const MAX_FONT_SIZE: f32 = 32.0;
 /// Font size step for zoom in/out
 const FONT_SIZE_STEP: f32 = 1.0;
 
+/// Modal window size constraints (as percentage of screen size)
+const MODAL_MAX_WIDTH_PERCENT: f32 = 0.90;
+const MODAL_MAX_HEIGHT_PERCENT: f32 = 0.85;
+
+/// Calculate modal window max size based on screen dimensions
+fn modal_max_size(ctx: &egui::Context) -> egui::Vec2 {
+    let screen_rect = ctx.screen_rect();
+    egui::vec2(
+        screen_rect.width() * MODAL_MAX_WIDTH_PERCENT,
+        screen_rect.height() * MODAL_MAX_HEIGHT_PERCENT,
+    )
+}
+
+/// Calculate constrained modal size - returns (width, height) clamped to max
+fn constrained_modal_size(ctx: &egui::Context, desired_width: f32, desired_height: f32) -> egui::Vec2 {
+    let max = modal_max_size(ctx);
+    egui::vec2(
+        desired_width.min(max.x),
+        desired_height.min(max.y),
+    )
+}
+
 /// Serializable color wrapper for themes
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct ThemeColor {
@@ -3579,10 +3601,14 @@ impl RequirementsApp {
         let mut close_dialog = false;
         let mut switch_to: Option<String> = None;
 
+        let max_size = modal_max_size(ctx);
+
         egui::Window::new("📁 Switch Project")
             .collapsible(false)
             .resizable(true)
             .min_width(400.0)
+            .max_width(max_size.x)
+            .max_height(max_size.y)
             .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
             .show(ctx, |ui| {
                 ui.heading("Available Projects");
@@ -3592,7 +3618,7 @@ impl RequirementsApp {
                     ui.label("No projects found in registry.");
                 } else {
                     egui::ScrollArea::vertical()
-                        .max_height(300.0)
+                        .max_height((max_size.y - 100.0).max(200.0))
                         .show(ui, |ui| {
                             for (name, path, description) in &self.available_projects {
                                 ui.group(|ui| {
@@ -3643,11 +3669,15 @@ impl RequirementsApp {
 
         let mut close_dialog = false;
         let mut create_project = false;
+        let max_size = modal_max_size(ctx);
 
         egui::Window::new("➕ New Project")
             .collapsible(false)
             .resizable(true)
             .min_width(450.0)
+            .max_width(max_size.x)
+            .max_height(max_size.y)
+            .scroll([false, true])
             .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
             .show(ctx, |ui| {
                 ui.heading("Create New Project");
@@ -3752,10 +3782,15 @@ impl RequirementsApp {
             return;
         }
 
+        let max_size = modal_max_size(ctx);
+
         egui::Window::new("⚙ Settings")
             .collapsible(false)
             .resizable(true)
             .min_width(400.0)
+            .max_width(max_size.x)
+            .max_height(max_size.y)
+            .scroll([false, true]) // Enable vertical scrolling for the whole window
             .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
             .show(ctx, |ui| {
                 // Tabs
@@ -4122,11 +4157,18 @@ impl RequirementsApp {
             return;
         }
 
+        let max_size = modal_max_size(ctx);
+        let icon_height = 700.0_f32.min(max_size.y);
+
         egui::Window::new("Status & Priority Icons")
             .collapsible(false)
             .resizable(true)
             .default_width(650.0)
-            .default_height(700.0)
+            .default_height(icon_height)
+            .max_width(max_size.x)
+            .max_height(max_size.y)
+            .scroll([false, true])
+            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
             .show(ctx, |ui| {
                 ui.heading("Configure Status Icons");
                 ui.add_space(5.0);
@@ -6268,21 +6310,24 @@ impl RequirementsApp {
         // Apply the working theme so user sees changes live
         self.theme_editor_theme.apply(ctx);
 
-        // Fixed dimensions for theme editor
-        const THEME_EDITOR_WIDTH: f32 = 850.0;
-        const THEME_EDITOR_HEIGHT: f32 = 500.0;
-        const CONTENT_HEIGHT: f32 = 400.0;
+        // Constrained dimensions for theme editor
+        let max_size = modal_max_size(ctx);
+        let theme_width = 850.0_f32.min(max_size.x);
+        let theme_height = 500.0_f32.min(max_size.y);
+        let content_height = (theme_height - 100.0).max(200.0); // Leave room for title/buttons
 
         egui::Window::new("🎨 Theme Editor")
             .collapsible(false)
-            .resizable(false)
-            .fixed_size([THEME_EDITOR_WIDTH, THEME_EDITOR_HEIGHT])
+            .resizable(true)
+            .default_size([theme_width, theme_height])
+            .max_width(max_size.x)
+            .max_height(max_size.y)
             .anchor(egui::Align2::CENTER_CENTER, [0.0, 30.0]) // Offset down to avoid menu bar
             .show(ctx, |ui| {
                 ui.horizontal(|ui| {
                     // Left column: Categories (fixed width)
                     ui.allocate_ui_with_layout(
-                        egui::vec2(140.0, CONTENT_HEIGHT),
+                        egui::vec2(140.0, content_height),
                         egui::Layout::top_down(egui::Align::LEFT),
                         |ui| {
                             ui.heading("Categories");
@@ -6342,7 +6387,7 @@ impl RequirementsApp {
 
                     // Center column: Property editors (fixed width)
                     ui.allocate_ui_with_layout(
-                        egui::vec2(340.0, CONTENT_HEIGHT),
+                        egui::vec2(340.0, content_height),
                         egui::Layout::top_down(egui::Align::LEFT),
                         |ui| {
                             ui.horizontal(|ui| {
@@ -6357,7 +6402,7 @@ impl RequirementsApp {
 
                             egui::ScrollArea::vertical()
                                 .id_salt("theme_editor_properties_scroll")
-                                .max_height(CONTENT_HEIGHT - 50.0)
+                                .max_height(content_height - 50.0)
                                 .show(ui, |ui| {
                                     match self.theme_editor_category {
                                         ThemeEditorCategory::Backgrounds => {
@@ -6402,7 +6447,7 @@ impl RequirementsApp {
 
                     // Right column: Live preview (fixed width)
                     ui.allocate_ui_with_layout(
-                        egui::vec2(320.0, CONTENT_HEIGHT),
+                        egui::vec2(320.0, content_height),
                         egui::Layout::top_down(egui::Align::LEFT),
                         |ui| {
                             ui.heading("Live Preview");
@@ -6410,7 +6455,7 @@ impl RequirementsApp {
 
                             egui::ScrollArea::vertical()
                                 .id_salt("theme_editor_preview_scroll")
-                                .max_height(CONTENT_HEIGHT - 30.0)
+                                .max_height(content_height - 30.0)
                                 .show(ui, |ui| {
                                     Self::show_theme_preview(&self.theme_editor_theme, ui);
                                 });
@@ -11101,14 +11146,20 @@ impl RequirementsApp {
     }
 
     fn show_markdown_help_modal(&mut self, ctx: &egui::Context) {
+        let max_size = modal_max_size(ctx);
+
         egui::Window::new("Markdown Help")
             .collapsible(false)
             .resizable(true)
             .default_width(600.0)
             .default_height(500.0)
+            .max_width(max_size.x)
+            .max_height(max_size.y)
             .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
             .show(ctx, |ui| {
-                egui::ScrollArea::vertical().show(ui, |ui| {
+                egui::ScrollArea::vertical()
+                    .max_height(max_size.y - 80.0) // Leave room for title bar and close button
+                    .show(ui, |ui| {
                     ui.heading("Supported Markdown Syntax");
                     ui.add_space(10.0);
 
@@ -13223,10 +13274,16 @@ impl RequirementsApp {
         }
 
         let mut open = true;
+        let max_size = modal_max_size(ctx);
+
         egui::Window::new("View Settings")
             .collapsible(false)
             .resizable(true)
             .default_width(450.0)
+            .max_width(max_size.x)
+            .max_height(max_size.y)
+            .scroll([false, true])
+            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
             .open(&mut open)
             .show(ctx, |ui| {
                 // View mode section
@@ -13499,10 +13556,16 @@ impl RequirementsApp {
         }
 
         let mut open = true;
+        let max_size = modal_max_size(ctx);
+
         egui::Window::new("View Settings - List 2")
             .collapsible(false)
             .resizable(true)
             .default_width(450.0)
+            .max_width(max_size.x)
+            .max_height(max_size.y)
+            .scroll([false, true])
+            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
             .open(&mut open)
             .show(ctx, |ui| {
                 // View mode section

@@ -3226,12 +3226,12 @@ requirements:
       - If only Title is set: "Title"
       - If only Name is set: "Name"
       - If neither is set: "Requirements Manager"
-  status: Draft
+  status: Approved
   priority: Medium
   owner: ''
   feature: 30-Uncategorized
   created_at: 2025-11-27T22:29:31.052887770Z
-  modified_at: 2025-11-27T22:39:44.745676492Z
+  modified_at: 2025-11-29T19:45:28.298966411Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -3323,6 +3323,13 @@ requirements:
           - If only Title is set: "Title"
           - If only Name is set: "Name"
           - If neither is set: "Requirements Manager"
+  - id: 65036622-4c0e-43dd-83c1-adef741e5cb0
+    author: Unknown User
+    timestamp: 2025-11-29T19:45:28.298965855Z
+    changes:
+    - field_name: status
+      old_value: Draft
+      new_value: Approved
 - id: 0b904a04-4422-4767-a7b6-28b9a721a1b9
   spec_id: MOUSE-0070
   prefix_override: MOUSE
@@ -3517,18 +3524,26 @@ requirements:
       - One-click to switch to any project
 
 
-  status: Draft
+  status: Approved
   priority: Medium
   owner: ''
   feature: 33-Uncategorized
   created_at: 2025-11-28T03:47:02.328158796Z
-  modified_at: 2025-11-28T03:47:02.328158796Z
+  modified_at: 2025-11-29T19:45:19.932360701Z
   req_type: Functional
   dependencies: []
   tags: []
   relationships:
   - rel_type: Parent
     target_id: bb81e51e-dd32-48ef-9806-cf26a09643f5
+  history:
+  - id: a941595f-d2c7-4b0f-8280-e759a8288bb8
+    author: Unknown User
+    timestamp: 2025-11-29T19:45:19.932359958Z
+    changes:
+    - field_name: status
+      old_value: Draft
+      new_value: Approved
 - id: b1ba8347-d9f7-4aee-a1e2-8c96f0ad5d3c
   spec_id: FR-0075
   title: New Project
@@ -3541,18 +3556,26 @@ requirements:
       - Option to include all users from template (default: only current user)
       - Automatically registers new project in the registry
       - Switches to the new project after creation
-  status: Draft
+  status: Approved
   priority: Medium
   owner: ''
   feature: 33-Uncategorized
   created_at: 2025-11-28T03:47:19.429481884Z
-  modified_at: 2025-11-28T03:47:19.429481884Z
+  modified_at: 2025-11-29T19:45:06.769085999Z
   req_type: Functional
   dependencies: []
   tags: []
   relationships:
   - rel_type: Parent
     target_id: bb81e51e-dd32-48ef-9806-cf26a09643f5
+  history:
+  - id: 731c7cdf-d0f1-4e5f-8526-d8228607fc48
+    author: Unknown User
+    timestamp: 2025-11-29T19:45:06.769084832Z
+    changes:
+    - field_name: status
+      old_value: Draft
+      new_value: Approved
 - id: 0b6acb18-ebe2-49b4-ab44-158213504f25
   spec_id: FR-0076
   title: Filtered Parent
@@ -4273,6 +4296,26 @@ requirements:
     target_id: 7fab205a-9f74-48fc-9a20-18581388a22f
     created_at: 2025-11-29T19:27:58.262503497Z
     created_by: Unknown User
+  - rel_type: Child
+    target_id: 5e4ad9bb-99fc-41ab-9fc6-eb5692964b44
+    created_at: 2025-11-29T19:29:03.733401253Z
+    created_by: Unknown User
+  - rel_type: Child
+    target_id: bae7da90-3781-4a92-927f-69e31a008422
+    created_at: 2025-11-29T19:34:32.266350849Z
+    created_by: Unknown User
+  - rel_type: Child
+    target_id: 32de4384-bede-49a0-8aad-0fd0c78d4e54
+    created_at: 2025-11-29T19:47:50.198464215Z
+    created_by: Unknown User
+  - rel_type: Child
+    target_id: 5393145a-5e62-429b-9a56-5df880351518
+    created_at: 2025-11-29T19:48:09.264589478Z
+    created_by: Unknown User
+  - rel_type: Child
+    target_id: 8ca9055b-3302-4768-ae92-fe60cf3d2fd8
+    created_at: 2025-11-29T19:48:55.967577114Z
+    created_by: Unknown User
 - id: 3ef749b7-b220-41f8-9a1d-1545d0c43a7f
   spec_id: FR-0103
   title: Dynamically update ID preview when Type changes in Edit form
@@ -4299,7 +4342,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 48-Uncategorized
   created_at: 2025-11-29T19:27:58.262496482Z
   created_by: Unknown User
   modified_at: 2025-11-29T19:27:58.262496482Z
@@ -4310,6 +4353,101 @@ requirements:
   - rel_type: Parent
     target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
     created_at: 2025-11-29T19:27:58.262503497Z
+    created_by: Unknown User
+- id: 5e4ad9bb-99fc-41ab-9fc6-eb5692964b44
+  spec_id: REQ-0105
+  title: Bug prefix not being used
+  description: Bug prefix not being used, it is using REQ
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 48-Uncategorized
+  created_at: 2025-11-29T19:28:54.366446721Z
+  created_by: Unknown User
+  modified_at: 2025-11-29T19:28:54.366446721Z
+  req_type: Bug
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
+    created_at: 2025-11-29T19:29:03.733401253Z
+    created_by: Unknown User
+- id: bae7da90-3781-4a92-927f-69e31a008422
+  spec_id: FR-0106
+  title: Add - select parent heuristically
+  description: When you click '+ Add' the parent should be the parent of the currently selected requirement, unless the selected requirement has children, in which case make it a child or if the selected requirement has no children and has no parent then make it a root (no parent) requirement.
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 48-Uncategorized
+  created_at: 2025-11-29T19:34:27.501813315Z
+  created_by: Unknown User
+  modified_at: 2025-11-29T19:34:27.501813315Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
+    created_at: 2025-11-29T19:34:32.266350849Z
+    created_by: Unknown User
+- id: 32de4384-bede-49a0-8aad-0fd0c78d4e54
+  spec_id: FR-0107
+  title: Actions should include assigning owner
+  description: ''
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-29T19:47:50.198455813Z
+  created_by: Unknown User
+  modified_at: 2025-11-29T19:47:50.198455813Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
+    created_at: 2025-11-29T19:47:50.198464215Z
+    created_by: Unknown User
+- id: 5393145a-5e62-429b-9a56-5df880351518
+  spec_id: FR-0108
+  title: Owner should be a dropdown
+  description: ''
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-29T19:48:09.264581852Z
+  created_by: Unknown User
+  modified_at: 2025-11-29T19:48:09.264581852Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
+    created_at: 2025-11-29T19:48:09.264589478Z
+    created_by: Unknown User
+- id: 8ca9055b-3302-4768-ae92-fe60cf3d2fd8
+  spec_id: FR-0109
+  title: New users should get name/email from git config
+  description: New users should get name/email from git config if that file exists
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-29T19:48:55.967570378Z
+  created_by: Unknown User
+  modified_at: 2025-11-29T19:48:55.967570378Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
+    created_at: 2025-11-29T19:48:55.967577114Z
     created_by: Unknown User
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
@@ -4363,8 +4501,8 @@ id_config:
     prefix: CR
     description: Change requests for modifications to existing functionality
 features: []
-next_feature_number: 48
-next_spec_number: 105
+next_feature_number: 49
+next_spec_number: 110
 prefix_counters: {}
 relationship_definitions:
 - name: parent
