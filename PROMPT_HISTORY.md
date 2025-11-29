@@ -708,3 +708,34 @@ A chronological record of development sessions and changes made to the Requireme
     - HighContrastDark: RGB(35, 35, 40)
     - SolarizedDark: RGB(7, 54, 66) (base02)
     - Nord: RGB(59, 66, 82) (nord1)
+
+### Stacked Layout Content Clipping Fix
+- **Prompt**: "In the horizontal stacked layout the Details View layout is being clipped after the first line"
+- **Root Cause**: The `SidePanel` and `CentralPanel` for the stacked detail view were wrapped in `ui.horizontal()`, which constrains height to a single row
+- **Solution**: Removed the `ui.horizontal()` wrapper; panels position themselves side-by-side naturally
+- **Actions**:
+  - Removed `ui.horizontal(|ui| { ... });` wrapper around the panels
+  - Fixed indentation of the SidePanel and CentralPanel code
+  - Panels now use full available height in the stacked detail view
+
+### Developer's Guide Documentation
+- **Prompt**: "We have a very nice set of layouts... I need a comprehensive write up on our architecture and implementation"
+- **Solution**: Created comprehensive Developer's Guide at `docs/DEVELOPER_GUIDE.md`
+- **Contents**:
+  - Project overview and technology stack
+  - Project structure (workspace, crates, modules)
+  - Core data model (Requirement, RequirementsStore, relationships)
+  - GUI architecture (RequirementsApp, Views, update loop)
+  - Layout system (5 layout modes with implementation patterns)
+  - Theme system (built-in themes, CustomTheme structure)
+  - State management patterns (pending operations, form state)
+  - Keyboard system (contexts, actions, bindings)
+  - Filtering and perspectives
+  - Configuration and persistence
+  - Common development tasks with code examples:
+    - Adding a new requirement field
+    - Adding a new layout mode
+    - Adding a new dialog
+  - Code patterns and conventions
+  - Troubleshooting guide
+  - Appendices with file locations and line number references
