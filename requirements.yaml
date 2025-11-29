@@ -101,19 +101,30 @@ requirements:
 - id: 93c22e3a-bb6c-4933-9c35-d9b8fd9173c5
   spec_id: FR-0007
   title: Title and description width should be width of window
-  description: the title and description is way too narrow. We should expand to the width of the window.
-  status: Draft
+  description: the title and description text boxes should expand to the width of the window.
+  status: Completed
   priority: Medium
   owner: ''
   feature: 3-Uncategorized
   created_at: 2025-11-25T21:14:25.964300983Z
-  modified_at: 2025-11-25T21:14:25.964300983Z
+  modified_at: 2025-11-29T02:28:14.174447534Z
   req_type: Functional
   dependencies: []
   tags: []
   relationships:
   - rel_type: Parent
     target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
+  history:
+  - id: 1709885b-510a-43d3-84e2-b740c8cfaa6a
+    author: '@joe'
+    timestamp: 2025-11-29T02:28:14.174443320Z
+    changes:
+    - field_name: description
+      old_value: the title and description is way too narrow. We should expand to the width of the window.
+      new_value: the title and description text boxes should expand to the width of the window.
+    - field_name: status
+      old_value: Draft
+      new_value: Completed
 - id: 39824b9c-6ff0-49b9-988d-6819978e547b
   spec_id: FR-0008
   title: comments should be displayed nested
@@ -803,13 +814,13 @@ requirements:
   spec_id: LAYOUT-0028
   prefix_override: LAYOUT
   title: Appearance/Behavior
-  description: ''
+  description: Requirements related to how widgets are layed out and should behave.
   status: Draft
   priority: Medium
   owner: ''
   feature: 18-Uncategorized
   created_at: 2025-11-26T22:56:44.024845680Z
-  modified_at: 2025-11-26T22:59:52.027319658Z
+  modified_at: 2025-11-29T02:27:36.644412019Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -873,6 +884,13 @@ requirements:
     - field_name: title
       old_value: Appearance
       new_value: Appearance/Behavior
+  - id: 5109859a-de40-48e4-b2a8-3a80d90281cd
+    author: '@joe'
+    timestamp: 2025-11-29T02:27:36.644407551Z
+    changes:
+    - field_name: description
+      old_value: ''
+      new_value: Requirements related to how widgets are layed out and should behave.
 - id: 4c3bb89e-2d41-4841-b2ff-881bb67fee99
   spec_id: RELATIONSHIPS-0030
   prefix_override: RELATIONSHIPS
@@ -3947,7 +3965,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 45-Uncategorized
   created_at: 2025-11-29T01:51:21.249079253Z
   created_by: '@joe'
   modified_at: 2025-11-29T01:51:21.249079253Z
@@ -3999,7 +4017,7 @@ id_config:
     prefix: CR
     description: Change requests for modifications to existing functionality
 features: []
-next_feature_number: 45
+next_feature_number: 46
 next_spec_number: 99
 prefix_counters: {}
 relationship_definitions:
@@ -4232,6 +4250,7 @@ allowed_prefixes:
 - FILTER
 - INBOX
 - KEYBOARD
+- LAYOUT
 - MOUSE
 - REQLIST
 - THEME

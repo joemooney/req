@@ -1452,6 +1452,83 @@ enum View {
     Edit,
 }
 
+/// Layout mode defines the panel arrangement
+#[derive(Default, Debug, PartialEq, Clone, Copy)]
+enum LayoutMode {
+    /// Single list only, no details panel
+    ListOnly,
+    /// Two lists side by side (vertical split)
+    SplitVertical,
+    /// Two lists stacked (horizontal split)
+    SplitHorizontal,
+    /// List + Details panel (default)
+    #[default]
+    ListAndDetails,
+}
+
+impl LayoutMode {
+    fn icon(&self) -> &'static str {
+        match self {
+            LayoutMode::ListOnly => "📋",
+            LayoutMode::SplitVertical => "▥",
+            LayoutMode::SplitHorizontal => "▤",
+            LayoutMode::ListAndDetails => "📋📄",
+        }
+    }
+
+    fn tooltip(&self) -> &'static str {
+        match self {
+            LayoutMode::ListOnly => "List only",
+            LayoutMode::SplitVertical => "Split view (side by side)",
+            LayoutMode::SplitHorizontal => "Split view (stacked)",
+            LayoutMode::ListAndDetails => "List + Details",
+        }
+    }
+}
+
+/// Position for the details panel
+#[derive(Default, Debug, PartialEq, Clone, Copy)]
+enum DetailsPosition {
+    /// Details panel on the bottom (default, full width)
+    #[default]
+    Bottom,
+    /// Details panel on the right
+    Right,
+    /// Details panel on the left
+    Left,
+    /// Details panel on top
+    Top,
+}
+
+impl DetailsPosition {
+    fn next(&self) -> Self {
+        match self {
+            DetailsPosition::Bottom => DetailsPosition::Right,
+            DetailsPosition::Right => DetailsPosition::Left,
+            DetailsPosition::Left => DetailsPosition::Top,
+            DetailsPosition::Top => DetailsPosition::Bottom,
+        }
+    }
+
+    fn icon(&self) -> &'static str {
+        match self {
+            DetailsPosition::Bottom => "⬇",
+            DetailsPosition::Right => "➡",
+            DetailsPosition::Left => "⬅",
+            DetailsPosition::Top => "⬆",
+        }
+    }
+
+    fn label(&self) -> &'static str {
+        match self {
+            DetailsPosition::Bottom => "Bottom",
+            DetailsPosition::Right => "Right",
+            DetailsPosition::Left => "Left",
+            DetailsPosition::Top => "Top",
+        }
+    }
+}
+
 /// Perspective defines how requirements are organized in the list
 #[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
 pub(crate) enum Perspective {
@@ -1755,13 +1832,13 @@ pub struct RequirementsApp {
     markdown_cache: CommonMarkCache,
     show_description_preview: bool, // Toggle preview mode in edit form
 
-    // Left panel state
+    // Layout state
     left_panel_collapsed: bool,  // Whether left panel is manually collapsed (in form view)
-    detail_panel_collapsed: bool, // Whether detail panel is collapsed (list-only mode)
-    list_panel_collapsed: bool,   // Whether list panel is collapsed (detail-only mode)
+    layout_mode: LayoutMode,     // Current layout mode (ListOnly, Split, ListAndDetails)
+    details_position: DetailsPosition, // Where details panel appears (Bottom, Right, Left, Top)
+    show_details: bool,          // Whether details panel is visible (in ListAndDetails mode)
 
-    // Split panel (second requirements list)
-    split_panel_open: bool,
+    // Split panel (second requirements list) - used in SplitVertical/SplitHorizontal modes
     split_perspective: Perspective,
     split_perspective_direction: PerspectiveDirection,
     split_filter_text: String,
@@ -2054,9 +2131,9 @@ impl RequirementsApp {
             markdown_cache: CommonMarkCache::default(),
             show_description_preview: false,
             left_panel_collapsed: false,
-            detail_panel_collapsed: false,
-            list_panel_collapsed: false,
-            split_panel_open: false,
+            layout_mode: LayoutMode::ListAndDetails,
+            details_position: DetailsPosition::Bottom,
+            show_details: true,
             split_perspective: Perspective::default(),
             split_perspective_direction: PerspectiveDirection::default(),
             split_filter_text: String::new(),
@@ -3012,6 +3089,91 @@ impl RequirementsApp {
                 }
 
                 ui.separator();
+
+                // Layout mode buttons (only show in List/Detail view, not in Add/Edit forms)
+                let in_form_view = self.current_view == View::Add || self.current_view == View::Edit;
+                if !in_form_view {
+                    // List Only button
+                    let list_only_selected = self.layout_mode == LayoutMode::ListOnly;
+                    if ui.selectable_label(list_only_selected, "📋")
+                        .on_hover_text("List only")
+                        .clicked()
+                    {
+                        self.layout_mode = LayoutMode::ListOnly;
+                    }
+
+                    // Split View dropdown (vertical or horizontal)
+                    let split_selected = self.layout_mode == LayoutMode::SplitVertical
+                        || self.layout_mode == LayoutMode::SplitHorizontal;
+                    let split_icon = if self.layout_mode == LayoutMode::SplitHorizontal {
+                        "▤"
+                    } else {
+                        "▥"
+                    };
+                    ui.menu_button(
+                        egui::RichText::new(split_icon)
+                            .color(if split_selected {
+                                ui.visuals().selection.stroke.color
+                            } else {
+                                ui.visuals().text_color()
+                            }),
+                        |ui| {
+                            if ui.button("▥ Side by side").clicked() {
+                                self.layout_mode = LayoutMode::SplitVertical;
+                                ui.close_menu();
+                            }
+                            if ui.button("▤ Stacked").clicked() {
+                                self.layout_mode = LayoutMode::SplitHorizontal;
+                                ui.close_menu();
+                            }
+                        },
+                    ).response.on_hover_text("Split view");
+
+                    // List + Details button
+                    let list_details_selected = self.layout_mode == LayoutMode::ListAndDetails;
+                    if ui.selectable_label(list_details_selected, "📋📄")
+                        .on_hover_text("List + Details")
+                        .clicked()
+                    {
+                        self.layout_mode = LayoutMode::ListAndDetails;
+                        self.show_details = true;
+                    }
+
+                    // Details position button (only show in ListAndDetails mode)
+                    if self.layout_mode == LayoutMode::ListAndDetails {
+                        ui.separator();
+                        // Show/Hide details toggle
+                        let details_label = if self.show_details { "📄" } else { "📄" };
+                        let details_tooltip = if self.show_details {
+                            format!("Hide details (currently {})", self.details_position.label())
+                        } else {
+                            "Show details".to_string()
+                        };
+                        if ui.button(details_label)
+                            .on_hover_text(&details_tooltip)
+                            .clicked()
+                        {
+                            self.show_details = !self.show_details;
+                        }
+
+                        // Details position button (cycles through positions)
+                        if self.show_details {
+                            let pos_tooltip = format!(
+                                "Details position: {} (click to cycle)",
+                                self.details_position.label()
+                            );
+                            if ui.button(self.details_position.icon())
+                                .on_hover_text(&pos_tooltip)
+                                .clicked()
+                            {
+                                self.details_position = self.details_position.next();
+                            }
+                        }
+                    }
+
+                    ui.separator();
+                }
+
                 ui.label(format!("Requirements: {}", self.store.requirements.len()));
 
                 // Show message
@@ -7209,20 +7371,19 @@ impl RequirementsApp {
 
     fn show_list_panel(&mut self, ctx: &egui::Context, in_form_view: bool, forced_width: Option<f32>) {
         let mut panel = egui::SidePanel::left("list_panel")
-            .min_width(200.0) // Allow narrower panel
+            .min_width(200.0)
             .default_width(400.0);
 
-        // Apply forced width if provided (for equal split when detail is collapsed)
         if let Some(width) = forced_width {
             panel = panel.exact_width(width);
         }
 
         panel.show(ctx, |ui| {
-                // Header with optional collapse button
+                // Header with optional hide button (only in form view)
                 ui.horizontal(|ui| {
                     ui.heading("Requirements");
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if in_form_view {
+                    if in_form_view {
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                             if ui
                                 .button("▶ Hide")
                                 .on_hover_text("Hide requirements list")
@@ -7230,36 +7391,8 @@ impl RequirementsApp {
                             {
                                 self.left_panel_collapsed = true;
                             }
-                        } else {
-                            // In List/Detail view, show buttons to collapse list or detail
-                            // "▶" hides detail panel (focus on list)
-                            if ui
-                                .button("▶")
-                                .on_hover_text("Hide detail panel (focus on list)")
-                                .clicked()
-                            {
-                                self.detail_panel_collapsed = true;
-                            }
-                            // "◀" hides list panel (focus on detail)
-                            if ui
-                                .button("◀")
-                                .on_hover_text("Hide list panel (focus on detail)")
-                                .clicked()
-                            {
-                                self.list_panel_collapsed = true;
-                            }
-                            // Split panel toggle
-                            let split_icon = if self.split_panel_open { "⊟" } else { "⊞" };
-                            let split_tooltip = if self.split_panel_open {
-                                "Close split panel"
-                            } else {
-                                "Open split panel (second list view)"
-                            };
-                            if ui.button(split_icon).on_hover_text(split_tooltip).clicked() {
-                                self.split_panel_open = !self.split_panel_open;
-                            }
-                        }
-                    });
+                        });
+                    }
                 });
                 ui.separator();
 
@@ -7541,10 +7674,11 @@ impl RequirementsApp {
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         if ui
                             .button("⊟")
-                            .on_hover_text("Close split panel")
+                            .on_hover_text("Close split view")
                             .clicked()
                         {
-                            self.split_panel_open = false;
+                            // Return to ListAndDetails mode
+                            self.layout_mode = LayoutMode::ListAndDetails;
                         }
                     });
                 });
@@ -7770,18 +7904,10 @@ impl RequirementsApp {
         }
     }
 
-    /// Show list in the central panel when detail view is collapsed (list-only mode)
-    fn show_list_only_view(&mut self, ui: &mut egui::Ui) {
-        // Header with button to restore detail panel
+    /// Show list content (for use in various layout modes)
+    fn show_list_content(&mut self, ui: &mut egui::Ui, _in_form_view: bool) {
+        // Header
         ui.horizontal(|ui| {
-            if ui
-                .button("◀")
-                .on_hover_text("Show detail panel")
-                .clicked()
-            {
-                self.detail_panel_collapsed = false;
-            }
-            ui.separator();
             ui.heading("Requirements");
         });
         ui.separator();
@@ -8837,6 +8963,59 @@ impl RequirementsApp {
         }
     }
 
+    /// Show split list content (for use in horizontal split layout)
+    fn show_split_list_content(&mut self, ui: &mut egui::Ui) {
+        // Header
+        ui.horizontal(|ui| {
+            ui.heading("Requirements (Split)");
+        });
+        ui.separator();
+
+        // Search bar
+        ui.horizontal(|ui| {
+            ui.label("🔍");
+            ui.add(
+                egui::TextEdit::singleline(&mut self.split_filter_text)
+                    .hint_text("Search...")
+                    .desired_width(200.0),
+            );
+
+            // Filter toggle
+            let filter_active = !self.split_filter_types.is_empty()
+                || !self.split_filter_features.is_empty();
+            let filter_btn_text = if filter_active {
+                "🔽 Filters ●"
+            } else {
+                "🔽 Filters"
+            };
+            if ui.button(filter_btn_text).clicked() {
+                self.split_show_filter_panel = !self.split_show_filter_panel;
+            }
+        });
+
+        // Perspective selector for split panel
+        ui.horizontal(|ui| {
+            ui.label("View:");
+            egui::ComboBox::from_id_salt("split_perspective_combo_content")
+                .selected_text(self.split_perspective.label())
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut self.split_perspective, Perspective::Flat, Perspective::Flat.label());
+                    ui.selectable_value(&mut self.split_perspective, Perspective::ParentChild, Perspective::ParentChild.label());
+                    ui.selectable_value(&mut self.split_perspective, Perspective::Verification, Perspective::Verification.label());
+                    ui.selectable_value(&mut self.split_perspective, Perspective::References, Perspective::References.label());
+                });
+        });
+        ui.separator();
+
+        // Scrollable list content
+        egui::ScrollArea::vertical()
+            .id_salt("split_list_content_scroll")
+            .auto_shrink([false, false])
+            .show(ui, |ui| {
+                self.show_split_list(ui);
+            });
+    }
+
     fn show_detail_view(&mut self, ui: &mut egui::Ui) {
         if let Some(idx) = self.selected_idx {
             if let Some(req) = self.store.requirements.get(idx).cloned() {
@@ -8853,16 +9032,6 @@ impl RequirementsApp {
                 let current_status = req.status.clone();
 
                 ui.horizontal(|ui| {
-                    // Show expand list button when list is collapsed
-                    if self.list_panel_collapsed {
-                        if ui
-                            .button("▶")
-                            .on_hover_text("Show list panel")
-                            .clicked()
-                        {
-                            self.list_panel_collapsed = false;
-                        }
-                    }
                     ui.heading(&req.title);
                     if is_archived {
                         ui.label("(Archived)");
@@ -9092,18 +9261,6 @@ impl RequirementsApp {
                 }
             }
         } else {
-            // Show expand list button when list is collapsed and no requirement selected
-            if self.list_panel_collapsed {
-                ui.horizontal(|ui| {
-                    if ui
-                        .button("▶")
-                        .on_hover_text("Show list panel")
-                        .clicked()
-                    {
-                        self.list_panel_collapsed = false;
-                    }
-                });
-            }
             ui.vertical_centered(|ui| {
                 ui.add_space(100.0);
                 ui.heading("Select a requirement from the list");
@@ -11608,77 +11765,136 @@ impl eframe::App for RequirementsApp {
 
         self.show_top_panel(ctx);
 
-        // Determine if we should show the left panel
-        // In List/Detail view: always show
-        // In Add/Edit view: show if window is wide enough AND not manually collapsed
+        // Determine layout based on current view and layout mode
         let screen_width = ctx.screen_rect().width();
+        let screen_height = ctx.screen_rect().height();
         let min_width_for_side_panel = 900.0; // Minimum width to show side panel in edit mode
         let in_form_view = self.current_view == View::Add || self.current_view == View::Edit;
 
-        // Determine if both panels should have equal width (when detail is collapsed and split is open)
-        let split_equal_width = self.detail_panel_collapsed && self.split_panel_open && !in_form_view;
+        if in_form_view {
+            // In Add/Edit form view, show optional list panel on left
+            let show_left_panel = screen_width >= min_width_for_side_panel && !self.left_panel_collapsed;
 
-        // Calculate equal width for both panels when in split-equal mode
-        let equal_panel_width: Option<f32> = if split_equal_width {
-            // Split screen width equally between the two panels (minus some margin for resizers)
-            Some((screen_width - 20.0) / 2.0)
-        } else {
-            None
-        };
-
-        let show_left_panel = if in_form_view {
-            screen_width >= min_width_for_side_panel && !self.left_panel_collapsed
-        } else if split_equal_width {
-            // When split-equal mode, always show main list panel
-            true
-        } else {
-            // In List/Detail view, show side panel only if:
-            // - detail panel is NOT collapsed (otherwise list is shown in central panel), AND
-            // - list panel is NOT collapsed
-            !self.detail_panel_collapsed && !self.list_panel_collapsed
-        };
-
-        if show_left_panel {
-            self.show_list_panel(ctx, in_form_view, equal_panel_width);
-        }
-
-        // Show split panel (second list view) next to main list if open
-        if self.split_panel_open && !in_form_view {
-            self.show_split_panel(ctx, equal_panel_width);
-        }
-
-        egui::CentralPanel::default().show(ctx, |ui| {
-            // Show panel toggle button in form view when panel is hidden
-            if in_form_view && !show_left_panel {
-                ui.horizontal(|ui| {
-                    if ui
-                        .button("◀ Show List")
-                        .on_hover_text("Show requirements list")
-                        .clicked()
-                    {
-                        self.left_panel_collapsed = false;
-                    }
-                });
-                ui.separator();
+            if show_left_panel {
+                self.show_list_panel(ctx, true, None);
             }
 
-            match &self.current_view {
-                View::List | View::Detail => {
-                    if self.detail_panel_collapsed {
-                        // Show list in full central panel when detail is collapsed
-                        self.show_list_only_view(ui);
+            egui::CentralPanel::default().show(ctx, |ui| {
+                if !show_left_panel {
+                    ui.horizontal(|ui| {
+                        if ui
+                            .button("◀ Show List")
+                            .on_hover_text("Show requirements list")
+                            .clicked()
+                        {
+                            self.left_panel_collapsed = false;
+                        }
+                    });
+                    ui.separator();
+                }
+
+                match &self.current_view {
+                    View::Add => self.show_form(ui, false),
+                    View::Edit => self.show_form(ui, true),
+                    _ => {}
+                }
+            });
+        } else {
+            // In List/Detail view, use layout mode
+            match self.layout_mode {
+                LayoutMode::ListOnly => {
+                    // Single list only - show in central panel
+                    egui::CentralPanel::default().show(ctx, |ui| {
+                        self.show_list_content(ui, false);
+                    });
+                }
+                LayoutMode::SplitVertical => {
+                    // Two lists side by side
+                    let panel_width = (screen_width - 20.0) / 2.0;
+
+                    self.show_list_panel(ctx, false, Some(panel_width));
+                    self.show_split_panel(ctx, Some(panel_width));
+
+                    // Empty central panel (lists take all space)
+                    egui::CentralPanel::default().show(ctx, |_ui| {});
+                }
+                LayoutMode::SplitHorizontal => {
+                    // Two lists stacked (top and bottom)
+                    let panel_height = (screen_height - 60.0) / 2.0; // Account for top panel
+
+                    // Top list
+                    egui::TopBottomPanel::top("split_top_list")
+                        .exact_height(panel_height)
+                        .show(ctx, |ui| {
+                            self.show_list_content(ui, false);
+                        });
+
+                    // Bottom list (in central panel)
+                    egui::CentralPanel::default().show(ctx, |ui| {
+                        self.show_split_list_content(ui);
+                    });
+                }
+                LayoutMode::ListAndDetails => {
+                    if !self.show_details {
+                        // Details hidden - just show list in central panel
+                        egui::CentralPanel::default().show(ctx, |ui| {
+                            self.show_list_content(ui, false);
+                        });
                     } else {
-                        self.show_detail_view(ui);
+                        // Show list and details based on position
+                        match self.details_position {
+                            DetailsPosition::Right => {
+                                // List on left side panel, details in central
+                                self.show_list_panel(ctx, false, None);
+                                egui::CentralPanel::default().show(ctx, |ui| {
+                                    self.show_detail_view(ui);
+                                });
+                            }
+                            DetailsPosition::Left => {
+                                // Details on left side panel, list in central
+                                egui::SidePanel::left("details_left_panel")
+                                    .min_width(300.0)
+                                    .default_width(400.0)
+                                    .show(ctx, |ui| {
+                                        self.show_detail_view(ui);
+                                    });
+                                egui::CentralPanel::default().show(ctx, |ui| {
+                                    self.show_list_content(ui, false);
+                                });
+                            }
+                            DetailsPosition::Bottom => {
+                                // List on top, details on bottom (default)
+                                let list_height = (screen_height - 60.0) * 0.4; // 40% for list
+                                egui::TopBottomPanel::top("list_top_panel")
+                                    .min_height(150.0)
+                                    .default_height(list_height)
+                                    .resizable(true)
+                                    .show(ctx, |ui| {
+                                        self.show_list_content(ui, false);
+                                    });
+                                egui::CentralPanel::default().show(ctx, |ui| {
+                                    self.show_detail_view(ui);
+                                });
+                            }
+                            DetailsPosition::Top => {
+                                // Details on top, list on bottom
+                                let details_height = (screen_height - 60.0) * 0.5;
+                                egui::TopBottomPanel::top("details_top_panel")
+                                    .min_height(150.0)
+                                    .default_height(details_height)
+                                    .resizable(true)
+                                    .show(ctx, |ui| {
+                                        self.show_detail_view(ui);
+                                    });
+                                egui::CentralPanel::default().show(ctx, |ui| {
+                                    self.show_list_content(ui, false);
+                                });
+                            }
+                        }
                     }
                 }
-                View::Add => {
-                    self.show_form(ui, false);
-                }
-                View::Edit => {
-                    self.show_form(ui, true);
-                }
             }
-        });
+        }
 
         // Show settings dialog (modal overlay)
         self.show_settings_dialog(ctx);
