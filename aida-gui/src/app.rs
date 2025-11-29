@@ -11146,125 +11146,112 @@ impl RequirementsApp {
     }
 
     fn show_markdown_help_modal(&mut self, ctx: &egui::Context) {
-        // Disable animation for instant window resizing
-        ctx.style_mut(|style| {
-            style.animation_time = 0.0;
-        });
-
         let max_size = modal_max_size(ctx);
         let modal_width = 700.0_f32.min(max_size.x);
         let modal_height = 500.0_f32.min(max_size.y);
 
-        egui::Window::new("Markdown Help")
-            .collapsible(false)
-            .resizable(true)
-            .default_width(modal_width)
-            .default_height(modal_height)
-            .min_width(400.0)
-            .min_height(300.0)
-            .max_width(max_size.x)
-            .max_height(max_size.y)
-            .scroll([false, true]) // Disable horizontal, enable vertical scrolling
+        // Draw a dark overlay behind the modal
+        let screen_rect = ctx.screen_rect();
+        ctx.layer_painter(egui::LayerId::new(egui::Order::PanelResizeLine, egui::Id::new("modal_overlay")))
+            .rect_filled(screen_rect, 0.0, egui::Color32::from_black_alpha(128));
+
+        // Use egui::Area for direct control over positioning and sizing
+        // This avoids the auto-sizing animation behavior of Window
+        egui::Area::new(egui::Id::new("markdown_help_area"))
+            .order(egui::Order::Foreground)
             .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
             .show(ctx, |ui| {
-                // Force minimum width to prevent content from collapsing
-                ui.set_min_width(modal_width - 20.0);
+                egui::Frame::window(ui.style())
+                    .show(ui, |ui| {
+                        // Force the exact size we want
+                        ui.set_min_size(egui::vec2(modal_width, modal_height));
+                        ui.set_max_size(egui::vec2(modal_width, modal_height));
 
-                let available_width = ui.available_width();
-                let panel_width = (available_width - 20.0) / 2.0; // 20px for separator and margins
-
-                ui.horizontal(|ui| {
-                    // Left panel: Syntax reference
-                    ui.vertical(|ui| {
-                        ui.set_width(panel_width);
-                        ui.heading("Syntax");
-                        ui.separator();
-                        ui.add_space(4.0);
-                        // No scroll area - let the window handle scrolling
-                        ui.scope(|ui| {
-                                // Headers
-                                ui.group(|ui| {
-                                    ui.strong("Headers");
-                                    ui.code("# Heading 1\n## Heading 2\n### Heading 3");
-                                });
-
-                                ui.add_space(6.0);
-
-                                // Text formatting
-                                ui.group(|ui| {
-                                    ui.strong("Text Formatting");
-                                    ui.code("**bold**\n*italic*\n~~strikethrough~~\n`inline code`");
-                                });
-
-                                ui.add_space(6.0);
-
-                                // Lists
-                                ui.group(|ui| {
-                                    ui.strong("Lists");
-                                    ui.code("- Item 1\n- Item 2\n  - Nested item\n\n1. First\n2. Second");
-                                });
-
-                                ui.add_space(6.0);
-
-                                // Links
-                                ui.group(|ui| {
-                                    ui.strong("Links");
-                                    ui.code("[Link text](https://example.com)");
-                                });
-
-                                ui.add_space(6.0);
-
-                                // Code blocks
-                                ui.group(|ui| {
-                                    ui.strong("Code Blocks");
-                                    ui.code("```\ncode block\n```\n\n```rust\nfn main() { }\n```");
-                                });
-
-                                ui.add_space(6.0);
-
-                                // Blockquotes
-                                ui.group(|ui| {
-                                    ui.strong("Blockquotes");
-                                    ui.code("> This is a quote");
-                                });
-
-                                ui.add_space(6.0);
-
-                                // Horizontal rule
-                                ui.group(|ui| {
-                                    ui.strong("Horizontal Rule");
-                                    ui.code("---");
-                                });
-
-                                ui.add_space(6.0);
-
-                                // Tables
-                                ui.group(|ui| {
-                                    ui.strong("Tables");
-                                    ui.code("| H1 | H2 |\n|----|----|\n| A  | B  |");
-                                });
-
-                                ui.add_space(6.0);
-
-                                // Task lists
-                                ui.group(|ui| {
-                                    ui.strong("Task Lists");
-                                    ui.code("- [ ] Todo\n- [x] Done");
-                                });
+                        // Title bar
+                        ui.horizontal(|ui| {
+                            ui.heading("Markdown Help");
+                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                if ui.button("✕").clicked() {
+                                    self.show_markdown_help = false;
+                                }
                             });
-                    });
-
-                    ui.separator();
-
-                    // Right panel: Live preview
-                    ui.vertical(|ui| {
-                        ui.set_width(panel_width);
-                        ui.heading("Preview");
+                        });
                         ui.separator();
-                        ui.add_space(4.0);
-                        // No scroll area - let the window handle scrolling
-                        // Sample markdown that demonstrates all features
-                        let sample_markdown = r#"# Heading 1
+
+                        // Content area with scrolling
+                        let content_height = modal_height - 80.0; // Reserve space for title and close button
+                        egui::ScrollArea::vertical()
+                            .max_height(content_height)
+                            .show(ui, |ui| {
+                                ui.set_min_width(modal_width - 30.0);
+
+                                let available_width = ui.available_width();
+                                let panel_width = (available_width - 20.0) / 2.0;
+
+                                ui.horizontal(|ui| {
+                                    // Left panel: Syntax reference
+                                    ui.vertical(|ui| {
+                                        ui.set_width(panel_width);
+                                        ui.heading("Syntax");
+                                        ui.separator();
+                                        ui.add_space(4.0);
+
+                                        ui.group(|ui| {
+                                            ui.strong("Headers");
+                                            ui.code("# Heading 1\n## Heading 2\n### Heading 3");
+                                        });
+                                        ui.add_space(6.0);
+                                        ui.group(|ui| {
+                                            ui.strong("Text Formatting");
+                                            ui.code("**bold**\n*italic*\n~~strikethrough~~\n`inline code`");
+                                        });
+                                        ui.add_space(6.0);
+                                        ui.group(|ui| {
+                                            ui.strong("Lists");
+                                            ui.code("- Item 1\n- Item 2\n  - Nested item\n\n1. First\n2. Second");
+                                        });
+                                        ui.add_space(6.0);
+                                        ui.group(|ui| {
+                                            ui.strong("Links");
+                                            ui.code("[Link text](https://example.com)");
+                                        });
+                                        ui.add_space(6.0);
+                                        ui.group(|ui| {
+                                            ui.strong("Code Blocks");
+                                            ui.code("```\ncode block\n```\n\n```rust\nfn main() { }\n```");
+                                        });
+                                        ui.add_space(6.0);
+                                        ui.group(|ui| {
+                                            ui.strong("Blockquotes");
+                                            ui.code("> This is a quote");
+                                        });
+                                        ui.add_space(6.0);
+                                        ui.group(|ui| {
+                                            ui.strong("Horizontal Rule");
+                                            ui.code("---");
+                                        });
+                                        ui.add_space(6.0);
+                                        ui.group(|ui| {
+                                            ui.strong("Tables");
+                                            ui.code("| H1 | H2 |\n|----|----|\n| A  | B  |");
+                                        });
+                                        ui.add_space(6.0);
+                                        ui.group(|ui| {
+                                            ui.strong("Task Lists");
+                                            ui.code("- [ ] Todo\n- [x] Done");
+                                        });
+                                    });
+
+                                    ui.separator();
+
+                                    // Right panel: Live preview
+                                    ui.vertical(|ui| {
+                                        ui.set_width(panel_width);
+                                        ui.heading("Preview");
+                                        ui.separator();
+                                        ui.add_space(4.0);
+
+                                        let sample_markdown = r#"# Heading 1
 ## Heading 2
 ### Heading 3
 
@@ -11298,18 +11285,20 @@ fn main() {
 - [ ] Todo
 - [x] Done
 "#;
-                        CommonMarkViewer::new()
-                            .show(ui, &mut self.markdown_cache, sample_markdown);
-                    });
-                });
+                                        CommonMarkViewer::new()
+                                            .show(ui, &mut self.markdown_cache, sample_markdown);
+                                    });
+                                });
+                            });
 
-                ui.add_space(8.0);
-                ui.separator();
-                ui.horizontal(|ui| {
-                    if ui.button("Close").clicked() {
-                        self.show_markdown_help = false;
-                    }
-                });
+                        ui.add_space(8.0);
+                        ui.separator();
+                        ui.horizontal(|ui| {
+                            if ui.button("Close").clicked() {
+                                self.show_markdown_help = false;
+                            }
+                        });
+                    });
             });
     }
 

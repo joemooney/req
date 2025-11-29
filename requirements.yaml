@@ -4320,6 +4320,14 @@ requirements:
     target_id: 216f572f-a9dd-4b3d-af93-b2ab39d60757
     created_at: 2025-11-29T19:50:26.797480119Z
     created_by: Unknown User
+  - rel_type: Child
+    target_id: cc937e52-dd05-4dd9-a75b-ae5cc8ca95b9
+    created_at: 2025-11-29T21:30:28.397461271Z
+    created_by: Unknown User
+  - rel_type: Child
+    target_id: 3a4bc953-af23-4573-879e-6dcd1a2f2fb8
+    created_at: 2025-11-29T21:31:29.234392023Z
+    created_by: Unknown User
 - id: 3ef749b7-b220-41f8-9a1d-1545d0c43a7f
   spec_id: FR-0103
   title: Dynamically update ID preview when Type changes in Edit form
@@ -4403,7 +4411,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 49-Uncategorized
   created_at: 2025-11-29T19:47:50.198455813Z
   created_by: Unknown User
   modified_at: 2025-11-29T19:47:50.198455813Z
@@ -4422,7 +4430,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 49-Uncategorized
   created_at: 2025-11-29T19:48:09.264581852Z
   created_by: Unknown User
   modified_at: 2025-11-29T19:48:09.264581852Z
@@ -4441,7 +4449,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 49-Uncategorized
   created_at: 2025-11-29T19:48:55.967570378Z
   created_by: Unknown User
   modified_at: 2025-11-29T19:48:55.967570378Z
@@ -4460,7 +4468,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 49-Uncategorized
   created_at: 2025-11-29T19:50:26.797473616Z
   created_by: Unknown User
   modified_at: 2025-11-29T19:50:26.797473616Z
@@ -4471,6 +4479,44 @@ requirements:
   - rel_type: Parent
     target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
     created_at: 2025-11-29T19:50:26.797480119Z
+    created_by: Unknown User
+- id: cc937e52-dd05-4dd9-a75b-ae5cc8ca95b9
+  spec_id: FR-0111
+  title: Modal dialoags 'x' icon to close in top right
+  description: Modal dialoags 'x' icon to close in top right, make sense?
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 50-Uncategorized
+  created_at: 2025-11-29T21:30:28.397453888Z
+  created_by: Unknown User
+  modified_at: 2025-11-29T21:30:28.397453888Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
+    created_at: 2025-11-29T21:30:28.397461271Z
+    created_by: Unknown User
+- id: 3a4bc953-af23-4573-879e-6dcd1a2f2fb8
+  spec_id: FR-0112
+  title: Role support
+  description: 'Support for different roles. '
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 50-Uncategorized
+  created_at: 2025-11-29T21:31:29.234371177Z
+  created_by: Unknown User
+  modified_at: 2025-11-29T21:31:29.234371177Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
+    created_at: 2025-11-29T21:31:29.234392023Z
     created_by: Unknown User
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
@@ -4524,8 +4570,8 @@ id_config:
     prefix: CR
     description: Change requests for modifications to existing functionality
 features: []
-next_feature_number: 49
-next_spec_number: 111
+next_feature_number: 51
+next_spec_number: 113
 prefix_counters: {}
 relationship_definitions:
 - name: parent
