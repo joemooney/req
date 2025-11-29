@@ -1452,79 +1452,63 @@ enum View {
     Edit,
 }
 
-/// Layout mode defines the panel arrangement
+/// Layout mode defines the panel arrangement (cycles through 4 predefined layouts)
 #[derive(Default, Debug, PartialEq, Clone, Copy)]
 enum LayoutMode {
-    /// Single list only, no details panel
-    ListOnly,
-    /// Two lists side by side (vertical split)
-    SplitVertical,
-    /// Two lists stacked (horizontal split)
-    SplitHorizontal,
-    /// List + Details panel (default)
+    /// List on left, Details on right (side-by-side) - default
     #[default]
-    ListAndDetails,
+    ListDetailsSide,
+    /// List on top, Details on bottom (stacked)
+    ListDetailsStacked,
+    /// Two lists side-by-side on top, Details on bottom
+    SplitListDetails,
+    /// Two lists side-by-side, no details
+    SplitListOnly,
 }
 
 impl LayoutMode {
-    fn icon(&self) -> &'static str {
-        match self {
-            LayoutMode::ListOnly => "📋",
-            LayoutMode::SplitVertical => "▥",
-            LayoutMode::SplitHorizontal => "▤",
-            LayoutMode::ListAndDetails => "📋📄",
-        }
-    }
-
-    fn tooltip(&self) -> &'static str {
-        match self {
-            LayoutMode::ListOnly => "List only",
-            LayoutMode::SplitVertical => "Split view (side by side)",
-            LayoutMode::SplitHorizontal => "Split view (stacked)",
-            LayoutMode::ListAndDetails => "List + Details",
-        }
-    }
-}
-
-/// Position for the details panel
-#[derive(Default, Debug, PartialEq, Clone, Copy)]
-enum DetailsPosition {
-    /// Details panel on the bottom (default, full width)
-    #[default]
-    Bottom,
-    /// Details panel on the right
-    Right,
-    /// Details panel on the left
-    Left,
-    /// Details panel on top
-    Top,
-}
-
-impl DetailsPosition {
+    /// Cycle to the next layout in sequence
     fn next(&self) -> Self {
         match self {
-            DetailsPosition::Bottom => DetailsPosition::Right,
-            DetailsPosition::Right => DetailsPosition::Left,
-            DetailsPosition::Left => DetailsPosition::Top,
-            DetailsPosition::Top => DetailsPosition::Bottom,
-        }
-    }
-
-    fn icon(&self) -> &'static str {
-        match self {
-            DetailsPosition::Bottom => "⬇",
-            DetailsPosition::Right => "➡",
-            DetailsPosition::Left => "⬅",
-            DetailsPosition::Top => "⬆",
+            LayoutMode::ListDetailsSide => LayoutMode::ListDetailsStacked,
+            LayoutMode::ListDetailsStacked => LayoutMode::SplitListDetails,
+            LayoutMode::SplitListDetails => LayoutMode::SplitListOnly,
+            LayoutMode::SplitListOnly => LayoutMode::ListDetailsSide,
         }
     }
 
     fn label(&self) -> &'static str {
         match self {
-            DetailsPosition::Bottom => "Bottom",
-            DetailsPosition::Right => "Right",
-            DetailsPosition::Left => "Left",
-            DetailsPosition::Top => "Top",
+            LayoutMode::ListDetailsSide => "List | Details",
+            LayoutMode::ListDetailsStacked => "List / Details",
+            LayoutMode::SplitListDetails => "List | List / Details",
+            LayoutMode::SplitListOnly => "List | List",
+        }
+    }
+
+    fn has_details(&self) -> bool {
+        matches!(self, LayoutMode::ListDetailsSide | LayoutMode::ListDetailsStacked | LayoutMode::SplitListDetails)
+    }
+
+    fn has_split(&self) -> bool {
+        matches!(self, LayoutMode::SplitListDetails | LayoutMode::SplitListOnly)
+    }
+
+    /// Get the layout to transition to when closing the details panel
+    fn without_details(&self) -> Self {
+        match self {
+            LayoutMode::ListDetailsSide | LayoutMode::ListDetailsStacked => LayoutMode::SplitListOnly,
+            LayoutMode::SplitListDetails => LayoutMode::SplitListOnly,
+            LayoutMode::SplitListOnly => LayoutMode::SplitListOnly, // Already no details
+        }
+    }
+
+    /// Get the layout to transition to when closing the split panel
+    fn without_split(&self) -> Self {
+        match self {
+            LayoutMode::SplitListDetails => LayoutMode::ListDetailsStacked,
+            LayoutMode::SplitListOnly => LayoutMode::ListDetailsSide,
+            _ => *self, // Already no split
         }
     }
 }
@@ -1834,11 +1818,9 @@ pub struct RequirementsApp {
 
     // Layout state
     left_panel_collapsed: bool,  // Whether left panel is manually collapsed (in form view)
-    layout_mode: LayoutMode,     // Current layout mode (ListOnly, Split, ListAndDetails)
-    details_position: DetailsPosition, // Where details panel appears (Bottom, Right, Left, Top)
-    show_details: bool,          // Whether details panel is visible (in ListAndDetails mode)
+    layout_mode: LayoutMode,     // Current layout mode (cycles through 4 layouts)
 
-    // Split panel (second requirements list) - used in SplitVertical/SplitHorizontal modes
+    // Split panel (second requirements list) - used in split layouts
     split_perspective: Perspective,
     split_perspective_direction: PerspectiveDirection,
     split_filter_text: String,
@@ -2131,9 +2113,7 @@ impl RequirementsApp {
             markdown_cache: CommonMarkCache::default(),
             show_description_preview: false,
             left_panel_collapsed: false,
-            layout_mode: LayoutMode::ListAndDetails,
-            details_position: DetailsPosition::Bottom,
-            show_details: true,
+            layout_mode: LayoutMode::ListDetailsSide,
             split_perspective: Perspective::default(),
             split_perspective_direction: PerspectiveDirection::default(),
             split_filter_text: String::new(),
@@ -3088,92 +3068,23 @@ impl RequirementsApp {
                     self.pending_view_change = Some(View::Add);
                 }
 
-                ui.separator();
-
-                // Layout mode buttons (only show in List/Detail view, not in Add/Edit forms)
+                // Layout cycle button (only show in List/Detail view, not in Add/Edit forms)
                 let in_form_view = self.current_view == View::Add || self.current_view == View::Edit;
                 if !in_form_view {
-                    // List Only button
-                    let list_only_selected = self.layout_mode == LayoutMode::ListOnly;
-                    if ui.selectable_label(list_only_selected, "📋")
-                        .on_hover_text("List only")
-                        .clicked()
-                    {
-                        self.layout_mode = LayoutMode::ListOnly;
-                    }
-
-                    // Split View dropdown (vertical or horizontal)
-                    let split_selected = self.layout_mode == LayoutMode::SplitVertical
-                        || self.layout_mode == LayoutMode::SplitHorizontal;
-                    let split_icon = if self.layout_mode == LayoutMode::SplitHorizontal {
-                        "▤"
-                    } else {
-                        "▥"
-                    };
-                    ui.menu_button(
-                        egui::RichText::new(split_icon)
-                            .color(if split_selected {
-                                ui.visuals().selection.stroke.color
-                            } else {
-                                ui.visuals().text_color()
-                            }),
-                        |ui| {
-                            if ui.button("▥ Side by side").clicked() {
-                                self.layout_mode = LayoutMode::SplitVertical;
-                                ui.close_menu();
-                            }
-                            if ui.button("▤ Stacked").clicked() {
-                                self.layout_mode = LayoutMode::SplitHorizontal;
-                                ui.close_menu();
-                            }
-                        },
-                    ).response.on_hover_text("Split view");
-
-                    // List + Details button
-                    let list_details_selected = self.layout_mode == LayoutMode::ListAndDetails;
-                    if ui.selectable_label(list_details_selected, "📋📄")
-                        .on_hover_text("List + Details")
-                        .clicked()
-                    {
-                        self.layout_mode = LayoutMode::ListAndDetails;
-                        self.show_details = true;
-                    }
-
-                    // Details position button (only show in ListAndDetails mode)
-                    if self.layout_mode == LayoutMode::ListAndDetails {
-                        ui.separator();
-                        // Show/Hide details toggle
-                        let details_label = if self.show_details { "📄" } else { "📄" };
-                        let details_tooltip = if self.show_details {
-                            format!("Hide details (currently {})", self.details_position.label())
-                        } else {
-                            "Show details".to_string()
-                        };
-                        if ui.button(details_label)
-                            .on_hover_text(&details_tooltip)
-                            .clicked()
-                        {
-                            self.show_details = !self.show_details;
-                        }
-
-                        // Details position button (cycles through positions)
-                        if self.show_details {
-                            let pos_tooltip = format!(
-                                "Details position: {} (click to cycle)",
-                                self.details_position.label()
-                            );
-                            if ui.button(self.details_position.icon())
-                                .on_hover_text(&pos_tooltip)
-                                .clicked()
-                            {
-                                self.details_position = self.details_position.next();
-                            }
-                        }
-                    }
-
                     ui.separator();
+                    let layout_tooltip = format!(
+                        "Layout: {} (click to cycle)",
+                        self.layout_mode.label()
+                    );
+                    if ui.button("⊞")
+                        .on_hover_text(&layout_tooltip)
+                        .clicked()
+                    {
+                        self.layout_mode = self.layout_mode.next();
+                    }
                 }
 
+                ui.separator();
                 ui.label(format!("Requirements: {}", self.store.requirements.len()));
 
                 // Show message
@@ -7677,8 +7588,8 @@ impl RequirementsApp {
                             .on_hover_text("Close split view")
                             .clicked()
                         {
-                            // Return to ListAndDetails mode
-                            self.layout_mode = LayoutMode::ListAndDetails;
+                            // Return to ListDetailsSide mode
+                            self.layout_mode = LayoutMode::ListDetailsSide;
                         }
                     });
                 });
@@ -9010,6 +8921,198 @@ impl RequirementsApp {
         // Scrollable list content
         egui::ScrollArea::vertical()
             .id_salt("split_list_content_scroll")
+            .auto_shrink([false, false])
+            .show(ui, |ui| {
+                self.show_split_list(ui);
+            });
+    }
+
+    /// Show list panel with close button (for layouts where panel can be closed)
+    fn show_list_panel_with_close(&mut self, ctx: &egui::Context, in_form_view: bool) {
+        egui::SidePanel::left("list_panel")
+            .min_width(200.0)
+            .default_width(400.0)
+            .show(ctx, |ui| {
+                // Header with close button (only if we have more than just this panel)
+                ui.horizontal(|ui| {
+                    ui.heading("Requirements");
+                    // Only show close button if we're in a split layout
+                    if self.layout_mode.has_split() {
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            if ui.button("✕").on_hover_text("Close this list").clicked() {
+                                self.layout_mode = self.layout_mode.without_split();
+                            }
+                        });
+                    } else if in_form_view {
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            if ui.button("▶ Hide").on_hover_text("Hide requirements list").clicked() {
+                                self.left_panel_collapsed = true;
+                            }
+                        });
+                    }
+                });
+                ui.separator();
+
+                // Rest of list content (search, filters, etc.)
+                self.show_list_panel_content(ui);
+            });
+    }
+
+    /// Show split panel with close button
+    fn show_split_panel_with_close(&mut self, ctx: &egui::Context, forced_width: Option<f32>) {
+        let mut panel = egui::SidePanel::left("split_panel")
+            .min_width(200.0)
+            .default_width(350.0);
+
+        if let Some(width) = forced_width {
+            panel = panel.exact_width(width);
+        }
+
+        panel.show(ctx, |ui| {
+            // Header with close button
+            ui.horizontal(|ui| {
+                ui.heading("Requirements");
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui.button("✕").on_hover_text("Close this list").clicked() {
+                        self.layout_mode = self.layout_mode.without_split();
+                    }
+                });
+            });
+            ui.separator();
+
+            // Split panel content
+            self.show_split_panel_content(ui);
+        });
+    }
+
+    /// Show list content with close button (for stacked layouts)
+    fn show_list_content_with_close(&mut self, ui: &mut egui::Ui, _in_form_view: bool) {
+        // Header with close button (only if we're in a split layout)
+        ui.horizontal(|ui| {
+            ui.heading("Requirements");
+            if self.layout_mode.has_split() {
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui.button("✕").on_hover_text("Close this list").clicked() {
+                        self.layout_mode = self.layout_mode.without_split();
+                    }
+                });
+            }
+        });
+        ui.separator();
+
+        // Search bar and rest of list content
+        self.show_list_panel_content(ui);
+    }
+
+    /// Show list content in a column (for side-by-side splits)
+    fn show_list_content_in_column(&mut self, ui: &mut egui::Ui, _in_form_view: bool) {
+        // Header with close button
+        ui.horizontal(|ui| {
+            ui.heading("List 1");
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                if ui.button("✕").on_hover_text("Close this list").clicked() {
+                    self.layout_mode = self.layout_mode.without_split();
+                }
+            });
+        });
+        ui.separator();
+
+        // Simplified list content for column
+        egui::ScrollArea::vertical()
+            .id_salt("list_column_scroll")
+            .auto_shrink([false, false])
+            .show(ui, |ui| {
+                self.show_tree_list(ui);
+            });
+    }
+
+    /// Show split list content in a column (for side-by-side splits)
+    fn show_split_list_content_in_column(&mut self, ui: &mut egui::Ui) {
+        // Header with close button
+        ui.horizontal(|ui| {
+            ui.heading("List 2");
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                if ui.button("✕").on_hover_text("Close this list").clicked() {
+                    self.layout_mode = self.layout_mode.without_split();
+                }
+            });
+        });
+        ui.separator();
+
+        // Simplified split list content for column
+        egui::ScrollArea::vertical()
+            .id_salt("split_column_scroll")
+            .auto_shrink([false, false])
+            .show(ui, |ui| {
+                self.show_split_list(ui);
+            });
+    }
+
+    /// Show detail view with close button
+    fn show_detail_view_with_close(&mut self, ui: &mut egui::Ui) {
+        // Add close button if we have details
+        if self.layout_mode.has_details() {
+            ui.horizontal(|ui| {
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui.button("✕").on_hover_text("Close details").clicked() {
+                        self.layout_mode = self.layout_mode.without_details();
+                    }
+                });
+            });
+        }
+        self.show_detail_view(ui);
+    }
+
+    /// Helper to show list panel content (search, filters, list)
+    fn show_list_panel_content(&mut self, ui: &mut egui::Ui) {
+        // Search bar
+        ui.horizontal(|ui| {
+            ui.label("🔍");
+            ui.add(
+                egui::TextEdit::singleline(&mut self.filter_text)
+                    .hint_text("Search...")
+                    .desired_width(150.0),
+            );
+
+            // Filter toggle button
+            let filter_active = !self.filter_types.is_empty() || !self.filter_features.is_empty();
+            let filter_btn_text = if filter_active { "🔽 ●" } else { "🔽" };
+            if ui.button(filter_btn_text).on_hover_text("Filters").clicked() {
+                self.show_filter_panel = !self.show_filter_panel;
+            }
+        });
+
+        // Scrollable list
+        egui::ScrollArea::vertical()
+            .id_salt("list_panel_scroll")
+            .auto_shrink([false, false])
+            .show(ui, |ui| {
+                self.show_tree_list(ui);
+            });
+    }
+
+    /// Helper to show split panel content (search, filters, list)
+    fn show_split_panel_content(&mut self, ui: &mut egui::Ui) {
+        // Search bar
+        ui.horizontal(|ui| {
+            ui.label("🔍");
+            ui.add(
+                egui::TextEdit::singleline(&mut self.split_filter_text)
+                    .hint_text("Search...")
+                    .desired_width(120.0),
+            );
+
+            // Filter toggle
+            let filter_active = !self.split_filter_types.is_empty() || !self.split_filter_features.is_empty();
+            let filter_btn_text = if filter_active { "🔽 ●" } else { "🔽" };
+            if ui.button(filter_btn_text).on_hover_text("Filters").clicked() {
+                self.split_show_filter_panel = !self.split_show_filter_panel;
+            }
+        });
+
+        // Scrollable list
+        egui::ScrollArea::vertical()
+            .id_salt("split_panel_scroll")
             .auto_shrink([false, false])
             .show(ui, |ui| {
                 self.show_split_list(ui);
@@ -11802,96 +11905,51 @@ impl eframe::App for RequirementsApp {
         } else {
             // In List/Detail view, use layout mode
             match self.layout_mode {
-                LayoutMode::ListOnly => {
-                    // Single list only - show in central panel
+                LayoutMode::ListDetailsSide => {
+                    // List on left, Details on right (side-by-side) - default
+                    self.show_list_panel_with_close(ctx, false);
                     egui::CentralPanel::default().show(ctx, |ui| {
-                        self.show_list_content(ui, false);
+                        self.show_detail_view_with_close(ui);
                     });
                 }
-                LayoutMode::SplitVertical => {
-                    // Two lists side by side
-                    let panel_width = (screen_width - 20.0) / 2.0;
-
-                    self.show_list_panel(ctx, false, Some(panel_width));
-                    self.show_split_panel(ctx, Some(panel_width));
-
-                    // Empty central panel (lists take all space)
-                    egui::CentralPanel::default().show(ctx, |_ui| {});
-                }
-                LayoutMode::SplitHorizontal => {
-                    // Two lists stacked (top and bottom)
-                    let panel_height = (screen_height - 60.0) / 2.0; // Account for top panel
-
-                    // Top list
-                    egui::TopBottomPanel::top("split_top_list")
-                        .exact_height(panel_height)
+                LayoutMode::ListDetailsStacked => {
+                    // List on top, Details on bottom (stacked)
+                    let list_height = (screen_height - 60.0) * 0.4;
+                    egui::TopBottomPanel::top("list_top_panel")
+                        .min_height(150.0)
+                        .default_height(list_height)
+                        .resizable(true)
                         .show(ctx, |ui| {
-                            self.show_list_content(ui, false);
+                            self.show_list_content_with_close(ui, false);
                         });
-
-                    // Bottom list (in central panel)
                     egui::CentralPanel::default().show(ctx, |ui| {
-                        self.show_split_list_content(ui);
+                        self.show_detail_view_with_close(ui);
                     });
                 }
-                LayoutMode::ListAndDetails => {
-                    if !self.show_details {
-                        // Details hidden - just show list in central panel
-                        egui::CentralPanel::default().show(ctx, |ui| {
-                            self.show_list_content(ui, false);
+                LayoutMode::SplitListDetails => {
+                    // Two lists side-by-side on top, Details on bottom
+                    let list_height = (screen_height - 60.0) * 0.4;
+                    egui::TopBottomPanel::top("split_lists_top")
+                        .min_height(150.0)
+                        .default_height(list_height)
+                        .resizable(true)
+                        .show(ctx, |ui| {
+                            // Two lists side by side
+                            ui.columns(2, |columns| {
+                                self.show_list_content_in_column(&mut columns[0], false);
+                                self.show_split_list_content_in_column(&mut columns[1]);
+                            });
                         });
-                    } else {
-                        // Show list and details based on position
-                        match self.details_position {
-                            DetailsPosition::Right => {
-                                // List on left side panel, details in central
-                                self.show_list_panel(ctx, false, None);
-                                egui::CentralPanel::default().show(ctx, |ui| {
-                                    self.show_detail_view(ui);
-                                });
-                            }
-                            DetailsPosition::Left => {
-                                // Details on left side panel, list in central
-                                egui::SidePanel::left("details_left_panel")
-                                    .min_width(300.0)
-                                    .default_width(400.0)
-                                    .show(ctx, |ui| {
-                                        self.show_detail_view(ui);
-                                    });
-                                egui::CentralPanel::default().show(ctx, |ui| {
-                                    self.show_list_content(ui, false);
-                                });
-                            }
-                            DetailsPosition::Bottom => {
-                                // List on top, details on bottom (default)
-                                let list_height = (screen_height - 60.0) * 0.4; // 40% for list
-                                egui::TopBottomPanel::top("list_top_panel")
-                                    .min_height(150.0)
-                                    .default_height(list_height)
-                                    .resizable(true)
-                                    .show(ctx, |ui| {
-                                        self.show_list_content(ui, false);
-                                    });
-                                egui::CentralPanel::default().show(ctx, |ui| {
-                                    self.show_detail_view(ui);
-                                });
-                            }
-                            DetailsPosition::Top => {
-                                // Details on top, list on bottom
-                                let details_height = (screen_height - 60.0) * 0.5;
-                                egui::TopBottomPanel::top("details_top_panel")
-                                    .min_height(150.0)
-                                    .default_height(details_height)
-                                    .resizable(true)
-                                    .show(ctx, |ui| {
-                                        self.show_detail_view(ui);
-                                    });
-                                egui::CentralPanel::default().show(ctx, |ui| {
-                                    self.show_list_content(ui, false);
-                                });
-                            }
-                        }
-                    }
+                    egui::CentralPanel::default().show(ctx, |ui| {
+                        self.show_detail_view_with_close(ui);
+                    });
+                }
+                LayoutMode::SplitListOnly => {
+                    // Two lists side-by-side, no details
+                    let panel_width = (screen_width - 20.0) / 2.0;
+                    self.show_list_panel_with_close(ctx, false);
+                    self.show_split_panel_with_close(ctx, Some(panel_width));
+                    egui::CentralPanel::default().show(ctx, |_ui| {});
                 }
             }
         }
