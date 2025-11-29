@@ -860,3 +860,31 @@ A chronological record of development sessions and changes made to the Requireme
   - List panel has search bar, filter button, scrollable tree list
   - `CentralPanel` below contains the form via `show_form_stacked()`
 - **Result**: Edit View in stacked mode now matches Detail View with list on top, form on bottom
+
+### User-Defined Theme Files
+- **Prompt**: "Should there be a default aida_gui_settings.yaml that we keep in git?" / "yes that sounds good to implement user-defined theme files and Keep the built-in themes compiled in as fallbacks"
+- **Solution**: Added support for loading custom themes from `~/.config/aida/themes/` directory
+- **Implementation** (in `app.rs`):
+  - New helper function `themes_dir()` returns and creates `~/.config/aida/themes/` directory
+  - `load_file_themes()` scans the themes directory for `.yaml`/`.yml` files and deserializes them
+  - `save_theme_to_file()` exports a theme as a YAML file to the themes directory
+  - Modified `UserSettings::load()` to merge file-based themes with embedded themes
+  - Added "Export to File" button in Theme Editor to save current theme to a file
+- **Result**: Users can now create, export, and share custom themes as YAML files. Built-in themes remain compiled in as fallbacks.
+
+### Modal Window Size Constraints
+- **Prompt**: "Modals should not be taller or wider than the window. We should use scrollbars (as needed) so that we never exceed a certain percentage of window height and width. The markdown Help for example can be very tall."
+- **Solution**: Added helper functions and constraints to limit modal windows to 90% width and 85% height of the main window
+- **Implementation** (in `app.rs`):
+  - Added constants `MODAL_MAX_WIDTH_PERCENT` (0.90) and `MODAL_MAX_HEIGHT_PERCENT` (0.85)
+  - New helper function `modal_max_size(ctx)` calculates max dimensions from screen rect
+  - New helper function `constrained_modal_size(ctx, width, height)` clamps sizes to max
+  - Updated modals to use `.max_width()`, `.max_height()`, and `.scroll()`:
+    - Markdown Help modal
+    - Settings dialog
+    - Theme Editor
+    - Switch Project dialog
+    - New Project dialog
+    - Status & Priority Icons dialog
+    - View Settings (List 1 and List 2)
+- **Result**: All modal windows now respect window boundaries and show scrollbars when content exceeds available space

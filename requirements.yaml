@@ -4316,6 +4316,10 @@ requirements:
     target_id: 8ca9055b-3302-4768-ae92-fe60cf3d2fd8
     created_at: 2025-11-29T19:48:55.967577114Z
     created_by: Unknown User
+  - rel_type: Child
+    target_id: 216f572f-a9dd-4b3d-af93-b2ab39d60757
+    created_at: 2025-11-29T19:50:26.797480119Z
+    created_by: Unknown User
 - id: 3ef749b7-b220-41f8-9a1d-1545d0c43a7f
   spec_id: FR-0103
   title: Dynamically update ID preview when Type changes in Edit form
@@ -4449,6 +4453,25 @@ requirements:
     target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
     created_at: 2025-11-29T19:48:55.967577114Z
     created_by: Unknown User
+- id: 216f572f-a9dd-4b3d-af93-b2ab39d60757
+  spec_id: FR-0110
+  title: For Add requirement, if not title is provided use first line of description as title.
+  description: For Add requirement, if not title is provided use first line of description as title.
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-29T19:50:26.797473616Z
+  created_by: Unknown User
+  modified_at: 2025-11-29T19:50:26.797473616Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
+    created_at: 2025-11-29T19:50:26.797480119Z
+    created_by: Unknown User
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
   spec_id: $USER-001
@@ -4502,7 +4525,7 @@ id_config:
     description: Change requests for modifications to existing functionality
 features: []
 next_feature_number: 49
-next_spec_number: 110
+next_spec_number: 111
 prefix_counters: {}
 relationship_definitions:
 - name: parent
