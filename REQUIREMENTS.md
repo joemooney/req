@@ -99,11 +99,29 @@
 
 ## 7. Storage
 
-### 7.1 File Format
-- **REQ-STORAGE-001**: System shall store requirements in YAML format
-- **REQ-STORAGE-002**: System shall be human-readable and editable
-- **REQ-STORAGE-003**: System shall be version-control friendly (Git)
-- **REQ-STORAGE-004**: System shall auto-migrate legacy formats on load
+### 7.1 Storage Backend Abstraction
+- **REQ-STORAGE-001**: System shall provide a pluggable storage backend architecture
+- **REQ-STORAGE-002**: System shall support multiple backend types (YAML, SQLite)
+- **REQ-STORAGE-003**: System shall auto-detect backend type from file extension
+- **REQ-STORAGE-004**: System shall provide migration between backend formats
+
+### 7.2 YAML Backend
+- **REQ-YAML-001**: System shall store requirements in YAML format
+- **REQ-YAML-002**: System shall be human-readable and editable
+- **REQ-YAML-003**: System shall be version-control friendly (Git)
+- **REQ-YAML-004**: System shall auto-migrate legacy formats on load
+
+### 7.3 SQLite Backend
+- **REQ-SQLITE-001**: System shall store requirements in SQLite database files
+- **REQ-SQLITE-002**: System shall use WAL mode for concurrent access
+- **REQ-SQLITE-003**: System shall provide efficient single-record CRUD operations
+- **REQ-SQLITE-004**: System shall store complex types (relationships, comments, history) as JSON
+
+### 7.4 Import/Export
+- **REQ-MIGRATE-001**: System shall support migration from YAML to SQLite
+- **REQ-MIGRATE-002**: System shall support migration from SQLite to YAML
+- **REQ-MIGRATE-003**: System shall support JSON export format
+- **REQ-MIGRATE-004**: System shall support JSON import format
 
 ## 8. Command Line Interface
 

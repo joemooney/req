@@ -909,3 +909,41 @@ A chronological record of development sessions and changes made to the Requireme
   - Both panels have independent scroll areas with unique `id_salt` values
   - Modal respects max size constraints (90% width, 85% height)
 - **Result**: Users can now see syntax examples on the left and rendered output on the right simultaneously
+
+
+### Database Abstraction Layer
+- **Prompt**: "I want to support multiple database implementations. We want to build this so that we can support different databases with an abstraction layer. I would like you to go ahead and implement SQLite support also. We should be able to migrate from YAML into SQLite, we may want a common import/export format (maybe YAML or JSON)."
+- **Solution**: Created a pluggable database backend system with YAML and SQLite support
+- **Implementation** (in `aida-core/src/db/`):
+  - `traits.rs`: Defined `DatabaseBackend` trait with full CRUD operations:
+    - `BackendType` enum (Yaml, Sqlite)
+    - `DatabaseConfig` struct for backend configuration
+    - Core methods: `load()`, `save()`, `update_atomically()`
+    - Requirement CRUD: `get_requirement()`, `add_requirement()`, `update_requirement()`, `delete_requirement()`
+    - User CRUD: `get_user()`, `add_user()`, `update_user()`, `delete_user()`
+    - Metadata operations: `get_name()`, `set_name()`, etc.
+    - Utility: `exists()`, `create_if_not_exists()`, `stats()`
+  - `yaml_backend.rs`: YAML implementation wrapping existing Storage class
+  - `sqlite_backend.rs`: Full SQLite implementation:
+    - WAL mode for concurrent access
+    - Schema versioning for future migrations
+    - Complex types (relationships, comments, history) stored as JSON
+    - Efficient single-record CRUD operations overriding default load-all behavior
+    - Thread-safe with Mutex-protected Connection
+  - `schema.sql`: SQLite schema definition with:
+    - `requirements` table with all fields and indexes
+    - `users` table
+    - `metadata` table for store configuration
+    - `schema_version` table for versioning
+  - `migration.rs`: Migration and export utilities:
+    - `migrate_yaml_to_sqlite()`: Convert YAML to SQLite
+    - `migrate_sqlite_to_yaml()`: Convert SQLite to YAML
+    - `export_to_json()`: Export store to JSON file
+    - `import_from_json()`: Import store from JSON file
+  - `mod.rs`: Module root with factory functions:
+    - `create_backend()`: Create backend by path (auto-detect from extension)
+    - `open_or_create()`: Open existing or create new database
+  - Added `rusqlite` dependency to workspace and aida-core Cargo.toml
+  - Updated `lib.rs` to export the new `db` module
+- **Result**: System now supports multiple storage backends with a unified interface. Migration between formats and JSON import/export for interoperability.
+

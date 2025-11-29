@@ -78,16 +78,28 @@ Define connections between requirements:
 
 - **Language**: Rust
 - **GUI Framework**: egui (cross-platform)
-- **Storage**: YAML (serde_yaml)
+- **Storage**: YAML (serde_yaml), SQLite (rusqlite)
 - **CLI Framework**: clap
 - **Interactive Prompts**: inquire
 
 ## Data Storage
 
-Requirements are stored in `requirements.yaml` files:
-- Human-readable YAML format
+Requirements are stored using a pluggable backend system:
+
+### YAML Backend (Default)
+- Human-readable YAML format (`requirements.yaml`)
 - Git-friendly for version control
 - Includes metadata, relationships, comments, and history
+
+### SQLite Backend
+- High-performance database storage (`.db` files)
+- WAL mode for better concurrent access
+- Efficient single-record CRUD operations
+- Complex fields (relationships, comments, history) stored as JSON
+
+### Migration & Export
+- Migrate between YAML and SQLite formats
+- JSON import/export for interoperability
 
 ## Getting Started
 

@@ -1,0 +1,817 @@
+//! SQLite database storage backend
+//!
+//! This backend stores requirements data in a SQLite database file,
+//! providing better concurrent access and query performance.
+
+use anyhow::{Context, Result};
+use rusqlite::{params, Connection, OptionalExtension};
+use std::collections::{HashMap, HashSet};
+use std::path::{Path, PathBuf};
+use std::sync::Mutex;
+use uuid::Uuid;
+
+use crate::models::{
+    Comment, CustomTypeDefinition, FeatureDefinition,
+    HistoryEntry, IdConfiguration, ReactionDefinition, RelationshipDefinition,
+    Relationship, Requirement, RequirementPriority, RequirementStatus,
+    RequirementType, RequirementsStore, UrlLink, User,
+};
+
+use super::traits::{BackendType, DatabaseBackend};
+
+/// Current schema version
+const SCHEMA_VERSION: i32 = 1;
+
+/// SQLite backend implementation
+pub struct SqliteBackend {
+    path: PathBuf,
+    conn: Mutex<Connection>,
+}
+
+impl SqliteBackend {
+    /// Creates a new SQLite backend
+    pub fn new<P: AsRef<Path>>(path: P) -> Result<Self> {
+        let path = path.as_ref().to_path_buf();
+
+        // Create parent directories if needed
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+
+        let conn = Connection::open(&path)?;
+
+        // Enable WAL mode for better concurrent access
+        conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;")?;
+
+        let backend = Self {
+            path,
+            conn: Mutex::new(conn),
+        };
+
+        backend.init_schema()?;
+        Ok(backend)
+    }
+
+    /// Initialize the database schema
+    fn init_schema(&self) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+
+        // Check current schema version
+        let current_version: i32 = conn
+            .query_row(
+                "SELECT version FROM schema_version LIMIT 1",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(0);
+
+        if current_version == 0 {
+            // Create initial schema
+            conn.execute_batch(include_str!("schema.sql"))?;
+        } else if current_version < SCHEMA_VERSION {
+            // Future: handle migrations
+            // For now, we just fail if the schema is outdated
+            anyhow::bail!(
+                "Database schema version {} is outdated, expected {}",
+                current_version,
+                SCHEMA_VERSION
+            );
+        }
+
+        Ok(())
+    }
+
+    /// Serializes complex types to JSON for storage
+    fn to_json<T: serde::Serialize>(value: &T) -> Result<String> {
+        serde_json::to_string(value).context("Failed to serialize to JSON")
+    }
+
+    /// Deserializes complex types from JSON storage
+    fn from_json<T: serde::de::DeserializeOwned>(json: &str) -> Result<T> {
+        serde_json::from_str(json).context("Failed to deserialize from JSON")
+    }
+
+    /// Converts a RequirementStatus to a string for storage
+    fn status_to_str(status: &RequirementStatus) -> &'static str {
+        match status {
+            RequirementStatus::Draft => "Draft",
+            RequirementStatus::Approved => "Approved",
+            RequirementStatus::Completed => "Completed",
+            RequirementStatus::Rejected => "Rejected",
+        }
+    }
+
+    /// Parses a RequirementStatus from a string
+    fn str_to_status(s: &str) -> RequirementStatus {
+        match s {
+            "Draft" => RequirementStatus::Draft,
+            "Approved" => RequirementStatus::Approved,
+            "Completed" => RequirementStatus::Completed,
+            "Rejected" => RequirementStatus::Rejected,
+            _ => RequirementStatus::Draft,
+        }
+    }
+
+    /// Converts a RequirementPriority to a string for storage
+    fn priority_to_str(priority: &RequirementPriority) -> &'static str {
+        match priority {
+            RequirementPriority::High => "High",
+            RequirementPriority::Medium => "Medium",
+            RequirementPriority::Low => "Low",
+        }
+    }
+
+    /// Parses a RequirementPriority from a string
+    fn str_to_priority(s: &str) -> RequirementPriority {
+        match s {
+            "High" => RequirementPriority::High,
+            "Medium" => RequirementPriority::Medium,
+            "Low" => RequirementPriority::Low,
+            _ => RequirementPriority::Medium,
+        }
+    }
+
+    /// Converts a RequirementType to a string for storage
+    fn type_to_str(req_type: &RequirementType) -> &'static str {
+        match req_type {
+            RequirementType::Functional => "Functional",
+            RequirementType::NonFunctional => "NonFunctional",
+            RequirementType::System => "System",
+            RequirementType::User => "User",
+            RequirementType::ChangeRequest => "ChangeRequest",
+            RequirementType::Bug => "Bug",
+            RequirementType::Epic => "Epic",
+            RequirementType::Story => "Story",
+            RequirementType::Task => "Task",
+            RequirementType::Spike => "Spike",
+        }
+    }
+
+    /// Parses a RequirementType from a string
+    fn str_to_type(s: &str) -> RequirementType {
+        match s {
+            "Functional" => RequirementType::Functional,
+            "NonFunctional" => RequirementType::NonFunctional,
+            "System" => RequirementType::System,
+            "User" => RequirementType::User,
+            "ChangeRequest" => RequirementType::ChangeRequest,
+            "Bug" => RequirementType::Bug,
+            "Epic" => RequirementType::Epic,
+            "Story" => RequirementType::Story,
+            "Task" => RequirementType::Task,
+            "Spike" => RequirementType::Spike,
+            _ => RequirementType::Functional,
+        }
+    }
+
+    /// Load requirements from database
+    fn load_requirements(&self, conn: &Connection) -> Result<Vec<Requirement>> {
+        let mut stmt = conn.prepare(
+            "SELECT id, spec_id, prefix_override, title, description, status, priority,
+                    owner, feature, created_at, created_by, modified_at, req_type,
+                    dependencies, tags, relationships, comments, history, archived,
+                    custom_status, custom_fields, urls
+             FROM requirements ORDER BY created_at"
+        )?;
+
+        let rows = stmt.query_map([], |row| {
+            let id_str: String = row.get(0)?;
+            let spec_id: Option<String> = row.get(1)?;
+            let prefix_override: Option<String> = row.get(2)?;
+            let title: String = row.get(3)?;
+            let description: String = row.get(4)?;
+            let status_str: String = row.get(5)?;
+            let priority_str: String = row.get(6)?;
+            let owner: String = row.get(7)?;
+            let feature: String = row.get(8)?;
+            let created_at_str: String = row.get(9)?;
+            let created_by: Option<String> = row.get(10)?;
+            let modified_at_str: String = row.get(11)?;
+            let req_type_str: String = row.get(12)?;
+            let dependencies_json: String = row.get(13)?;
+            let tags_json: String = row.get(14)?;
+            let relationships_json: String = row.get(15)?;
+            let comments_json: String = row.get(16)?;
+            let history_json: String = row.get(17)?;
+            let archived: bool = row.get(18)?;
+            let custom_status: Option<String> = row.get(19)?;
+            let custom_fields_json: String = row.get(20)?;
+            let urls_json: String = row.get(21)?;
+
+            Ok((
+                id_str, spec_id, prefix_override, title, description, status_str, priority_str,
+                owner, feature, created_at_str, created_by, modified_at_str, req_type_str,
+                dependencies_json, tags_json, relationships_json, comments_json, history_json,
+                archived, custom_status, custom_fields_json, urls_json
+            ))
+        })?;
+
+        let mut requirements = Vec::new();
+        for row_result in rows {
+            let (
+                id_str, spec_id, prefix_override, title, description, status_str, priority_str,
+                owner, feature, created_at_str, created_by, modified_at_str, req_type_str,
+                dependencies_json, tags_json, relationships_json, comments_json, history_json,
+                archived, custom_status, custom_fields_json, urls_json
+            ) = row_result?;
+
+            let id = Uuid::parse_str(&id_str).unwrap_or_else(|_| Uuid::new_v4());
+            let status = Self::str_to_status(&status_str);
+            let priority = Self::str_to_priority(&priority_str);
+            let req_type = Self::str_to_type(&req_type_str);
+            let created_at = chrono::DateTime::parse_from_rfc3339(&created_at_str)
+                .map(|dt| dt.with_timezone(&chrono::Utc))
+                .unwrap_or_else(|_| chrono::Utc::now());
+            let modified_at = chrono::DateTime::parse_from_rfc3339(&modified_at_str)
+                .map(|dt| dt.with_timezone(&chrono::Utc))
+                .unwrap_or_else(|_| chrono::Utc::now());
+            let dependencies: Vec<Uuid> = Self::from_json(&dependencies_json).unwrap_or_default();
+            let tags: HashSet<String> = Self::from_json(&tags_json).unwrap_or_default();
+            let relationships: Vec<Relationship> = Self::from_json(&relationships_json).unwrap_or_default();
+            let comments: Vec<Comment> = Self::from_json(&comments_json).unwrap_or_default();
+            let history: Vec<HistoryEntry> = Self::from_json(&history_json).unwrap_or_default();
+            let custom_fields: HashMap<String, String> = Self::from_json(&custom_fields_json).unwrap_or_default();
+            let urls: Vec<UrlLink> = Self::from_json(&urls_json).unwrap_or_default();
+
+            requirements.push(Requirement {
+                id,
+                spec_id,
+                prefix_override,
+                title,
+                description,
+                status,
+                priority,
+                owner,
+                feature,
+                created_at,
+                created_by,
+                modified_at,
+                req_type,
+                dependencies,
+                tags,
+                relationships,
+                comments,
+                history,
+                archived,
+                custom_status,
+                custom_fields,
+                urls,
+            });
+        }
+
+        Ok(requirements)
+    }
+
+    /// Load users from database
+    fn load_users(&self, conn: &Connection) -> Result<Vec<User>> {
+        let mut stmt = conn.prepare(
+            "SELECT id, spec_id, name, email, handle, created_at, archived FROM users"
+        )?;
+
+        let rows = stmt.query_map([], |row| {
+            let id_str: String = row.get(0)?;
+            let spec_id: Option<String> = row.get(1)?;
+            let name: String = row.get(2)?;
+            let email: String = row.get(3)?;
+            let handle: String = row.get(4)?;
+            let created_at_str: String = row.get(5)?;
+            let archived: bool = row.get(6)?;
+            Ok((id_str, spec_id, name, email, handle, created_at_str, archived))
+        })?;
+
+        let mut users = Vec::new();
+        for row_result in rows {
+            let (id_str, spec_id, name, email, handle, created_at_str, archived) = row_result?;
+            let id = Uuid::parse_str(&id_str).unwrap_or_else(|_| Uuid::new_v4());
+            let created_at = chrono::DateTime::parse_from_rfc3339(&created_at_str)
+                .map(|dt| dt.with_timezone(&chrono::Utc))
+                .unwrap_or_else(|_| chrono::Utc::now());
+
+            users.push(User {
+                id,
+                spec_id,
+                name,
+                email,
+                handle,
+                created_at,
+                archived,
+            });
+        }
+
+        Ok(users)
+    }
+
+    /// Load metadata from database
+    fn load_metadata(&self, conn: &Connection) -> Result<(String, String, String, IdConfiguration, u32, u32, HashMap<String, u32>, HashMap<String, u32>)> {
+        let row = conn.query_row(
+            "SELECT name, title, description, id_config, next_feature_number, next_spec_number, prefix_counters, meta_counters
+             FROM metadata WHERE id = 1",
+            [],
+            |row| {
+                let name: String = row.get(0)?;
+                let title: String = row.get(1)?;
+                let description: String = row.get(2)?;
+                let id_config_json: String = row.get(3)?;
+                let next_feature_number: u32 = row.get(4)?;
+                let next_spec_number: u32 = row.get(5)?;
+                let prefix_counters_json: String = row.get(6)?;
+                let meta_counters_json: String = row.get(7)?;
+                Ok((name, title, description, id_config_json, next_feature_number, next_spec_number, prefix_counters_json, meta_counters_json))
+            }
+        ).optional()?;
+
+        match row {
+            Some((name, title, description, id_config_json, next_feature_number, next_spec_number, prefix_counters_json, meta_counters_json)) => {
+                let id_config: IdConfiguration = Self::from_json(&id_config_json).unwrap_or_default();
+                let prefix_counters: HashMap<String, u32> = Self::from_json(&prefix_counters_json).unwrap_or_default();
+                let meta_counters: HashMap<String, u32> = Self::from_json(&meta_counters_json).unwrap_or_default();
+                Ok((name, title, description, id_config, next_feature_number, next_spec_number, prefix_counters, meta_counters))
+            }
+            None => {
+                Ok((String::new(), String::new(), String::new(), IdConfiguration::default(), 1, 1, HashMap::new(), HashMap::new()))
+            }
+        }
+    }
+
+    /// Load features from database
+    fn load_features(&self, conn: &Connection) -> Result<Vec<FeatureDefinition>> {
+        let json: String = conn
+            .query_row("SELECT features FROM metadata WHERE id = 1", [], |row| row.get(0))
+            .unwrap_or_else(|_| "[]".to_string());
+        Self::from_json(&json)
+    }
+
+    /// Load type definitions from database
+    fn load_type_definitions(&self, conn: &Connection) -> Result<Vec<CustomTypeDefinition>> {
+        let json: String = conn
+            .query_row("SELECT type_definitions FROM metadata WHERE id = 1", [], |row| row.get(0))
+            .unwrap_or_else(|_| "[]".to_string());
+        let defs: Vec<CustomTypeDefinition> = Self::from_json(&json)?;
+        if defs.is_empty() {
+            Ok(crate::models::default_type_definitions())
+        } else {
+            Ok(defs)
+        }
+    }
+
+    /// Load relationship definitions from database
+    fn load_relationship_definitions(&self, conn: &Connection) -> Result<Vec<RelationshipDefinition>> {
+        let json: String = conn
+            .query_row("SELECT relationship_definitions FROM metadata WHERE id = 1", [], |row| row.get(0))
+            .unwrap_or_else(|_| "[]".to_string());
+        let defs: Vec<RelationshipDefinition> = Self::from_json(&json)?;
+        if defs.is_empty() {
+            Ok(RelationshipDefinition::defaults())
+        } else {
+            Ok(defs)
+        }
+    }
+
+    /// Load reaction definitions from database
+    fn load_reaction_definitions(&self, conn: &Connection) -> Result<Vec<ReactionDefinition>> {
+        let json: String = conn
+            .query_row("SELECT reaction_definitions FROM metadata WHERE id = 1", [], |row| row.get(0))
+            .unwrap_or_else(|_| "[]".to_string());
+        let defs: Vec<ReactionDefinition> = Self::from_json(&json)?;
+        if defs.is_empty() {
+            Ok(crate::models::default_reaction_definitions())
+        } else {
+            Ok(defs)
+        }
+    }
+
+    /// Load allowed prefixes from database
+    fn load_allowed_prefixes(&self, conn: &Connection) -> Result<(Vec<String>, bool)> {
+        let row = conn.query_row(
+            "SELECT allowed_prefixes, restrict_prefixes FROM metadata WHERE id = 1",
+            [],
+            |row| {
+                let json: String = row.get(0)?;
+                let restrict: bool = row.get(1)?;
+                Ok((json, restrict))
+            }
+        ).optional()?;
+
+        match row {
+            Some((json, restrict)) => {
+                let prefixes: Vec<String> = Self::from_json(&json).unwrap_or_default();
+                Ok((prefixes, restrict))
+            }
+            None => Ok((Vec::new(), false))
+        }
+    }
+
+    /// Save a requirement to the database
+    fn save_requirement(&self, conn: &Connection, req: &Requirement) -> Result<()> {
+        conn.execute(
+            "INSERT OR REPLACE INTO requirements
+             (id, spec_id, prefix_override, title, description, status, priority, owner, feature,
+              created_at, created_by, modified_at, req_type, dependencies, tags, relationships,
+              comments, history, archived, custom_status, custom_fields, urls)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22)",
+            params![
+                req.id.to_string(),
+                req.spec_id,
+                req.prefix_override,
+                req.title,
+                req.description,
+                Self::status_to_str(&req.status),
+                Self::priority_to_str(&req.priority),
+                req.owner,
+                req.feature,
+                req.created_at.to_rfc3339(),
+                req.created_by,
+                req.modified_at.to_rfc3339(),
+                Self::type_to_str(&req.req_type),
+                Self::to_json(&req.dependencies)?,
+                Self::to_json(&req.tags)?,
+                Self::to_json(&req.relationships)?,
+                Self::to_json(&req.comments)?,
+                Self::to_json(&req.history)?,
+                req.archived,
+                req.custom_status,
+                Self::to_json(&req.custom_fields)?,
+                Self::to_json(&req.urls)?,
+            ],
+        )?;
+        Ok(())
+    }
+
+    /// Save a user to the database
+    fn save_user(&self, conn: &Connection, user: &User) -> Result<()> {
+        conn.execute(
+            "INSERT OR REPLACE INTO users (id, spec_id, name, email, handle, created_at, archived)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            params![
+                user.id.to_string(),
+                user.spec_id,
+                user.name,
+                user.email,
+                user.handle,
+                user.created_at.to_rfc3339(),
+                user.archived,
+            ],
+        )?;
+        Ok(())
+    }
+
+    /// Save metadata to the database
+    fn save_metadata(&self, conn: &Connection, store: &RequirementsStore) -> Result<()> {
+        conn.execute(
+            "INSERT OR REPLACE INTO metadata
+             (id, name, title, description, id_config, features, next_feature_number, next_spec_number,
+              prefix_counters, relationship_definitions, reaction_definitions, meta_counters,
+              type_definitions, allowed_prefixes, restrict_prefixes)
+             VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
+            params![
+                store.name,
+                store.title,
+                store.description,
+                Self::to_json(&store.id_config)?,
+                Self::to_json(&store.features)?,
+                store.next_feature_number,
+                store.next_spec_number,
+                Self::to_json(&store.prefix_counters)?,
+                Self::to_json(&store.relationship_definitions)?,
+                Self::to_json(&store.reaction_definitions)?,
+                Self::to_json(&store.meta_counters)?,
+                Self::to_json(&store.type_definitions)?,
+                Self::to_json(&store.allowed_prefixes)?,
+                store.restrict_prefixes,
+            ],
+        )?;
+        Ok(())
+    }
+}
+
+impl DatabaseBackend for SqliteBackend {
+    fn backend_type(&self) -> BackendType {
+        BackendType::Sqlite
+    }
+
+    fn path(&self) -> &Path {
+        &self.path
+    }
+
+    fn load(&self) -> Result<RequirementsStore> {
+        let conn = self.conn.lock().unwrap();
+
+        let requirements = self.load_requirements(&conn)?;
+        let users = self.load_users(&conn)?;
+        let (name, title, description, id_config, next_feature_number, next_spec_number, prefix_counters, meta_counters) =
+            self.load_metadata(&conn)?;
+        let features = self.load_features(&conn)?;
+        let type_definitions = self.load_type_definitions(&conn)?;
+        let relationship_definitions = self.load_relationship_definitions(&conn)?;
+        let reaction_definitions = self.load_reaction_definitions(&conn)?;
+        let (allowed_prefixes, restrict_prefixes) = self.load_allowed_prefixes(&conn)?;
+
+        Ok(RequirementsStore {
+            name,
+            title,
+            description,
+            requirements,
+            users,
+            id_config,
+            features,
+            next_feature_number,
+            next_spec_number,
+            prefix_counters,
+            relationship_definitions,
+            reaction_definitions,
+            meta_counters,
+            type_definitions,
+            allowed_prefixes,
+            restrict_prefixes,
+        })
+    }
+
+    fn save(&self, store: &RequirementsStore) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+
+        // Use a transaction for atomicity
+        conn.execute("BEGIN TRANSACTION", [])?;
+
+        // Clear existing data
+        conn.execute("DELETE FROM requirements", [])?;
+        conn.execute("DELETE FROM users", [])?;
+
+        // Save all requirements
+        for req in &store.requirements {
+            self.save_requirement(&conn, req)?;
+        }
+
+        // Save all users
+        for user in &store.users {
+            self.save_user(&conn, user)?;
+        }
+
+        // Save metadata
+        self.save_metadata(&conn, store)?;
+
+        conn.execute("COMMIT", [])?;
+        Ok(())
+    }
+
+    fn update_atomically<F>(&self, update_fn: F) -> Result<RequirementsStore>
+    where
+        F: FnOnce(&mut RequirementsStore),
+    {
+        let conn = self.conn.lock().unwrap();
+
+        conn.execute("BEGIN EXCLUSIVE TRANSACTION", [])?;
+
+        // Load within transaction
+        drop(conn);
+        let mut store = self.load()?;
+
+        // Apply changes
+        update_fn(&mut store);
+
+        // Save within transaction
+        let conn = self.conn.lock().unwrap();
+
+        // Clear existing data
+        conn.execute("DELETE FROM requirements", [])?;
+        conn.execute("DELETE FROM users", [])?;
+
+        // Save all requirements
+        for req in &store.requirements {
+            self.save_requirement(&conn, req)?;
+        }
+
+        // Save all users
+        for user in &store.users {
+            self.save_user(&conn, user)?;
+        }
+
+        // Save metadata
+        self.save_metadata(&conn, &store)?;
+
+        conn.execute("COMMIT", [])?;
+        Ok(store)
+    }
+
+    // Override for more efficient single-requirement operations
+
+    fn get_requirement(&self, id: &Uuid) -> Result<Option<Requirement>> {
+        let conn = self.conn.lock().unwrap();
+
+        let result = conn.query_row(
+            "SELECT id, spec_id, prefix_override, title, description, status, priority,
+                    owner, feature, created_at, created_by, modified_at, req_type,
+                    dependencies, tags, relationships, comments, history, archived,
+                    custom_status, custom_fields, urls
+             FROM requirements WHERE id = ?1",
+            [id.to_string()],
+            |row| {
+                let id_str: String = row.get(0)?;
+                let spec_id: Option<String> = row.get(1)?;
+                let prefix_override: Option<String> = row.get(2)?;
+                let title: String = row.get(3)?;
+                let description: String = row.get(4)?;
+                let status_str: String = row.get(5)?;
+                let priority_str: String = row.get(6)?;
+                let owner: String = row.get(7)?;
+                let feature: String = row.get(8)?;
+                let created_at_str: String = row.get(9)?;
+                let created_by: Option<String> = row.get(10)?;
+                let modified_at_str: String = row.get(11)?;
+                let req_type_str: String = row.get(12)?;
+                let dependencies_json: String = row.get(13)?;
+                let tags_json: String = row.get(14)?;
+                let relationships_json: String = row.get(15)?;
+                let comments_json: String = row.get(16)?;
+                let history_json: String = row.get(17)?;
+                let archived: bool = row.get(18)?;
+                let custom_status: Option<String> = row.get(19)?;
+                let custom_fields_json: String = row.get(20)?;
+                let urls_json: String = row.get(21)?;
+
+                Ok((
+                    id_str, spec_id, prefix_override, title, description, status_str, priority_str,
+                    owner, feature, created_at_str, created_by, modified_at_str, req_type_str,
+                    dependencies_json, tags_json, relationships_json, comments_json, history_json,
+                    archived, custom_status, custom_fields_json, urls_json
+                ))
+            }
+        ).optional()?;
+
+        match result {
+            Some((
+                id_str, spec_id, prefix_override, title, description, status_str, priority_str,
+                owner, feature, created_at_str, created_by, modified_at_str, req_type_str,
+                dependencies_json, tags_json, relationships_json, comments_json, history_json,
+                archived, custom_status, custom_fields_json, urls_json
+            )) => {
+                let id = Uuid::parse_str(&id_str).unwrap_or_else(|_| Uuid::new_v4());
+                let status = Self::str_to_status(&status_str);
+                let priority = Self::str_to_priority(&priority_str);
+                let req_type = Self::str_to_type(&req_type_str);
+                let created_at = chrono::DateTime::parse_from_rfc3339(&created_at_str)
+                    .map(|dt| dt.with_timezone(&chrono::Utc))
+                    .unwrap_or_else(|_| chrono::Utc::now());
+                let modified_at = chrono::DateTime::parse_from_rfc3339(&modified_at_str)
+                    .map(|dt| dt.with_timezone(&chrono::Utc))
+                    .unwrap_or_else(|_| chrono::Utc::now());
+                let dependencies: Vec<Uuid> = Self::from_json(&dependencies_json).unwrap_or_default();
+                let tags: HashSet<String> = Self::from_json(&tags_json).unwrap_or_default();
+                let relationships: Vec<Relationship> = Self::from_json(&relationships_json).unwrap_or_default();
+                let comments: Vec<Comment> = Self::from_json(&comments_json).unwrap_or_default();
+                let history: Vec<HistoryEntry> = Self::from_json(&history_json).unwrap_or_default();
+                let custom_fields: HashMap<String, String> = Self::from_json(&custom_fields_json).unwrap_or_default();
+                let urls: Vec<UrlLink> = Self::from_json(&urls_json).unwrap_or_default();
+
+                Ok(Some(Requirement {
+                    id,
+                    spec_id,
+                    prefix_override,
+                    title,
+                    description,
+                    status,
+                    priority,
+                    owner,
+                    feature,
+                    created_at,
+                    created_by,
+                    modified_at,
+                    req_type,
+                    dependencies,
+                    tags,
+                    relationships,
+                    comments,
+                    history,
+                    archived,
+                    custom_status,
+                    custom_fields,
+                    urls,
+                }))
+            }
+            None => Ok(None),
+        }
+    }
+
+    fn update_requirement(&self, requirement: &Requirement) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        self.save_requirement(&conn, requirement)
+    }
+
+    fn delete_requirement(&self, id: &Uuid) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        let rows_affected = conn.execute(
+            "DELETE FROM requirements WHERE id = ?1",
+            [id.to_string()],
+        )?;
+        if rows_affected == 0 {
+            anyhow::bail!("Requirement not found: {}", id)
+        }
+        Ok(())
+    }
+
+    fn get_user(&self, id: &Uuid) -> Result<Option<User>> {
+        let conn = self.conn.lock().unwrap();
+
+        conn.query_row(
+            "SELECT id, spec_id, name, email, handle, created_at, archived FROM users WHERE id = ?1",
+            [id.to_string()],
+            |row| {
+                let id_str: String = row.get(0)?;
+                let spec_id: Option<String> = row.get(1)?;
+                let name: String = row.get(2)?;
+                let email: String = row.get(3)?;
+                let handle: String = row.get(4)?;
+                let created_at_str: String = row.get(5)?;
+                let archived: bool = row.get(6)?;
+
+                let id = Uuid::parse_str(&id_str).unwrap_or_else(|_| Uuid::new_v4());
+                let created_at = chrono::DateTime::parse_from_rfc3339(&created_at_str)
+                    .map(|dt| dt.with_timezone(&chrono::Utc))
+                    .unwrap_or_else(|_| chrono::Utc::now());
+
+                Ok(User {
+                    id,
+                    spec_id,
+                    name,
+                    email,
+                    handle,
+                    created_at,
+                    archived,
+                })
+            }
+        ).optional().map_err(|e| e.into())
+    }
+
+    fn update_user(&self, user: &User) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        self.save_user(&conn, user)
+    }
+
+    fn delete_user(&self, id: &Uuid) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        let rows_affected = conn.execute(
+            "DELETE FROM users WHERE id = ?1",
+            [id.to_string()],
+        )?;
+        if rows_affected == 0 {
+            anyhow::bail!("User not found: {}", id)
+        }
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::NamedTempFile;
+
+    #[test]
+    fn test_sqlite_backend_create_and_load() {
+        let temp_file = NamedTempFile::with_suffix(".db").unwrap();
+        let backend = SqliteBackend::new(temp_file.path()).unwrap();
+
+        backend.create_if_not_exists().unwrap();
+
+        let store = backend.load().unwrap();
+        assert!(store.requirements.is_empty());
+        assert!(store.users.is_empty());
+    }
+
+    #[test]
+    fn test_sqlite_backend_save_and_load() {
+        let temp_file = NamedTempFile::with_suffix(".db").unwrap();
+        let backend = SqliteBackend::new(temp_file.path()).unwrap();
+
+        let mut store = RequirementsStore::new();
+        store.name = "Test DB".to_string();
+        store.title = "Test Database".to_string();
+
+        backend.save(&store).unwrap();
+
+        let loaded = backend.load().unwrap();
+        assert_eq!(loaded.name, "Test DB");
+        assert_eq!(loaded.title, "Test Database");
+    }
+
+    #[test]
+    fn test_sqlite_backend_requirement_crud() {
+        let temp_file = NamedTempFile::with_suffix(".db").unwrap();
+        let backend = SqliteBackend::new(temp_file.path()).unwrap();
+
+        // Create initial store
+        backend.save(&RequirementsStore::new()).unwrap();
+
+        // Add requirement
+        let req = Requirement::new("Test Req".to_string(), "Test Description".to_string());
+        let req = backend.add_requirement(req).unwrap();
+
+        // Get by ID
+        let loaded = backend.get_requirement(&req.id).unwrap();
+        assert!(loaded.is_some());
+        assert_eq!(loaded.unwrap().title, "Test Req");
+
+        // Delete
+        backend.delete_requirement(&req.id).unwrap();
+        let loaded = backend.get_requirement(&req.id).unwrap();
+        assert!(loaded.is_none());
+    }
+}

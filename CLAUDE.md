@@ -40,6 +40,11 @@ cargo clippy --workspace            # Linting
 
 - **models.rs**: Core data structures (`Requirement`, `RequirementsStore`, `RequirementStatus`, `RequirementPriority`, `RequirementType`, `Comment`, `HistoryEntry`, `Relationship`)
 - **storage.rs**: YAML file persistence layer using `serde_yaml`
+- **db/**: Database abstraction layer for multiple storage backends
+  - **traits.rs**: `DatabaseBackend` trait defining the storage interface
+  - **yaml_backend.rs**: YAML storage implementation (wraps existing Storage)
+  - **sqlite_backend.rs**: SQLite storage implementation with WAL mode
+  - **migration.rs**: Migration utilities (YAML↔SQLite, JSON import/export)
 - **registry.rs**: Multi-project registry management (stored at `~/.requirements.config`)
 - **project.rs**: Project resolution logic
 - **export.rs**: Export functionality (mapping, JSON)

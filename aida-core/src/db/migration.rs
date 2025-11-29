@@ -1,0 +1,200 @@
+//! Migration utilities for converting between storage backends
+//!
+//! This module provides functions to migrate data between YAML and SQLite backends,
+//! as well as import/export to JSON format for interoperability.
+
+use anyhow::{Context, Result};
+use std::path::Path;
+
+use crate::models::RequirementsStore;
+use super::{SqliteBackend, YamlBackend};
+use super::traits::DatabaseBackend;
+
+/// Migrates data from a YAML file to a SQLite database
+///
+/// # Arguments
+/// * `yaml_path` - Path to the source YAML file
+/// * `sqlite_path` - Path to the destination SQLite database
+///
+/// # Returns
+/// The number of requirements migrated
+pub fn migrate_yaml_to_sqlite<P1: AsRef<Path>, P2: AsRef<Path>>(
+    yaml_path: P1,
+    sqlite_path: P2,
+) -> Result<usize> {
+    let yaml_backend = YamlBackend::new(yaml_path);
+    let sqlite_backend = SqliteBackend::new(sqlite_path)?;
+
+    // Load from YAML
+    let store = yaml_backend.load()
+        .context("Failed to load YAML database")?;
+
+    let req_count = store.requirements.len();
+
+    // Save to SQLite
+    sqlite_backend.save(&store)
+        .context("Failed to save to SQLite database")?;
+
+    Ok(req_count)
+}
+
+/// Migrates data from a SQLite database to a YAML file
+///
+/// # Arguments
+/// * `sqlite_path` - Path to the source SQLite database
+/// * `yaml_path` - Path to the destination YAML file
+///
+/// # Returns
+/// The number of requirements migrated
+pub fn migrate_sqlite_to_yaml<P1: AsRef<Path>, P2: AsRef<Path>>(
+    sqlite_path: P1,
+    yaml_path: P2,
+) -> Result<usize> {
+    let sqlite_backend = SqliteBackend::new(sqlite_path)?;
+    let yaml_backend = YamlBackend::new(yaml_path);
+
+    // Load from SQLite
+    let store = sqlite_backend.load()
+        .context("Failed to load SQLite database")?;
+
+    let req_count = store.requirements.len();
+
+    // Save to YAML
+    yaml_backend.save(&store)
+        .context("Failed to save to YAML file")?;
+
+    Ok(req_count)
+}
+
+/// Exports a RequirementsStore to a JSON file
+///
+/// JSON format is useful for:
+/// - Interoperability with other systems
+/// - API responses
+/// - Backup/restore
+///
+/// # Arguments
+/// * `store` - The requirements store to export
+/// * `json_path` - Path to the destination JSON file
+pub fn export_to_json<P: AsRef<Path>>(store: &RequirementsStore, json_path: P) -> Result<()> {
+    let json = serde_json::to_string_pretty(store)
+        .context("Failed to serialize to JSON")?;
+
+    std::fs::write(json_path, json)
+        .context("Failed to write JSON file")?;
+
+    Ok(())
+}
+
+/// Imports a RequirementsStore from a JSON file
+///
+/// # Arguments
+/// * `json_path` - Path to the source JSON file
+///
+/// # Returns
+/// The imported RequirementsStore
+pub fn import_from_json<P: AsRef<Path>>(json_path: P) -> Result<RequirementsStore> {
+    let json = std::fs::read_to_string(json_path)
+        .context("Failed to read JSON file")?;
+
+    let store: RequirementsStore = serde_json::from_str(&json)
+        .context("Failed to parse JSON")?;
+
+    Ok(store)
+}
+
+/// Exports data from any backend to a JSON file
+///
+/// # Arguments
+/// * `backend` - The source backend
+/// * `json_path` - Path to the destination JSON file
+pub fn export_backend_to_json<P: AsRef<Path>>(
+    backend: &dyn DatabaseBackend,
+    json_path: P,
+) -> Result<()> {
+    let store = backend.load()?;
+    export_to_json(&store, json_path)
+}
+
+/// Imports data from a JSON file into any backend
+///
+/// # Arguments
+/// * `json_path` - Path to the source JSON file
+/// * `backend` - The destination backend
+pub fn import_json_to_backend<P: AsRef<Path>>(
+    json_path: P,
+    backend: &dyn DatabaseBackend,
+) -> Result<()> {
+    let store = import_from_json(json_path)?;
+    backend.save(&store)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::{NamedTempFile, TempDir};
+
+    #[test]
+    fn test_yaml_to_sqlite_migration() {
+        let yaml_file = NamedTempFile::with_suffix(".yaml").unwrap();
+        let sqlite_file = NamedTempFile::with_suffix(".db").unwrap();
+
+        // Create a YAML file with some data
+        let yaml_backend = YamlBackend::new(yaml_file.path());
+        let mut store = RequirementsStore::new();
+        store.name = "Migration Test".to_string();
+        store.title = "Test Migration".to_string();
+        yaml_backend.save(&store).unwrap();
+
+        // Migrate to SQLite
+        let count = migrate_yaml_to_sqlite(yaml_file.path(), sqlite_file.path()).unwrap();
+        assert_eq!(count, 0); // No requirements
+
+        // Verify SQLite has the data
+        let sqlite_backend = SqliteBackend::new(sqlite_file.path()).unwrap();
+        let loaded = sqlite_backend.load().unwrap();
+        assert_eq!(loaded.name, "Migration Test");
+        assert_eq!(loaded.title, "Test Migration");
+    }
+
+    #[test]
+    fn test_sqlite_to_yaml_migration() {
+        let sqlite_file = NamedTempFile::with_suffix(".db").unwrap();
+        let yaml_file = NamedTempFile::with_suffix(".yaml").unwrap();
+
+        // Create a SQLite database with some data
+        let sqlite_backend = SqliteBackend::new(sqlite_file.path()).unwrap();
+        let mut store = RequirementsStore::new();
+        store.name = "SQLite Test".to_string();
+        store.title = "Test SQLite".to_string();
+        sqlite_backend.save(&store).unwrap();
+
+        // Migrate to YAML
+        let count = migrate_sqlite_to_yaml(sqlite_file.path(), yaml_file.path()).unwrap();
+        assert_eq!(count, 0);
+
+        // Verify YAML has the data
+        let yaml_backend = YamlBackend::new(yaml_file.path());
+        let loaded = yaml_backend.load().unwrap();
+        assert_eq!(loaded.name, "SQLite Test");
+        assert_eq!(loaded.title, "Test SQLite");
+    }
+
+    #[test]
+    fn test_json_export_import() {
+        let temp_dir = TempDir::new().unwrap();
+        let json_path = temp_dir.path().join("export.json");
+
+        let mut store = RequirementsStore::new();
+        store.name = "JSON Test".to_string();
+        store.title = "Test JSON Export".to_string();
+
+        // Export
+        export_to_json(&store, &json_path).unwrap();
+
+        // Import
+        let loaded = import_from_json(&json_path).unwrap();
+        assert_eq!(loaded.name, "JSON Test");
+        assert_eq!(loaded.title, "Test JSON Export");
+    }
+}
