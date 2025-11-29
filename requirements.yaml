@@ -840,6 +840,8 @@ requirements:
     target_id: 043639ed-7c12-4d99-acc2-587a38b0d25d
   - rel_type: Child
     target_id: 9238ec28-2a11-4d0b-90df-f78861f49d72
+  - rel_type: Child
+    target_id: 7e7f5a93-f0ac-4fde-85eb-8852f43065b8
 - id: 617353d0-7006-4a3c-92ba-49e5218386e2
   spec_id: ADMIN-0031
   prefix_override: ADMIN
@@ -3604,7 +3606,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 39-Uncategorized
   created_at: 2025-11-28T21:59:56.082585533Z
   modified_at: 2025-11-28T21:59:56.082585533Z
   req_type: Functional
@@ -3613,6 +3615,24 @@ requirements:
   relationships:
   - rel_type: Parent
     target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
+- id: 7e7f5a93-f0ac-4fde-85eb-8852f43065b8
+  spec_id: FR-0092
+  title: Reference relation
+  description: |-
+    In Links tab add a button for `+ Reference` which will open a modal with a search box that will perform a full fuzzy search for and show a
+      list of requirements to select from and wither double click or select and Link (button) to create the reference relationship.
+  status: Approved
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-29T00:18:02.434052743Z
+  modified_at: 2025-11-29T00:18:02.434052743Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 4c3bb89e-2d41-4841-b2ff-881bb67fee99
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
   spec_id: $USER-001
@@ -3653,8 +3673,8 @@ id_config:
     prefix: CR
     description: Change requests for modifications to existing functionality
 features: []
-next_feature_number: 39
-next_spec_number: 92
+next_feature_number: 40
+next_spec_number: 93
 prefix_counters: {}
 relationship_definitions:
 - name: parent

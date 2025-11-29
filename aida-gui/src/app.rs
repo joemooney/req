@@ -1823,6 +1823,11 @@ pub struct RequirementsApp {
     // Markdown help modal
     show_markdown_help: bool,
 
+    // Reference picker modal (for adding References relationships)
+    show_reference_picker: bool,
+    reference_picker_search: String,
+    reference_picker_selected: Option<Uuid>, // Selected requirement in the picker
+
     // Context menu state - stores selection before right-click clears it
     last_text_selection: Option<TextSelection>,
 
@@ -2086,6 +2091,10 @@ impl RequirementsApp {
             url_verification_in_progress: false,
             // Markdown help
             show_markdown_help: false,
+            // Reference picker
+            show_reference_picker: false,
+            reference_picker_search: String::new(),
+            reference_picker_selected: None,
             // Context menu
             last_text_selection: None,
             // Project management
@@ -8512,6 +8521,12 @@ impl RequirementsApp {
             return;
         }
 
+        // Show reference picker modal if active
+        if self.show_reference_picker {
+            self.show_reference_picker_modal(ui, req_id);
+            return;
+        }
+
         // URLs section
         ui.horizontal(|ui| {
             ui.heading("External Links");
@@ -8613,6 +8628,11 @@ impl RequirementsApp {
         // Relationships section
         ui.horizontal(|ui| {
             ui.heading("Relationships");
+            if ui.button("➕ Reference").clicked() {
+                self.reference_picker_search.clear();
+                self.reference_picker_selected = None;
+                self.show_reference_picker = true;
+            }
             ui.add_space(20.0);
             ui.checkbox(&mut self.show_recursive_relationships, "Recursive")
                 .on_hover_text(
@@ -9143,6 +9163,178 @@ impl RequirementsApp {
             }
             Err(e) => {
                 self.url_verification_status = Some((false, format!("Invalid URL: {}", e)));
+            }
+        }
+    }
+
+    /// Show the reference picker modal for adding References relationships
+    fn show_reference_picker_modal(&mut self, ui: &mut egui::Ui, source_req_id: Uuid) {
+        ui.heading("Add Reference");
+        ui.add_space(5.0);
+        ui.label("Search for a requirement to reference:");
+        ui.add_space(10.0);
+
+        // Search box with focus
+        let search_response = ui.add(
+            egui::TextEdit::singleline(&mut self.reference_picker_search)
+                .hint_text("Type to search by ID, title, or description...")
+                .desired_width(400.0),
+        );
+
+        // Request focus on first frame
+        if !search_response.has_focus() && self.reference_picker_search.is_empty() {
+            search_response.request_focus();
+        }
+
+        ui.add_space(10.0);
+
+        // Get existing reference targets from the source requirement
+        let existing_refs: std::collections::HashSet<Uuid> = self
+            .store
+            .requirements
+            .iter()
+            .find(|r| r.id == source_req_id)
+            .map(|r| {
+                r.relationships
+                    .iter()
+                    .filter(|rel| rel.rel_type == RelationshipType::References)
+                    .map(|rel| rel.target_id)
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        // Perform fuzzy search and collect matching requirements
+        let search_lower = self.reference_picker_search.to_lowercase();
+        let matches: Vec<(Uuid, String, String, Option<String>)> = self
+            .store
+            .requirements
+            .iter()
+            .filter(|r| {
+                // Don't show the source requirement itself
+                if r.id == source_req_id {
+                    return false;
+                }
+                // Don't show already-referenced requirements
+                if existing_refs.contains(&r.id) {
+                    return false;
+                }
+                // If search is empty, show all (up to a limit)
+                if search_lower.is_empty() {
+                    return true;
+                }
+                // Fuzzy match on spec_id, title, and description
+                let spec_id_match = r
+                    .spec_id
+                    .as_ref()
+                    .map(|s| s.to_lowercase().contains(&search_lower))
+                    .unwrap_or(false);
+                let title_match = r.title.to_lowercase().contains(&search_lower);
+                let desc_match = r.description.to_lowercase().contains(&search_lower);
+                spec_id_match || title_match || desc_match
+            })
+            .take(50) // Limit results
+            .map(|r| {
+                let label = r
+                    .spec_id
+                    .as_ref()
+                    .map(|s| format!("{}: {}", s, r.title))
+                    .unwrap_or_else(|| r.title.clone());
+                let status = r.effective_status();
+                let desc = if r.description.len() > 100 {
+                    Some(format!("{}...", &r.description[..100]))
+                } else if !r.description.is_empty() {
+                    Some(r.description.clone())
+                } else {
+                    None
+                };
+                (r.id, label, status, desc)
+            })
+            .collect();
+
+        // Show results in a scrollable area
+        let available_height = ui.available_height() - 60.0; // Leave room for buttons
+        egui::ScrollArea::vertical()
+            .max_height(available_height.max(200.0))
+            .show(ui, |ui| {
+                if matches.is_empty() {
+                    if search_lower.is_empty() {
+                        ui.label("No requirements available to reference.");
+                    } else {
+                        ui.label("No matching requirements found.");
+                    }
+                } else {
+                    for (id, label, status, desc) in &matches {
+                        let is_selected = self.reference_picker_selected == Some(*id);
+                        let response = ui.selectable_label(is_selected, label);
+
+                        // Check clicked/double_clicked before consuming response with on_hover_text
+                        let was_clicked = response.clicked();
+                        let was_double_clicked = response.double_clicked();
+
+                        // Show status and description on hover
+                        let hover_text = if let Some(d) = desc {
+                            format!("Status: {}\n{}", status, d)
+                        } else {
+                            format!("Status: {}", status)
+                        };
+                        response.on_hover_text(hover_text);
+
+                        if was_clicked {
+                            self.reference_picker_selected = Some(*id);
+                        }
+
+                        // Double-click to immediately link
+                        if was_double_clicked {
+                            self.reference_picker_selected = Some(*id);
+                            self.create_reference_relationship(source_req_id, *id);
+                            self.show_reference_picker = false;
+                            self.reference_picker_search.clear();
+                            self.reference_picker_selected = None;
+                            return;
+                        }
+                    }
+                }
+            });
+
+        ui.add_space(15.0);
+
+        // Buttons
+        ui.horizontal(|ui| {
+            let can_link = self.reference_picker_selected.is_some();
+            if ui
+                .add_enabled(can_link, egui::Button::new("🔗 Link"))
+                .on_hover_text("Create a References relationship")
+                .clicked()
+            {
+                if let Some(target_id) = self.reference_picker_selected {
+                    self.create_reference_relationship(source_req_id, target_id);
+                    self.show_reference_picker = false;
+                    self.reference_picker_search.clear();
+                    self.reference_picker_selected = None;
+                }
+            }
+            if ui.button("Cancel").clicked() {
+                self.show_reference_picker = false;
+                self.reference_picker_search.clear();
+                self.reference_picker_selected = None;
+            }
+        });
+    }
+
+    /// Create a References relationship between two requirements
+    fn create_reference_relationship(&mut self, source_id: Uuid, target_id: Uuid) {
+        match self.store.add_relationship(
+            &source_id,
+            RelationshipType::References,
+            &target_id,
+            false, // Not bidirectional for References
+        ) {
+            Ok(_) => {
+                self.save();
+                self.message = Some(("Reference relationship created".to_string(), false));
+            }
+            Err(e) => {
+                self.message = Some((format!("Failed to create relationship: {}", e), true));
             }
         }
     }
