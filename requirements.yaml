@@ -3777,14 +3777,14 @@ requirements:
           4. Click "Cancel" to close without creating a reference
 - id: 9aec2046-225d-40e4-aadf-609045e8ab45
   spec_id: FR-0093
-  title: Open Additions Requirements List view
+  title: Open Additional Requirements List view (split panel)
   description: Abilty to have more than one Requirements List views open and drag requirements between, creating a relationship determined by the view to which you drag the relationship to.
   status: Draft
   priority: Medium
   owner: ''
   feature: 41-Uncategorized
   created_at: 2025-11-29T00:32:45.333241402Z
-  modified_at: 2025-11-29T00:32:45.333241402Z
+  modified_at: 2025-11-29T01:51:54.049982063Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -3793,6 +3793,18 @@ requirements:
     target_id: 5a09caba-1c81-4c8c-bc18-48f677c205b4
     created_at: 2025-11-29T01:23:19.372658881Z
     created_by: '@joe'
+  - rel_type: Child
+    target_id: 2fa72f4a-8d65-4197-89ea-cc462ca32023
+    created_at: 2025-11-29T01:51:21.249120875Z
+    created_by: '@joe'
+  history:
+  - id: 180ec1e9-b2b1-4ac1-bda1-c269236ea9e7
+    author: '@joe'
+    timestamp: 2025-11-29T01:51:54.049977092Z
+    changes:
+    - field_name: title
+      old_value: Open Additions Requirements List view
+      new_value: Open Additional Requirements List view (split panel)
 - id: 924b8768-f882-4bb3-ad8f-bbe9c9fd56b8
   spec_id: FR-0094
   title: Pseudo Relations
@@ -3914,7 +3926,7 @@ requirements:
   status: Approved
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 44-Uncategorized
   created_at: 2025-11-29T01:44:54.911565255Z
   created_by: '@joe'
   modified_at: 2025-11-29T01:44:54.911565255Z
@@ -3925,6 +3937,27 @@ requirements:
   - rel_type: Parent
     target_id: 01cb13e7-36e9-4dc1-900c-46d22087db4e
     created_at: 2025-11-29T01:44:54.911603527Z
+    created_by: '@joe'
+- id: 2fa72f4a-8d65-4197-89ea-cc462ca32023
+  spec_id: FR-0098
+  title: Child dragged to parent makes sibling
+  description: |2-
+
+    dragging a child to its parent makes it a sibling of the parent (i.e change parent of child to parent of parent). This way we can correct cases where we inadvertently created a child when we meant to create a sibling
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-29T01:51:21.249079253Z
+  created_by: '@joe'
+  modified_at: 2025-11-29T01:51:21.249079253Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 9aec2046-225d-40e4-aadf-609045e8ab45
+    created_at: 2025-11-29T01:51:21.249120875Z
     created_by: '@joe'
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
@@ -3966,8 +3999,8 @@ id_config:
     prefix: CR
     description: Change requests for modifications to existing functionality
 features: []
-next_feature_number: 44
-next_spec_number: 98
+next_feature_number: 45
+next_spec_number: 99
 prefix_counters: {}
 relationship_definitions:
 - name: parent

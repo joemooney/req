@@ -7517,9 +7517,9 @@ impl RequirementsApp {
             });
     }
 
-    /// Show split panel (second requirements list) on the right side
+    /// Show split panel (second requirements list) on the left side (next to main list)
     fn show_split_panel(&mut self, ctx: &egui::Context) {
-        egui::SidePanel::right("split_panel")
+        egui::SidePanel::left("split_panel")
             .min_width(200.0)
             .default_width(350.0)
             .show(ctx, |ui| {
@@ -11616,7 +11616,7 @@ impl eframe::App for RequirementsApp {
             self.show_list_panel(ctx, in_form_view);
         }
 
-        // Show split panel (second list view) on the right if open
+        // Show split panel (second list view) next to main list if open
         if self.split_panel_open && !in_form_view && !self.detail_panel_collapsed {
             self.show_split_panel(ctx);
         }
