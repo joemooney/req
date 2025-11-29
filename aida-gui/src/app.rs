@@ -9636,115 +9636,127 @@ impl RequirementsApp {
                 ui.separator();
 
                 if stacked {
-                    // Stacked layout: horizontal split with fields on left, tabs on right
+                    // Stacked layout: horizontal split with fields on left (25%), tabs on right (75%)
+                    // Use a resizable strip layout
                     let req_id = req.id;
-                    ui.columns(2, |columns| {
-                        // LEFT COLUMN: Metadata fields
-                        columns[0].vertical(|ui| {
-                            egui::ScrollArea::vertical()
-                                .id_salt("detail_metadata_scroll")
-                                .auto_shrink([false, false])
-                                .show(ui, |ui| {
-                                    egui::Grid::new("detail_grid_stacked")
-                                        .num_columns(2)
-                                        .spacing([20.0, 6.0])
-                                        .striped(true)
-                                        .show(ui, |ui| {
-                                            ui.label("ID:");
-                                            ui.label(req.spec_id.as_deref().unwrap_or("N/A"));
-                                            ui.end_row();
+                    let available_width = ui.available_width();
+                    let default_left_width = available_width * 0.25; // 25% for metadata, 75% for tabs
 
-                                            ui.label("Status:");
-                                            ui.label(format!("{:?}", req.status));
-                                            ui.end_row();
-
-                                            ui.label("Priority:");
-                                            ui.label(format!("{:?}", req.priority));
-                                            ui.end_row();
-
-                                            ui.label("Type:");
-                                            ui.label(format!("{:?}", req.req_type));
-                                            ui.end_row();
-
-                                            ui.label("Feature:");
-                                            ui.label(&req.feature);
-                                            ui.end_row();
-
-                                            ui.label("Owner:");
-                                            ui.label(&req.owner);
-                                            ui.end_row();
-
-                                            if !req.tags.is_empty() {
-                                                ui.label("Tags:");
-                                                let tags_vec: Vec<String> = req.tags.iter().cloned().collect();
-                                                ui.label(tags_vec.join(", "));
+                    // Use a horizontal layout with a resizable left panel
+                    ui.horizontal(|ui| {
+                        // LEFT SIDE: Metadata fields in a resizable panel
+                        egui::SidePanel::left("detail_metadata_panel")
+                            .resizable(true)
+                            .default_width(default_left_width)
+                            .min_width(150.0)
+                            .max_width(available_width * 0.5)
+                            .show_inside(ui, |ui| {
+                                egui::ScrollArea::vertical()
+                                    .id_salt("detail_metadata_scroll")
+                                    .auto_shrink([false, false])
+                                    .show(ui, |ui| {
+                                        egui::Grid::new("detail_grid_stacked")
+                                            .num_columns(2)
+                                            .spacing([10.0, 6.0])
+                                            .striped(true)
+                                            .show(ui, |ui| {
+                                                ui.label("ID:");
+                                                ui.label(req.spec_id.as_deref().unwrap_or("N/A"));
                                                 ui.end_row();
-                                            }
 
-                                            if let Some(ref created_by) = req.created_by {
-                                                ui.label("Created By:");
-                                                ui.label(created_by);
+                                                ui.label("Status:");
+                                                ui.label(format!("{:?}", req.status));
                                                 ui.end_row();
-                                            }
 
-                                            ui.label("Created:");
-                                            ui.label(req.created_at.format("%Y-%m-%d %H:%M").to_string());
-                                            ui.end_row();
+                                                ui.label("Priority:");
+                                                ui.label(format!("{:?}", req.priority));
+                                                ui.end_row();
 
-                                            ui.label("Modified:");
-                                            ui.label(req.modified_at.format("%Y-%m-%d %H:%M").to_string());
-                                            ui.end_row();
-                                        });
-                                });
-                        });
+                                                ui.label("Type:");
+                                                ui.label(format!("{:?}", req.req_type));
+                                                ui.end_row();
 
-                        // RIGHT COLUMN: Tabs and tab content
-                        columns[1].vertical(|ui| {
-                            // Tabs
-                            ui.horizontal(|ui| {
-                                ui.selectable_value(
-                                    &mut self.active_tab,
-                                    DetailTab::Description,
-                                    "📄 Desc",
-                                );
-                                ui.selectable_value(
-                                    &mut self.active_tab,
-                                    DetailTab::Comments,
-                                    format!("💬 ({})", req.comments.len()),
-                                );
-                                ui.selectable_value(
-                                    &mut self.active_tab,
-                                    DetailTab::Links,
-                                    format!("🔗 ({})", req.relationships.len() + req.urls.len()),
-                                );
-                                ui.selectable_value(
-                                    &mut self.active_tab,
-                                    DetailTab::History,
-                                    format!("📜 ({})", req.history.len()),
-                                );
+                                                ui.label("Feature:");
+                                                ui.label(&req.feature);
+                                                ui.end_row();
+
+                                                ui.label("Owner:");
+                                                ui.label(&req.owner);
+                                                ui.end_row();
+
+                                                if !req.tags.is_empty() {
+                                                    ui.label("Tags:");
+                                                    let tags_vec: Vec<String> = req.tags.iter().cloned().collect();
+                                                    ui.label(tags_vec.join(", "));
+                                                    ui.end_row();
+                                                }
+
+                                                if let Some(ref created_by) = req.created_by {
+                                                    ui.label("Created By:");
+                                                    ui.label(created_by);
+                                                    ui.end_row();
+                                                }
+
+                                                ui.label("Created:");
+                                                ui.label(req.created_at.format("%Y-%m-%d %H:%M").to_string());
+                                                ui.end_row();
+
+                                                ui.label("Modified:");
+                                                ui.label(req.modified_at.format("%Y-%m-%d %H:%M").to_string());
+                                                ui.end_row();
+                                            });
+                                    });
                             });
 
-                            ui.separator();
-
-                            // Tab content
-                            egui::ScrollArea::vertical()
-                                .id_salt("detail_tab_content_scroll")
-                                .auto_shrink([false, false])
-                                .show(ui, |ui| match &self.active_tab {
-                                    DetailTab::Description => {
-                                        self.show_description_tab(ui, &req, idx);
-                                    }
-                                    DetailTab::Comments => {
-                                        self.show_comments_tab(ui, &req, idx);
-                                    }
-                                    DetailTab::Links => {
-                                        self.show_links_tab(ui, &req, req_id);
-                                    }
-                                    DetailTab::History => {
-                                        self.show_history_tab(ui, &req);
-                                    }
+                        // RIGHT SIDE: Tabs and tab content (takes remaining space)
+                        egui::CentralPanel::default()
+                            .frame(egui::Frame::none())
+                            .show_inside(ui, |ui| {
+                                // Tabs
+                                ui.horizontal(|ui| {
+                                    ui.selectable_value(
+                                        &mut self.active_tab,
+                                        DetailTab::Description,
+                                        "📄 Description",
+                                    );
+                                    ui.selectable_value(
+                                        &mut self.active_tab,
+                                        DetailTab::Comments,
+                                        format!("💬 Comments ({})", req.comments.len()),
+                                    );
+                                    ui.selectable_value(
+                                        &mut self.active_tab,
+                                        DetailTab::Links,
+                                        format!("🔗 Links ({})", req.relationships.len() + req.urls.len()),
+                                    );
+                                    ui.selectable_value(
+                                        &mut self.active_tab,
+                                        DetailTab::History,
+                                        format!("📜 History ({})", req.history.len()),
+                                    );
                                 });
-                        });
+
+                                ui.separator();
+
+                                // Tab content
+                                egui::ScrollArea::vertical()
+                                    .id_salt("detail_tab_content_scroll")
+                                    .auto_shrink([false, false])
+                                    .show(ui, |ui| match &self.active_tab {
+                                        DetailTab::Description => {
+                                            self.show_description_tab(ui, &req, idx);
+                                        }
+                                        DetailTab::Comments => {
+                                            self.show_comments_tab(ui, &req, idx);
+                                        }
+                                        DetailTab::Links => {
+                                            self.show_links_tab(ui, &req, req_id);
+                                        }
+                                        DetailTab::History => {
+                                            self.show_history_tab(ui, &req);
+                                        }
+                                    });
+                            });
                     });
                 } else {
                     // Side layout (vertical): metadata at top, tabs below
