@@ -1529,6 +1529,14 @@ impl LayoutMode {
     }
 }
 
+/// Which list panel currently has focus for keyboard navigation
+#[derive(Default, Debug, PartialEq, Clone, Copy)]
+enum FocusedList {
+    #[default]
+    List1,  // Main requirements list
+    List2,  // Split list (second list)
+}
+
 /// Perspective defines how requirements are organized in the list
 #[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
 pub(crate) enum Perspective {
@@ -1849,6 +1857,7 @@ pub struct RequirementsApp {
     split_tree_collapsed: HashMap<Uuid, bool>,
     split_selected_idx: Option<usize>,
     split_active_preset: Option<String>,
+    focused_list: FocusedList,  // Which list has focus for keyboard navigation
 
     // Relationship definition editing
     editing_rel_def: Option<String>, // Name of relationship def being edited (None = adding new)
@@ -2145,6 +2154,7 @@ impl RequirementsApp {
             split_tree_collapsed: HashMap::new(),
             split_selected_idx: None,
             split_active_preset: None,
+            focused_list: FocusedList::default(),
             editing_rel_def: None,
             rel_def_form_name: String::new(),
             rel_def_form_display_name: String::new(),
@@ -6816,6 +6826,44 @@ impl RequirementsApp {
         }
     }
 
+    /// Get indices of requirements for the split list (List 2) that pass the split filters
+    fn get_split_filtered_indices(&self) -> Vec<usize> {
+        let filter_text = self.split_filter_text.to_lowercase();
+        self.store
+            .requirements
+            .iter()
+            .enumerate()
+            .filter(|(_, req)| {
+                // Skip archived
+                if req.archived && !self.show_archived {
+                    return false;
+                }
+                // Text filter
+                if !filter_text.is_empty() {
+                    let matches = req.title.to_lowercase().contains(&filter_text)
+                        || req.description.to_lowercase().contains(&filter_text);
+                    if !matches {
+                        return false;
+                    }
+                }
+                // Type filter
+                if !self.split_filter_types.is_empty()
+                    && !self.split_filter_types.contains(&req.req_type)
+                {
+                    return false;
+                }
+                // Feature filter
+                if !self.split_filter_features.is_empty()
+                    && !self.split_filter_features.contains(&req.feature)
+                {
+                    return false;
+                }
+                true
+            })
+            .map(|(idx, _)| idx)
+            .collect()
+    }
+
     /// Collect tree indices in top-down order (roots first, then children)
     fn collect_tree_indices_top_down(
         &self,
@@ -7813,11 +7861,13 @@ impl RequirementsApp {
                     let response = ui.selectable_label(is_selected, &display);
                     if response.clicked() {
                         self.split_selected_idx = Some(idx);
+                        self.focused_list = FocusedList::List2;
                     }
                     if response.double_clicked() {
                         // Switch to edit mode on double-click
                         self.split_selected_idx = Some(idx);
                         self.selected_idx = Some(idx);
+                        self.focused_list = FocusedList::List2;
                         self.load_form_from_requirement(idx);
                         self.pending_view_change = Some(View::Edit);
                     }
@@ -7850,10 +7900,12 @@ impl RequirementsApp {
                     let response = ui.selectable_label(is_selected, &display);
                     if response.clicked() {
                         self.split_selected_idx = Some(idx);
+                        self.focused_list = FocusedList::List2;
                     }
                     if response.double_clicked() {
                         self.split_selected_idx = Some(idx);
                         self.selected_idx = Some(idx);
+                        self.focused_list = FocusedList::List2;
                         self.load_form_from_requirement(idx);
                         self.pending_view_change = Some(View::Edit);
                     }
@@ -8582,6 +8634,7 @@ impl RequirementsApp {
             // Handle interactions
             if response.clicked() {
                 self.selected_idx = Some(idx);
+                self.focused_list = FocusedList::List1;
                 self.pending_view_change = Some(View::Detail);
             }
 
@@ -8840,10 +8893,12 @@ impl RequirementsApp {
         if response.double_clicked() {
             // Double-click opens for editing
             self.selected_idx = Some(idx);
+            self.focused_list = FocusedList::List1;
             self.load_form_from_requirement(idx);
             self.pending_view_change = Some(View::Edit);
         } else if response.clicked() {
             self.selected_idx = Some(idx);
+            self.focused_list = FocusedList::List1;
             self.pending_view_change = Some(View::Detail);
         }
 
@@ -11870,8 +11925,13 @@ impl eframe::App for RequirementsApp {
                 self.pending_save = true;
             }
 
-            // Handle navigation (delta-based or jump-based)
-            let filtered_indices = self.get_filtered_indices();
+            // Handle navigation (delta-based or jump-based) based on focused list
+            // Get the appropriate filtered indices and current selection based on focus
+            let (filtered_indices, current_selection) = match self.focused_list {
+                FocusedList::List1 => (self.get_filtered_indices(), self.selected_idx),
+                FocusedList::List2 => (self.get_split_filtered_indices(), self.split_selected_idx),
+            };
+
             if !filtered_indices.is_empty() {
                 let new_selection = if jump_to_start {
                     // Jump to first item
@@ -11880,7 +11940,7 @@ impl eframe::App for RequirementsApp {
                     // Jump to last item
                     Some(filtered_indices[filtered_indices.len() - 1])
                 } else if nav_delta != 0 {
-                    if let Some(current_idx) = self.selected_idx {
+                    if let Some(current_idx) = current_selection {
                         // Find current position in filtered list
                         if let Some(pos) =
                             filtered_indices.iter().position(|&idx| idx == current_idx)
@@ -11912,12 +11972,22 @@ impl eframe::App for RequirementsApp {
                 };
 
                 if let Some(new_sel) = new_selection {
-                    if Some(new_sel) != self.selected_idx {
-                        self.selected_idx = Some(new_sel);
-                        self.pending_view_change = Some(View::Detail);
-                        // Scroll the newly selected item into view
-                        if let Some(req) = self.store.requirements.get(new_sel) {
-                            self.scroll_to_requirement = Some(req.id);
+                    match self.focused_list {
+                        FocusedList::List1 => {
+                            if Some(new_sel) != self.selected_idx {
+                                self.selected_idx = Some(new_sel);
+                                self.pending_view_change = Some(View::Detail);
+                                // Scroll the newly selected item into view
+                                if let Some(req) = self.store.requirements.get(new_sel) {
+                                    self.scroll_to_requirement = Some(req.id);
+                                }
+                            }
+                        }
+                        FocusedList::List2 => {
+                            if Some(new_sel) != self.split_selected_idx {
+                                self.split_selected_idx = Some(new_sel);
+                                // Don't change view, but scroll into view if we add split scroll support
+                            }
                         }
                     }
                 }
