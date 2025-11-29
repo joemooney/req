@@ -822,3 +822,15 @@ A chronological record of development sessions and changes made to the Requireme
   - Added `.max_width(max_panel_width)` to the SidePanel configuration
   - Content is now clipped/truncated rather than expanding the panel
 - **Result**: List panel stays within bounds even with long requirement titles
+
+### Details View Title Truncation
+- **Prompt**: "In the Details view the title needs to be truncated so that the Actions and Edit buttons remain visible"
+- **Root Cause**: The title label in `show_detail_view_internal()` was rendered first without width constraints, causing it to push the Actions/Edit/Close buttons off-screen when titles were very long.
+- **Solution**: Constrain title width to reserve space for buttons
+- **Implementation** (in `show_detail_view_internal()` around line 9635):
+  - Calculate reserved `buttons_width` (220px with Close button, 180px without)
+  - Calculate `title_max_width = (available_width - buttons_width).max(100.0)`
+  - Use `allocate_ui_with_layout()` to create constrained space for title
+  - Apply `ui.set_clip_rect()` to prevent overflow
+  - Use `egui::Label::new(title_text).truncate()` to truncate with ellipsis
+- **Result**: Long titles are now truncated with ellipsis, keeping Actions, Edit, and Close buttons visible
