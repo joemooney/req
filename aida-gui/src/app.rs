@@ -11785,12 +11785,37 @@ impl RequirementsApp {
                             .spacing([10.0, 8.0])
                             .striped(true)
                             .show(ui, |ui| {
-                                // ID (for edit mode) or Prefix (for add mode)
+                                // ID (for edit mode) - dynamically update based on form_prefix/form_type
                                 if is_edit {
                                     if let Some(idx) = self.selected_idx {
                                         if let Some(req) = self.store.requirements.get(idx) {
                                             ui.label("ID:");
-                                            ui.label(req.spec_id.as_deref().unwrap_or("N/A"));
+                                            // Compute what the ID will be based on current form state
+                                            let displayed_id = if let Some(current_spec_id) = &req.spec_id {
+                                                // Extract the number part from current spec_id (e.g., "FR-0001" -> "0001")
+                                                if let Some(dash_pos) = current_spec_id.rfind('-') {
+                                                    let number_part = &current_spec_id[dash_pos..]; // includes the dash
+                                                    // Determine the prefix to use
+                                                    let effective_prefix = if !self.form_prefix.trim().is_empty() {
+                                                        // User has explicitly set a prefix
+                                                        self.form_prefix.trim().to_uppercase()
+                                                    } else {
+                                                        // Use the type's default prefix
+                                                        let type_name = format!("{:?}", self.form_type);
+                                                        self.store.type_definitions
+                                                            .iter()
+                                                            .find(|td| td.name == type_name)
+                                                            .and_then(|td| td.prefix.clone())
+                                                            .unwrap_or_else(|| "REQ".to_string())
+                                                    };
+                                                    format!("{}{}", effective_prefix, number_part)
+                                                } else {
+                                                    current_spec_id.clone()
+                                                }
+                                            } else {
+                                                "N/A".to_string()
+                                            };
+                                            ui.label(&displayed_id);
                                             ui.end_row();
                                         }
                                     }
@@ -12095,12 +12120,37 @@ impl RequirementsApp {
             .spacing([40.0, 8.0])
             .striped(true)
             .show(ui, |ui| {
-                // ID (for edit mode)
+                // ID (for edit mode) - dynamically update based on form_prefix/form_type
                 if is_edit {
                     if let Some(idx) = self.selected_idx {
                         if let Some(req) = self.store.requirements.get(idx) {
                             ui.label("ID:");
-                            ui.label(req.spec_id.as_deref().unwrap_or("N/A"));
+                            // Compute what the ID will be based on current form state
+                            let displayed_id = if let Some(current_spec_id) = &req.spec_id {
+                                // Extract the number part from current spec_id (e.g., "FR-0001" -> "0001")
+                                if let Some(dash_pos) = current_spec_id.rfind('-') {
+                                    let number_part = &current_spec_id[dash_pos..]; // includes the dash
+                                    // Determine the prefix to use
+                                    let effective_prefix = if !self.form_prefix.trim().is_empty() {
+                                        // User has explicitly set a prefix
+                                        self.form_prefix.trim().to_uppercase()
+                                    } else {
+                                        // Use the type's default prefix
+                                        let type_name = format!("{:?}", self.form_type);
+                                        self.store.type_definitions
+                                            .iter()
+                                            .find(|td| td.name == type_name)
+                                            .and_then(|td| td.prefix.clone())
+                                            .unwrap_or_else(|| "REQ".to_string())
+                                    };
+                                    format!("{}{}", effective_prefix, number_part)
+                                } else {
+                                    current_spec_id.clone()
+                                }
+                            } else {
+                                "N/A".to_string()
+                            };
+                            ui.label(&displayed_id);
                             ui.end_row();
                         }
                     }

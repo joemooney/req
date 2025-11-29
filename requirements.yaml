@@ -1525,7 +1525,7 @@ requirements:
       old_value: ''
       new_value: Type Definition Editor
 - id: 05a9d563-dc72-4bcd-b69c-6095fd396c28
-  spec_id: REQ-0090
+  spec_id: FR-0101
   title: Arrow keys bad behavior in edit mode123456789012345678901234567890AAAAAAAABBBBBBBBBB
   description: " When I am add/edit and I start editing the desription and I press the up arrow, I think the global key binding is being invoked to move to \nthe previous requirement \nFixed! The issue was that the navigation keybindings (Up/Down arrows) were being processed even when in Add/Edit form view. The fix adds\n  explicit checks for:\n\n\n\n  1. in_form_view - when the current view is Add or Edit\n  2. in_settings - when the settings dialog is open\n\n  When any of these conditions are true (or text_input_focused), the keybinding context is set to KeyContext::Global, which prevents the\n  navigation bindings (which have KeyContext::RequirementsList) from being triggered.\n\n  Committed as 0bfa17c and pushed to GitHub.\n"
   status: Draft
@@ -1533,8 +1533,8 @@ requirements:
   owner: ''
   feature: 23-Uncategorized
   created_at: 2025-11-27T05:38:12.026793995Z
-  modified_at: 2025-11-29T06:56:17.755951978Z
-  req_type: Bug
+  modified_at: 2025-11-29T19:07:00.534501748Z
+  req_type: Functional
   dependencies: []
   tags: []
   relationships:
@@ -1586,6 +1586,16 @@ requirements:
     - field_name: title
       old_value: Arrow keys bad behavior in edit mode123456789012345678901234567890
       new_value: Arrow keys bad behavior in edit mode123456789012345678901234567890AAAAAAAABBBBBBBBBB
+  - id: 7ed4ec37-fcc2-4ee9-89fb-085434edd9b6
+    author: Unknown User
+    timestamp: 2025-11-29T19:07:00.534500858Z
+    changes:
+    - field_name: type
+      old_value: Bug
+      new_value: Functional
+    - field_name: spec_id
+      old_value: REQ-0090
+      new_value: FR-0101
 - id: 0aefc969-49e7-4825-9118-ba20f778636c
   spec_id: FR-0046
   title: Width of Requirements View Panel
@@ -4292,7 +4302,7 @@ id_config:
     description: Change requests for modifications to existing functionality
 features: []
 next_feature_number: 47
-next_spec_number: 101
+next_spec_number: 102
 prefix_counters: {}
 relationship_definitions:
 - name: parent
