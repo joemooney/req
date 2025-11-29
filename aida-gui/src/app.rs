@@ -14041,8 +14041,66 @@ impl eframe::App for RequirementsApp {
                         }
                     });
                 }
+                LayoutMode::ListDetailsStacked => {
+                    // Use TopBottomPanel approach to match Detail View exactly
+                    // List on top, Form on bottom (vertically stacked)
+                    if show_left_panel {
+                        let list_height = (screen_height - 60.0) * 0.4;
+                        egui::TopBottomPanel::top("list_top_panel")
+                            .min_height(150.0)
+                            .default_height(list_height)
+                            .resizable(true)
+                            .show(ctx, |ui| {
+                                // Simplified list content matching Detail View
+                                ui.horizontal(|ui| {
+                                    ui.heading("Requirements");
+                                });
+                                // Search bar
+                                ui.horizontal(|ui| {
+                                    ui.label("🔍");
+                                    ui.add(
+                                        egui::TextEdit::singleline(&mut self.filter_text)
+                                            .hint_text("Search...")
+                                            .desired_width(120.0),
+                                    );
+                                    // Filter toggle button
+                                    let filter_active = !self.filter_types.is_empty() || !self.filter_features.is_empty()
+                                        || !self.filter_prefixes.is_empty() || !self.filter_statuses.is_empty()
+                                        || !self.filter_priorities.is_empty();
+                                    let filter_btn_text = if filter_active { "🔽 ●" } else { "🔽" };
+                                    if ui.button(filter_btn_text).on_hover_text("Filters").clicked() {
+                                        self.show_filter_dialog_list1 = !self.show_filter_dialog_list1;
+                                    }
+                                });
+                                ui.separator();
+                                // Scrollable list
+                                egui::ScrollArea::vertical()
+                                    .id_salt("list_stacked_scroll")
+                                    .auto_shrink([false, false])
+                                    .show(ui, |ui| {
+                                        self.show_tree_list(ui);
+                                    });
+                            });
+                    }
+                    egui::CentralPanel::default().show(ctx, |ui| {
+                        if !show_left_panel {
+                            ui.horizontal(|ui| {
+                                if ui
+                                    .button("▲ Show List")
+                                    .on_hover_text("Show requirements list")
+                                    .clicked()
+                                {
+                                    self.left_panel_collapsed = false;
+                                }
+                            });
+                            ui.separator();
+                        }
+                        self.show_form_stacked(ui, is_edit);
+                    });
+                }
                 _ => {
-                    // For other layout modes, use SidePanel approach
+                    // For other layout modes (SplitListDetails, SplitListOnly, ListOnly),
+                    // use SidePanel approach
                     if show_left_panel {
                         self.show_list_panel_simple(ctx);
                     }
@@ -14060,11 +14118,7 @@ impl eframe::App for RequirementsApp {
                             });
                             ui.separator();
                         }
-
-                        match self.layout_mode {
-                            LayoutMode::ListDetailsStacked => self.show_form_stacked(ui, is_edit),
-                            _ => self.show_form_vertical(ui, is_edit),
-                        }
+                        self.show_form_vertical(ui, is_edit);
                     });
                 }
             }
