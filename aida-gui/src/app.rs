@@ -1756,8 +1756,9 @@ pub struct RequirementsApp {
     show_description_preview: bool, // Toggle preview mode in edit form
 
     // Left panel state
-    left_panel_collapsed: bool,  // Whether left panel is manually collapsed
+    left_panel_collapsed: bool,  // Whether left panel is manually collapsed (in form view)
     detail_panel_collapsed: bool, // Whether detail panel is collapsed (list-only mode)
+    list_panel_collapsed: bool,   // Whether list panel is collapsed (detail-only mode)
 
     // Relationship definition editing
     editing_rel_def: Option<String>, // Name of relationship def being edited (None = adding new)
@@ -2042,6 +2043,7 @@ impl RequirementsApp {
             show_description_preview: false,
             left_panel_collapsed: false,
             detail_panel_collapsed: false,
+            list_panel_collapsed: false,
             editing_rel_def: None,
             rel_def_form_name: String::new(),
             rel_def_form_display_name: String::new(),
@@ -7201,13 +7203,22 @@ impl RequirementsApp {
                                 self.left_panel_collapsed = true;
                             }
                         } else {
-                            // In List/Detail view, show button to hide detail panel
+                            // In List/Detail view, show buttons to collapse list or detail
+                            // "▶" hides detail panel (focus on list)
                             if ui
                                 .button("▶")
                                 .on_hover_text("Hide detail panel (focus on list)")
                                 .clicked()
                             {
                                 self.detail_panel_collapsed = true;
+                            }
+                            // "◀" hides list panel (focus on detail)
+                            if ui
+                                .button("◀")
+                                .on_hover_text("Hide list panel (focus on detail)")
+                                .clicked()
+                            {
+                                self.list_panel_collapsed = true;
                             }
                         }
                     });
@@ -8557,6 +8568,16 @@ impl RequirementsApp {
                 let current_status = req.status.clone();
 
                 ui.horizontal(|ui| {
+                    // Show expand list button when list is collapsed
+                    if self.list_panel_collapsed {
+                        if ui
+                            .button("▶")
+                            .on_hover_text("Show list panel")
+                            .clicked()
+                        {
+                            self.list_panel_collapsed = false;
+                        }
+                    }
                     ui.heading(&req.title);
                     if is_archived {
                         ui.label("(Archived)");
@@ -8786,6 +8807,18 @@ impl RequirementsApp {
                 }
             }
         } else {
+            // Show expand list button when list is collapsed and no requirement selected
+            if self.list_panel_collapsed {
+                ui.horizontal(|ui| {
+                    if ui
+                        .button("▶")
+                        .on_hover_text("Show list panel")
+                        .clicked()
+                    {
+                        self.list_panel_collapsed = false;
+                    }
+                });
+            }
             ui.vertical_centered(|ui| {
                 ui.add_space(100.0);
                 ui.heading("Select a requirement from the list");
@@ -11300,8 +11333,10 @@ impl eframe::App for RequirementsApp {
         let show_left_panel = if in_form_view {
             screen_width >= min_width_for_side_panel && !self.left_panel_collapsed
         } else {
-            // In List/Detail view, show side panel only if detail panel is NOT collapsed
-            !self.detail_panel_collapsed
+            // In List/Detail view, show side panel if:
+            // - detail panel is collapsed (list-only mode), OR
+            // - list panel is NOT collapsed (normal mode)
+            self.detail_panel_collapsed || !self.list_panel_collapsed
         };
 
         if show_left_panel {
