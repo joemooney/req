@@ -11151,8 +11151,7 @@ impl RequirementsApp {
         egui::Window::new("Markdown Help")
             .collapsible(false)
             .resizable(true)
-            .default_width(600.0)
-            .default_height(500.0)
+            .auto_sized() // Auto-size to fit content
             .max_width(max_size.x)
             .max_height(max_size.y)
             .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
