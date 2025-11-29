@@ -9268,9 +9268,14 @@ impl RequirementsApp {
     /// Show simplified list panel for form views (matches Detail View layout)
     /// Only shows search + filter button, no perspective/preset controls
     fn show_list_panel_simple(&mut self, ctx: &egui::Context) {
+        // Calculate max width as 50% of screen to match Detail View proportions
+        let screen_width = ctx.screen_rect().width();
+        let max_panel_width = (screen_width * 0.5).max(350.0);
+
         egui::SidePanel::left("list_panel_simple")
             .min_width(150.0)
             .default_width(350.0)
+            .max_width(max_panel_width)
             .resizable(true)
             .show(ctx, |ui| {
                 // Set clip rect to prevent content overflow
