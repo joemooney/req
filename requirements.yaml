@@ -1,5 +1,5 @@
 name: Aida
-title: ''
+title: AI Design Assistant
 description: ''
 requirements:
 - id: 37be9566-a051-430b-b47b-1890a395a524
@@ -863,8 +863,6 @@ requirements:
   - rel_type: Child
     target_id: 05a9d563-dc72-4bcd-b69c-6095fd396c28
   - rel_type: Child
-    target_id: 0aefc969-49e7-4825-9118-ba20f778636c
-  - rel_type: Child
     target_id: baf7ce9a-b022-41d6-9781-c8b5d1c32acd
   - rel_type: Child
     target_id: 2c0c3c1a-aa65-4cce-8d03-3898775b3ac2
@@ -893,8 +891,8 @@ requirements:
     created_at: 2025-11-29T04:33:51.842489368Z
     created_by: '@joe'
   - rel_type: Child
-    target_id: d0650db4-0021-4496-8620-f7f6bf8dbc87
-    created_at: 2025-11-29T04:39:50.207480269Z
+    target_id: 0aefc969-49e7-4825-9118-ba20f778636c
+    created_at: 2025-11-29T16:53:29.853418314Z
     created_by: '@joe'
   history:
   - id: e2ba3669-855e-4b99-9b7f-30300da178c5
@@ -1517,14 +1515,14 @@ requirements:
       new_value: Type Definition Editor
 - id: 05a9d563-dc72-4bcd-b69c-6095fd396c28
   spec_id: REQ-0090
-  title: Arrow keys bad behavior in edit mode
+  title: Arrow keys bad behavior in edit mode123456789012345678901234567890AAAAAAAABBBBBBBBBB
   description: " When I am add/edit and I start editing the desription and I press the up arrow, I think the global key binding is being invoked to move to \nthe previous requirement \nFixed! The issue was that the navigation keybindings (Up/Down arrows) were being processed even when in Add/Edit form view. The fix adds\n  explicit checks for:\n\n\n\n  1. in_form_view - when the current view is Add or Edit\n  2. in_settings - when the settings dialog is open\n\n  When any of these conditions are true (or text_input_focused), the keybinding context is set to KeyContext::Global, which prevents the\n  navigation bindings (which have KeyContext::RequirementsList) from being triggered.\n\n  Committed as 0bfa17c and pushed to GitHub.\n"
   status: Draft
   priority: Medium
   owner: ''
   feature: 23-Uncategorized
   created_at: 2025-11-27T05:38:12.026793995Z
-  modified_at: 2025-11-28T21:12:10.250824067Z
+  modified_at: 2025-11-29T06:56:17.755951978Z
   req_type: Bug
   dependencies: []
   tags: []
@@ -1563,6 +1561,20 @@ requirements:
     - field_name: spec_id
       old_value: CR-0045
       new_value: REQ-0090
+  - id: 2ed947d1-1889-4601-9f6b-34f9d49140cc
+    author: '@joe'
+    timestamp: 2025-11-29T06:55:55.693542724Z
+    changes:
+    - field_name: title
+      old_value: Arrow keys bad behavior in edit mode
+      new_value: Arrow keys bad behavior in edit mode123456789012345678901234567890
+  - id: caef4416-f537-4e9b-9b52-f7ba66d66ed6
+    author: '@joe'
+    timestamp: 2025-11-29T06:56:17.755951610Z
+    changes:
+    - field_name: title
+      old_value: Arrow keys bad behavior in edit mode123456789012345678901234567890
+      new_value: Arrow keys bad behavior in edit mode123456789012345678901234567890AAAAAAAABBBBBBBBBB
 - id: 0aefc969-49e7-4825-9118-ba20f778636c
   spec_id: FR-0046
   title: Width of Requirements View Panel
@@ -1579,6 +1591,8 @@ requirements:
   relationships:
   - rel_type: Parent
     target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
+    created_at: 2025-11-29T16:53:29.853418314Z
+    created_by: '@joe'
   history:
   - id: d9b95a8a-e34b-4afa-9d2d-59ebbbc515e6
     author: '@joe'
@@ -2829,6 +2843,10 @@ requirements:
     target_id: f54c4d83-8073-49d1-9229-c712480a83e4
   - rel_type: Child
     target_id: 3fe85c39-0da4-477a-9ac5-04ecb9696ec9
+  - rel_type: Child
+    target_id: d0650db4-0021-4496-8620-f7f6bf8dbc87
+    created_at: 2025-11-29T16:54:13.987670996Z
+    created_by: '@joe'
   history:
   - id: a2587809-925c-4e2e-9333-f041b1d67116
     author: '@joe'
@@ -4038,22 +4056,30 @@ requirements:
 - id: d0650db4-0021-4496-8620-f7f6bf8dbc87
   spec_id: FR-0100
   title: Details View layout
-  description: Details View Panel should display with the tabs (Description. Links etc.) at the bottome of the paned whe the Details View panel is displayed on the right. But if the Details View panel is display at the bottom then a better use of space is to split the layout so that the Type, Status and other fields are displayed in a vertical column on the left and the right side of the panel shows the tabs.
+  description: Details View Panel should display with the tabs (Description. Links etc.) at the bottom of the panel when the Details View panel is displayed on the right (as currently implemented). But if the Details View panel is displayed at the bottom (in in List/Details) then a better use of space is to split the Details View panel so that the ID, Type, Status and other non-wide fields are displayed in a vertical column on the left and on the right side of the panel we show the tabs.
   status: Draft
   priority: Medium
   owner: ''
   feature: 46-Uncategorized
   created_at: 2025-11-29T04:39:50.207441032Z
   created_by: '@joe'
-  modified_at: 2025-11-29T04:39:50.207441032Z
+  modified_at: 2025-11-29T16:57:05.354231753Z
   req_type: Functional
   dependencies: []
   tags: []
   relationships:
   - rel_type: Parent
-    target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
-    created_at: 2025-11-29T04:39:50.207480269Z
+    target_id: ae4d77e5-55a4-4a56-97d1-a030d922a04d
+    created_at: 2025-11-29T16:54:13.987670996Z
     created_by: '@joe'
+  history:
+  - id: 2fe4deea-e196-4b7c-ab1a-59b6d5b3efb9
+    author: '@joe'
+    timestamp: 2025-11-29T16:57:05.354230926Z
+    changes:
+    - field_name: description
+      old_value: Details View Panel should display with the tabs (Description. Links etc.) at the bottome of the paned whe the Details View panel is displayed on the right. But if the Details View panel is display at the bottom then a better use of space is to split the layout so that the Type, Status and other fields are displayed in a vertical column on the left and the right side of the panel shows the tabs.
+      new_value: Details View Panel should display with the tabs (Description. Links etc.) at the bottom of the panel when the Details View panel is displayed on the right (as currently implemented). But if the Details View panel is displayed at the bottom (in in List/Details) then a better use of space is to split the Details View panel so that the ID, Type, Status and other non-wide fields are displayed in a vertical column on the left and on the right side of the panel we show the tabs.
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
   spec_id: $USER-001

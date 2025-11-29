@@ -1527,6 +1527,12 @@ impl LayoutMode {
             LayoutMode::ListOnly,
         ]
     }
+
+    /// Returns true if the details panel is displayed at the bottom (stacked),
+    /// false if displayed on the side (right)
+    fn is_details_stacked(&self) -> bool {
+        matches!(self, LayoutMode::ListDetailsStacked | LayoutMode::SplitListDetails)
+    }
 }
 
 /// Which list panel currently has focus for keyboard navigation
@@ -7911,15 +7917,17 @@ impl RequirementsApp {
                         req.title
                     );
 
-                    // Custom rendering like List 1 - no hover highlight
+                    // Custom rendering - constrain to available width
+                    let available_width = ui.available_width() - 8.0;
+
                     let text = egui::WidgetText::from(&label);
                     let galley = text.into_galley(
                         ui,
-                        Some(egui::TextWrapMode::Extend),
-                        f32::INFINITY,
+                        Some(egui::TextWrapMode::Truncate),
+                        available_width.max(50.0),
                         egui::TextStyle::Body,
                     );
-                    let desired_size = galley.size() + egui::vec2(8.0, 4.0);
+                    let desired_size = egui::vec2(available_width.max(50.0), galley.size().y) + egui::vec2(8.0, 4.0);
                     let (rect, response) = ui.allocate_exact_size(desired_size, egui::Sense::click());
 
                     // Scroll to center if requested
@@ -7988,15 +7996,16 @@ impl RequirementsApp {
                         rel_indicator
                     );
 
-                    // Custom rendering like List 1 - no hover highlight
+                    // Custom rendering - constrain to available width
+                    let available_width = ui.available_width() - 8.0;
                     let text = egui::WidgetText::from(&label);
                     let galley = text.into_galley(
                         ui,
-                        Some(egui::TextWrapMode::Extend),
-                        f32::INFINITY,
+                        Some(egui::TextWrapMode::Truncate),
+                        available_width.max(50.0),
                         egui::TextStyle::Body,
                     );
-                    let desired_size = galley.size() + egui::vec2(8.0, 4.0);
+                    let desired_size = egui::vec2(available_width.max(50.0), galley.size().y) + egui::vec2(8.0, 4.0);
                     let (rect, response) = ui.allocate_exact_size(desired_size, egui::Sense::click());
 
                     // Scroll to center if requested
@@ -8725,6 +8734,7 @@ impl RequirementsApp {
             // Calculate size for the label - constrain to available width
             // available_width already accounts for indent space since we called ui.add_space earlier
             let available_width = ui.available_width() - 8.0; // account for padding
+
             let text = egui::WidgetText::from(&label);
             let galley = text.into_galley(
                 ui,
@@ -8732,6 +8742,7 @@ impl RequirementsApp {
                 available_width.max(50.0), // minimum width to prevent issues
                 egui::TextStyle::Body,
             );
+
             let desired_size = egui::vec2(available_width.max(50.0), galley.size().y) + egui::vec2(8.0, 4.0); // padding
 
             let (rect, response) = ui.allocate_exact_size(desired_size, sense);
@@ -9171,10 +9182,19 @@ impl RequirementsApp {
 
     /// Show list panel with close button (for layouts where panel can be closed)
     fn show_list_panel_with_close(&mut self, ctx: &egui::Context, in_form_view: bool) {
+        // Get screen width to calculate 50% default
+        let screen_width = ctx.screen_rect().width();
+        let default_width = (screen_width / 2.0).max(200.0);
+
         egui::SidePanel::left("list_panel")
-            .min_width(200.0)
-            .default_width(400.0)
+            .min_width(150.0)
+            .default_width(default_width)
+            .resizable(true)
             .show(ctx, |ui| {
+                // Set clip rect to prevent content overflow
+                let clip_rect = ui.available_rect_before_wrap();
+                ui.set_clip_rect(clip_rect);
+
                 // Header with close button (only if we have more than just this panel)
                 ui.horizontal(|ui| {
                     ui.heading("Requirements");
@@ -9348,8 +9368,9 @@ impl RequirementsApp {
 
     /// Show detail view with close button
     fn show_detail_view_with_close(&mut self, ui: &mut egui::Ui) {
-        // Pass show_close flag to show_detail_view_internal
-        self.show_detail_view_internal(ui, self.layout_mode.has_details());
+        // Pass show_close flag and stacked orientation to show_detail_view_internal
+        let stacked = self.layout_mode.is_details_stacked();
+        self.show_detail_view_internal(ui, self.layout_mode.has_details(), stacked);
     }
 
     /// Helper to show list panel content (search, filters, list)
@@ -9373,11 +9394,14 @@ impl RequirementsApp {
             }
         });
 
-        // Scrollable list
+        // Scrollable list - vertical only to prevent content from expanding panel width
         egui::ScrollArea::vertical()
             .id_salt("list_panel_scroll")
             .auto_shrink([false, false])
+            .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysVisible)
             .show(ui, |ui| {
+                // Constrain content width to prevent horizontal expansion
+                ui.set_max_width(ui.available_width());
                 self.show_tree_list(ui);
             });
     }
@@ -9465,10 +9489,10 @@ impl RequirementsApp {
     }
 
     fn show_detail_view(&mut self, ui: &mut egui::Ui) {
-        self.show_detail_view_internal(ui, false);
+        self.show_detail_view_internal(ui, false, false);
     }
 
-    fn show_detail_view_internal(&mut self, ui: &mut egui::Ui, show_close: bool) {
+    fn show_detail_view_internal(&mut self, ui: &mut egui::Ui, show_close: bool, stacked: bool) {
         // Track if close was clicked
         let mut close_details = false;
 
@@ -9611,103 +9635,217 @@ impl RequirementsApp {
 
                 ui.separator();
 
-                // Metadata grid (always shown)
-                egui::Grid::new("detail_grid")
-                    .num_columns(2)
-                    .spacing([40.0, 8.0])
-                    .striped(true)
-                    .show(ui, |ui| {
-                        ui.label("ID:");
-                        ui.label(req.spec_id.as_deref().unwrap_or("N/A"));
-                        ui.end_row();
+                if stacked {
+                    // Stacked layout: horizontal split with fields on left, tabs on right
+                    let req_id = req.id;
+                    ui.columns(2, |columns| {
+                        // LEFT COLUMN: Metadata fields
+                        columns[0].vertical(|ui| {
+                            egui::ScrollArea::vertical()
+                                .id_salt("detail_metadata_scroll")
+                                .auto_shrink([false, false])
+                                .show(ui, |ui| {
+                                    egui::Grid::new("detail_grid_stacked")
+                                        .num_columns(2)
+                                        .spacing([20.0, 6.0])
+                                        .striped(true)
+                                        .show(ui, |ui| {
+                                            ui.label("ID:");
+                                            ui.label(req.spec_id.as_deref().unwrap_or("N/A"));
+                                            ui.end_row();
 
-                        ui.label("Status:");
-                        ui.label(format!("{:?}", req.status));
-                        ui.end_row();
+                                            ui.label("Status:");
+                                            ui.label(format!("{:?}", req.status));
+                                            ui.end_row();
 
-                        ui.label("Priority:");
-                        ui.label(format!("{:?}", req.priority));
-                        ui.end_row();
+                                            ui.label("Priority:");
+                                            ui.label(format!("{:?}", req.priority));
+                                            ui.end_row();
 
-                        ui.label("Type:");
-                        ui.label(format!("{:?}", req.req_type));
-                        ui.end_row();
+                                            ui.label("Type:");
+                                            ui.label(format!("{:?}", req.req_type));
+                                            ui.end_row();
 
-                        ui.label("Feature:");
-                        ui.label(&req.feature);
-                        ui.end_row();
+                                            ui.label("Feature:");
+                                            ui.label(&req.feature);
+                                            ui.end_row();
 
-                        ui.label("Owner:");
-                        ui.label(&req.owner);
-                        ui.end_row();
+                                            ui.label("Owner:");
+                                            ui.label(&req.owner);
+                                            ui.end_row();
 
-                        if !req.tags.is_empty() {
-                            ui.label("Tags:");
-                            let tags_vec: Vec<String> = req.tags.iter().cloned().collect();
-                            ui.label(tags_vec.join(", "));
+                                            if !req.tags.is_empty() {
+                                                ui.label("Tags:");
+                                                let tags_vec: Vec<String> = req.tags.iter().cloned().collect();
+                                                ui.label(tags_vec.join(", "));
+                                                ui.end_row();
+                                            }
+
+                                            if let Some(ref created_by) = req.created_by {
+                                                ui.label("Created By:");
+                                                ui.label(created_by);
+                                                ui.end_row();
+                                            }
+
+                                            ui.label("Created:");
+                                            ui.label(req.created_at.format("%Y-%m-%d %H:%M").to_string());
+                                            ui.end_row();
+
+                                            ui.label("Modified:");
+                                            ui.label(req.modified_at.format("%Y-%m-%d %H:%M").to_string());
+                                            ui.end_row();
+                                        });
+                                });
+                        });
+
+                        // RIGHT COLUMN: Tabs and tab content
+                        columns[1].vertical(|ui| {
+                            // Tabs
+                            ui.horizontal(|ui| {
+                                ui.selectable_value(
+                                    &mut self.active_tab,
+                                    DetailTab::Description,
+                                    "📄 Desc",
+                                );
+                                ui.selectable_value(
+                                    &mut self.active_tab,
+                                    DetailTab::Comments,
+                                    format!("💬 ({})", req.comments.len()),
+                                );
+                                ui.selectable_value(
+                                    &mut self.active_tab,
+                                    DetailTab::Links,
+                                    format!("🔗 ({})", req.relationships.len() + req.urls.len()),
+                                );
+                                ui.selectable_value(
+                                    &mut self.active_tab,
+                                    DetailTab::History,
+                                    format!("📜 ({})", req.history.len()),
+                                );
+                            });
+
+                            ui.separator();
+
+                            // Tab content
+                            egui::ScrollArea::vertical()
+                                .id_salt("detail_tab_content_scroll")
+                                .auto_shrink([false, false])
+                                .show(ui, |ui| match &self.active_tab {
+                                    DetailTab::Description => {
+                                        self.show_description_tab(ui, &req, idx);
+                                    }
+                                    DetailTab::Comments => {
+                                        self.show_comments_tab(ui, &req, idx);
+                                    }
+                                    DetailTab::Links => {
+                                        self.show_links_tab(ui, &req, req_id);
+                                    }
+                                    DetailTab::History => {
+                                        self.show_history_tab(ui, &req);
+                                    }
+                                });
+                        });
+                    });
+                } else {
+                    // Side layout (vertical): metadata at top, tabs below
+                    // Metadata grid (always shown)
+                    egui::Grid::new("detail_grid")
+                        .num_columns(2)
+                        .spacing([40.0, 8.0])
+                        .striped(true)
+                        .show(ui, |ui| {
+                            ui.label("ID:");
+                            ui.label(req.spec_id.as_deref().unwrap_or("N/A"));
                             ui.end_row();
-                        }
 
-                        // Created by and timestamps
-                        if let Some(ref created_by) = req.created_by {
-                            ui.label("Created By:");
-                            ui.label(created_by);
+                            ui.label("Status:");
+                            ui.label(format!("{:?}", req.status));
                             ui.end_row();
-                        }
 
-                        ui.label("Created:");
-                        ui.label(req.created_at.format("%Y-%m-%d %H:%M").to_string());
-                        ui.end_row();
+                            ui.label("Priority:");
+                            ui.label(format!("{:?}", req.priority));
+                            ui.end_row();
 
-                        ui.label("Modified:");
-                        ui.label(req.modified_at.format("%Y-%m-%d %H:%M").to_string());
-                        ui.end_row();
+                            ui.label("Type:");
+                            ui.label(format!("{:?}", req.req_type));
+                            ui.end_row();
+
+                            ui.label("Feature:");
+                            ui.label(&req.feature);
+                            ui.end_row();
+
+                            ui.label("Owner:");
+                            ui.label(&req.owner);
+                            ui.end_row();
+
+                            if !req.tags.is_empty() {
+                                ui.label("Tags:");
+                                let tags_vec: Vec<String> = req.tags.iter().cloned().collect();
+                                ui.label(tags_vec.join(", "));
+                                ui.end_row();
+                            }
+
+                            // Created by and timestamps
+                            if let Some(ref created_by) = req.created_by {
+                                ui.label("Created By:");
+                                ui.label(created_by);
+                                ui.end_row();
+                            }
+
+                            ui.label("Created:");
+                            ui.label(req.created_at.format("%Y-%m-%d %H:%M").to_string());
+                            ui.end_row();
+
+                            ui.label("Modified:");
+                            ui.label(req.modified_at.format("%Y-%m-%d %H:%M").to_string());
+                            ui.end_row();
+                        });
+
+                    ui.separator();
+
+                    // Tabbed content
+                    ui.horizontal(|ui| {
+                        ui.selectable_value(
+                            &mut self.active_tab,
+                            DetailTab::Description,
+                            "📄 Description",
+                        );
+                        ui.selectable_value(
+                            &mut self.active_tab,
+                            DetailTab::Comments,
+                            format!("💬 Comments ({})", req.comments.len()),
+                        );
+                        ui.selectable_value(
+                            &mut self.active_tab,
+                            DetailTab::Links,
+                            format!("🔗 Links ({})", req.relationships.len() + req.urls.len()),
+                        );
+                        ui.selectable_value(
+                            &mut self.active_tab,
+                            DetailTab::History,
+                            format!("📜 History ({})", req.history.len()),
+                        );
                     });
 
-                ui.separator();
+                    ui.separator();
 
-                // Tabbed content
-                ui.horizontal(|ui| {
-                    ui.selectable_value(
-                        &mut self.active_tab,
-                        DetailTab::Description,
-                        "📄 Description",
-                    );
-                    ui.selectable_value(
-                        &mut self.active_tab,
-                        DetailTab::Comments,
-                        format!("💬 Comments ({})", req.comments.len()),
-                    );
-                    ui.selectable_value(
-                        &mut self.active_tab,
-                        DetailTab::Links,
-                        format!("🔗 Links ({})", req.relationships.len() + req.urls.len()),
-                    );
-                    ui.selectable_value(
-                        &mut self.active_tab,
-                        DetailTab::History,
-                        format!("📜 History ({})", req.history.len()),
-                    );
-                });
-
-                ui.separator();
-
-                // Tab content
-                let req_id = req.id;
-                egui::ScrollArea::vertical().show(ui, |ui| match &self.active_tab {
-                    DetailTab::Description => {
-                        self.show_description_tab(ui, &req, idx);
-                    }
-                    DetailTab::Comments => {
-                        self.show_comments_tab(ui, &req, idx);
-                    }
-                    DetailTab::Links => {
-                        self.show_links_tab(ui, &req, req_id);
-                    }
-                    DetailTab::History => {
-                        self.show_history_tab(ui, &req);
-                    }
-                });
+                    // Tab content
+                    let req_id = req.id;
+                    egui::ScrollArea::vertical().show(ui, |ui| match &self.active_tab {
+                        DetailTab::Description => {
+                            self.show_description_tab(ui, &req, idx);
+                        }
+                        DetailTab::Comments => {
+                            self.show_comments_tab(ui, &req, idx);
+                        }
+                        DetailTab::Links => {
+                            self.show_links_tab(ui, &req, req_id);
+                        }
+                        DetailTab::History => {
+                            self.show_history_tab(ui, &req);
+                        }
+                    });
+                }
 
                 // Double-click on background area to edit (when no modal is open)
                 if !self.show_url_form
@@ -12937,9 +13075,48 @@ impl eframe::App for RequirementsApp {
             match self.layout_mode {
                 LayoutMode::ListDetailsSide => {
                     // List on left, Details on right (side-by-side) - default
-                    self.show_list_panel_with_close(ctx, false);
+                    // Use columns approach to ensure proper 50/50 split
                     egui::CentralPanel::default().show(ctx, |ui| {
-                        self.show_detail_view_with_close(ui);
+                        ui.columns(2, |columns| {
+                            // Left column (List)
+                            let col0_rect = columns[0].available_rect_before_wrap();
+                            columns[0].set_clip_rect(col0_rect);
+                            columns[0].vertical(|ui| {
+                                ui.horizontal(|ui| {
+                                    ui.heading("Requirements");
+                                });
+                                // Search bar
+                                ui.horizontal(|ui| {
+                                    ui.label("🔍");
+                                    ui.add(
+                                        egui::TextEdit::singleline(&mut self.filter_text)
+                                            .hint_text("Search...")
+                                            .desired_width(120.0),
+                                    );
+                                    // Filter toggle button
+                                    let filter_active = !self.filter_types.is_empty() || !self.filter_features.is_empty()
+                                        || !self.filter_prefixes.is_empty() || !self.filter_statuses.is_empty()
+                                        || !self.filter_priorities.is_empty();
+                                    let filter_btn_text = if filter_active { "🔽 ●" } else { "🔽" };
+                                    if ui.button(filter_btn_text).on_hover_text("Filters").clicked() {
+                                        self.show_filter_dialog_list1 = !self.show_filter_dialog_list1;
+                                    }
+                                });
+                                ui.separator();
+                                // Scrollable list
+                                egui::ScrollArea::vertical()
+                                    .id_salt("list_side_scroll")
+                                    .auto_shrink([false, false])
+                                    .show(ui, |ui| {
+                                        self.show_tree_list(ui);
+                                    });
+                            });
+
+                            // Right column (Details)
+                            columns[1].vertical(|ui| {
+                                self.show_detail_view_with_close(ui);
+                            });
+                        });
                     });
                 }
                 LayoutMode::ListDetailsStacked => {
@@ -12964,9 +13141,16 @@ impl eframe::App for RequirementsApp {
                         .default_height(list_height)
                         .resizable(true)
                         .show(ctx, |ui| {
-                            // Two lists side by side
+                            // Two lists side by side with clipping
                             ui.columns(2, |columns| {
+                                // Set clip rect for left column
+                                let col0_rect = columns[0].available_rect_before_wrap();
+                                columns[0].set_clip_rect(col0_rect);
                                 self.show_list_content_in_column(&mut columns[0], false);
+
+                                // Set clip rect for right column
+                                let col1_rect = columns[1].available_rect_before_wrap();
+                                columns[1].set_clip_rect(col1_rect);
                                 self.show_split_list_content_in_column(&mut columns[1]);
                             });
                         });
@@ -12976,10 +13160,88 @@ impl eframe::App for RequirementsApp {
                 }
                 LayoutMode::SplitListOnly => {
                     // Two lists side-by-side, no details
-                    let panel_width = (screen_width - 20.0) / 2.0;
-                    self.show_list_panel_with_close(ctx, false);
-                    self.show_split_panel_with_close(ctx, Some(panel_width));
-                    egui::CentralPanel::default().show(ctx, |_ui| {});
+                    // Use a Frame inside CentralPanel with explicit column layout
+                    egui::CentralPanel::default().show(ctx, |ui| {
+                        ui.columns(2, |columns| {
+                            // Left column (List 1)
+                            let col0_rect = columns[0].available_rect_before_wrap();
+                            columns[0].set_clip_rect(col0_rect);
+                            columns[0].vertical(|ui| {
+                                ui.horizontal(|ui| {
+                                    ui.heading("Requirements");
+                                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                        if ui.button("✕").on_hover_text("Close this list").clicked() {
+                                            self.layout_mode = self.layout_mode.without_split();
+                                        }
+                                    });
+                                });
+                                // Search bar for List 1
+                                ui.horizontal(|ui| {
+                                    ui.label("🔍");
+                                    ui.add(
+                                        egui::TextEdit::singleline(&mut self.filter_text)
+                                            .hint_text("Search...")
+                                            .desired_width(120.0),
+                                    );
+                                    // Filter toggle button
+                                    let filter_active = !self.filter_types.is_empty() || !self.filter_features.is_empty()
+                                        || !self.filter_prefixes.is_empty() || !self.filter_statuses.is_empty()
+                                        || !self.filter_priorities.is_empty();
+                                    let filter_btn_text = if filter_active { "🔽 ●" } else { "🔽" };
+                                    if ui.button(filter_btn_text).on_hover_text("Filters").clicked() {
+                                        self.show_filter_dialog_list1 = !self.show_filter_dialog_list1;
+                                    }
+                                });
+                                ui.separator();
+                                // Scrollable list with clipping
+                                egui::ScrollArea::vertical()
+                                    .id_salt("list1_split_only_scroll")
+                                    .auto_shrink([false, false])
+                                    .show(ui, |ui| {
+                                        self.show_tree_list(ui);
+                                    });
+                            });
+
+                            // Right column (List 2)
+                            let col1_rect = columns[1].available_rect_before_wrap();
+                            columns[1].set_clip_rect(col1_rect);
+                            columns[1].vertical(|ui| {
+                                ui.horizontal(|ui| {
+                                    ui.heading("Requirements");
+                                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                        if ui.button("✕").on_hover_text("Close this list").clicked() {
+                                            self.layout_mode = self.layout_mode.without_split();
+                                        }
+                                    });
+                                });
+                                // Search bar for List 2
+                                ui.horizontal(|ui| {
+                                    ui.label("🔍");
+                                    ui.add(
+                                        egui::TextEdit::singleline(&mut self.split_filter_text)
+                                            .hint_text("Search...")
+                                            .desired_width(120.0),
+                                    );
+                                    // Filter toggle button
+                                    let filter_active = !self.split_filter_types.is_empty() || !self.split_filter_features.is_empty()
+                                        || !self.split_filter_prefixes.is_empty() || !self.split_filter_statuses.is_empty()
+                                        || !self.split_filter_priorities.is_empty();
+                                    let filter_btn_text = if filter_active { "🔽 ●" } else { "🔽" };
+                                    if ui.button(filter_btn_text).on_hover_text("Filters").clicked() {
+                                        self.show_filter_dialog_list2 = !self.show_filter_dialog_list2;
+                                    }
+                                });
+                                ui.separator();
+                                // Scrollable list with clipping
+                                egui::ScrollArea::vertical()
+                                    .id_salt("list2_split_only_scroll")
+                                    .auto_shrink([false, false])
+                                    .show(ui, |ui| {
+                                        self.show_split_list(ui);
+                                    });
+                            });
+                        });
+                    });
                 }
                 LayoutMode::ListOnly => {
                     // Single list, no details - full width
