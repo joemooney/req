@@ -812,3 +812,13 @@ A chronological record of development sessions and changes made to the Requireme
   - No perspective/preset/direction controls (these made panel wider)
   - Changed form view to use `show_list_panel_simple()` instead of `show_list_panel()`
 - **Result**: List panel now maintains consistent width when switching between Detail and Edit views
+
+### List Panel Max Width Constraint
+- **Prompt**: User feedback showing list panel in Edit view auto-expanding to fit long requirement titles (e.g., "REQ-0090 - Arrow keys bad behavior in edit mode123456789...")
+- **Root Cause**: `SidePanel::left()` with `.resizable(true)` auto-expands to fit content width. The long title in the list was causing the panel to grow beyond desired bounds.
+- **Solution**: Added `max_width` constraint to `show_list_panel_simple()`
+- **Implementation**:
+  - Calculate `max_panel_width` as 50% of screen width (minimum 350.0)
+  - Added `.max_width(max_panel_width)` to the SidePanel configuration
+  - Content is now clipped/truncated rather than expanding the panel
+- **Result**: List panel stays within bounds even with long requirement titles
