@@ -849,3 +849,14 @@ A chronological record of development sessions and changes made to the Requireme
   - Uses same scroll area ID (`"list_side_scroll"`) as Detail View for consistency
   - Other layout modes (ListDetailsStacked, SplitListDetails, etc.) continue using SidePanel
 - **Result**: Seamless transition between Detail View and Edit View with no visual gaps
+
+### Edit View Layout Fix (ListDetailsStacked Mode)
+- **Prompt**: User screenshots showing stacked layout Edit view was using wrong panel arrangement - list on LEFT instead of on TOP
+- **Root Cause**: Edit View for `ListDetailsStacked` was using `SidePanel` (list on left) + `CentralPanel` approach, but Detail View uses `TopBottomPanel` (list on top) + `CentralPanel`
+- **Solution**: Make Edit View use `TopBottomPanel` for `ListDetailsStacked` mode
+- **Implementation** (in form view code around line 14044):
+  - For `ListDetailsStacked`: Use `TopBottomPanel::top("list_top_panel")` for list
+  - Same panel ID, min_height, default_height, and resizable settings as Detail View
+  - List panel has search bar, filter button, scrollable tree list
+  - `CentralPanel` below contains the form via `show_form_stacked()`
+- **Result**: Edit View in stacked mode now matches Detail View with list on top, form on bottom
