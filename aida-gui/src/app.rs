@@ -11919,6 +11919,310 @@ impl RequirementsApp {
         }
     }
 
+    /// Show the form using a vertical layout (matches List|Details side-by-side view)
+    /// Title bar at top with editable title and Save/Cancel buttons
+    /// Metadata grid below title bar (dropdowns for Type, Status, Priority, etc.)
+    /// Description editor at bottom with markdown preview toggle
+    fn show_form_vertical(&mut self, ui: &mut egui::Ui, is_edit: bool) {
+        // Get title bar styling from theme
+        let title_bar_bg = self.user_settings.theme.title_bar_bg();
+        let title_bar_font_size = self.user_settings.theme.title_bar_font_size();
+
+        // Check for pending save (triggered by Ctrl+S keybinding)
+        let should_save = self.pending_save;
+        if should_save {
+            self.pending_save = false;
+        }
+
+        // Check for ESC key to cancel (only if confirmation dialog is not open)
+        let esc_pressed =
+            !self.show_cancel_confirm_dialog && ui.input(|i| i.key_pressed(egui::Key::Escape));
+
+        // === TITLE BAR ===
+        let available_width = ui.available_width();
+        egui::Frame::none()
+            .fill(title_bar_bg)
+            .inner_margin(egui::Margin::symmetric(8.0, 4.0))
+            .rounding(2.0)
+            .show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    // Editable title
+                    let title_response = egui::TextEdit::singleline(&mut self.form_title)
+                        .font(egui::TextStyle::Heading)
+                        .desired_width(available_width * 0.6)
+                        .hint_text("Enter requirement title...")
+                        .show(ui);
+
+                    show_text_context_menu(
+                        ui,
+                        &title_response.response,
+                        &mut self.form_title,
+                        title_response.response.id,
+                        &mut self.last_text_selection,
+                    );
+
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        // Cancel button
+                        if ui.button("❌ Cancel").clicked() || esc_pressed {
+                            self.request_form_cancel(is_edit);
+                        }
+
+                        // Save button
+                        if ui.button("💾 Save").clicked() || should_save {
+                            if is_edit {
+                                if let Some(idx) = self.selected_idx {
+                                    self.update_requirement(idx);
+                                }
+                            } else {
+                                self.add_requirement();
+                            }
+                        }
+
+                        // Mode indicator
+                        let mode_text = if is_edit { "Edit" } else { "New" };
+                        ui.label(egui::RichText::new(mode_text).size(14.0 * title_bar_font_size).italics());
+                    });
+                });
+            });
+
+        ui.separator();
+
+        // Track if type changed for status validation
+        let old_type = self.form_type.clone();
+
+        // === METADATA GRID ===
+        egui::Grid::new("form_metadata_grid_vertical")
+            .num_columns(2)
+            .spacing([40.0, 8.0])
+            .striped(true)
+            .show(ui, |ui| {
+                // ID (for edit mode)
+                if is_edit {
+                    if let Some(idx) = self.selected_idx {
+                        if let Some(req) = self.store.requirements.get(idx) {
+                            ui.label("ID:");
+                            ui.label(req.spec_id.as_deref().unwrap_or("N/A"));
+                            ui.end_row();
+                        }
+                    }
+                }
+
+                // ID Prefix
+                ui.label("Prefix:");
+                self.show_prefix_field(ui);
+                ui.end_row();
+
+                // Type dropdown
+                ui.label("Type:");
+                egui::ComboBox::new("form_type_combo_vert", "")
+                    .selected_text(format!("{:?}", self.form_type))
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(&mut self.form_type, RequirementType::Functional, "Functional");
+                        ui.selectable_value(&mut self.form_type, RequirementType::NonFunctional, "NonFunctional");
+                        ui.selectable_value(&mut self.form_type, RequirementType::System, "System");
+                        ui.selectable_value(&mut self.form_type, RequirementType::User, "User");
+                        ui.selectable_value(&mut self.form_type, RequirementType::ChangeRequest, "Change Request");
+                        ui.selectable_value(&mut self.form_type, RequirementType::Bug, "Bug");
+                        ui.separator();
+                        ui.selectable_value(&mut self.form_type, RequirementType::Epic, "Epic");
+                        ui.selectable_value(&mut self.form_type, RequirementType::Story, "Story");
+                        ui.selectable_value(&mut self.form_type, RequirementType::Task, "Task");
+                        ui.selectable_value(&mut self.form_type, RequirementType::Spike, "Spike");
+                    });
+                ui.end_row();
+
+                // Status dropdown
+                ui.label("Status:");
+                let statuses = self.store.get_statuses_for_type(&self.form_type);
+                egui::ComboBox::new("form_status_combo_vert", "")
+                    .selected_text(&self.form_status_string)
+                    .show_ui(ui, |ui| {
+                        for status in &statuses {
+                            if ui.selectable_label(self.form_status_string == *status, status).clicked() {
+                                self.form_status_string = status.clone();
+                            }
+                        }
+                    });
+                ui.end_row();
+
+                // Priority dropdown
+                ui.label("Priority:");
+                egui::ComboBox::new("form_priority_combo_vert", "")
+                    .selected_text(format!("{:?}", self.form_priority))
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(&mut self.form_priority, RequirementPriority::High, "High");
+                        ui.selectable_value(&mut self.form_priority, RequirementPriority::Medium, "Medium");
+                        ui.selectable_value(&mut self.form_priority, RequirementPriority::Low, "Low");
+                    });
+                ui.end_row();
+
+                // Feature
+                ui.label("Feature:");
+                ui.add(egui::TextEdit::singleline(&mut self.form_feature).desired_width(200.0));
+                ui.end_row();
+
+                // Owner
+                ui.label("Owner:");
+                ui.add(egui::TextEdit::singleline(&mut self.form_owner).desired_width(200.0));
+                ui.end_row();
+
+                // Tags
+                ui.label("Tags:");
+                ui.add(
+                    egui::TextEdit::singleline(&mut self.form_tags)
+                        .desired_width(200.0)
+                        .hint_text("comma-separated"),
+                );
+                ui.end_row();
+
+                // Parent relationship (for new requirements)
+                if !is_edit {
+                    if let Some(parent_id) = self.form_parent_id {
+                        let parent_info = self.store.requirements.iter()
+                            .find(|r| r.id == parent_id)
+                            .map(|r| {
+                                let spec = r.spec_id.as_deref().unwrap_or("N/A");
+                                format!("{}", spec)
+                            });
+                        if let Some(parent_label) = parent_info {
+                            ui.label("Parent:");
+                            ui.horizontal(|ui| {
+                                ui.label(&parent_label);
+                                if ui.small_button("x").on_hover_text("Remove parent").clicked() {
+                                    self.form_parent_id = None;
+                                }
+                            });
+                            ui.end_row();
+                        }
+                    }
+                }
+            });
+
+        // Custom fields section
+        let custom_fields = self.store.get_custom_fields_for_type(&self.form_type);
+        if !custom_fields.is_empty() {
+            ui.add_space(8.0);
+            ui.separator();
+            ui.label(egui::RichText::new("Custom Fields").strong());
+            ui.add_space(4.0);
+
+            let mut sorted_fields = custom_fields;
+            sorted_fields.sort_by_key(|f| f.order);
+
+            egui::Grid::new("form_custom_fields_grid_vertical")
+                .num_columns(2)
+                .spacing([40.0, 6.0])
+                .show(ui, |ui| {
+                    for field in sorted_fields {
+                        let label = if field.required {
+                            format!("{}*:", field.label)
+                        } else {
+                            format!("{}:", field.label)
+                        };
+                        ui.label(&label);
+
+                        let current_value = self.form_custom_fields
+                            .get(&field.name)
+                            .cloned()
+                            .or_else(|| field.default_value.clone())
+                            .unwrap_or_default();
+
+                        self.show_custom_field_editor(ui, &field, current_value);
+                        ui.end_row();
+                    }
+                });
+        }
+
+        ui.separator();
+
+        // Handle type change - validate status
+        if old_type != self.form_type {
+            let statuses = self.store.get_statuses_for_type(&self.form_type);
+            if !statuses.contains(&self.form_status_string) {
+                self.form_status_string = statuses.first().cloned().unwrap_or_else(|| "Draft".to_string());
+            }
+            self.form_custom_fields.clear();
+        }
+
+        // === DESCRIPTION EDITOR ===
+        ui.horizontal(|ui| {
+            ui.label(egui::RichText::new("Description").strong());
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                let preview_label = if self.show_description_preview {
+                    "✏ Edit"
+                } else {
+                    "👁 Preview"
+                };
+                if ui.button(preview_label).clicked() {
+                    self.show_description_preview = !self.show_description_preview;
+                }
+                if ui.link("Markdown").on_hover_text("Click for Markdown help").clicked() {
+                    self.show_markdown_help = true;
+                }
+            });
+        });
+
+        ui.separator();
+
+        // Description content area with scroll
+        egui::ScrollArea::vertical()
+            .id_salt("form_description_scroll_vertical")
+            .auto_shrink([false, false])
+            .show(ui, |ui| {
+                if self.show_description_preview {
+                    // Preview mode - render as markdown
+                    CommonMarkViewer::new().show(
+                        ui,
+                        &mut self.markdown_cache,
+                        &self.form_description,
+                    );
+                } else {
+                    // Edit mode - text editor
+                    let output = egui::TextEdit::multiline(&mut self.form_description)
+                        .desired_width(ui.available_width())
+                        .desired_rows(15)
+                        .hint_text("Enter requirement description (Markdown supported)...")
+                        .show(ui);
+
+                    // Request focus if we came here via double-click on description
+                    if self.focus_description {
+                        output.response.request_focus();
+                        self.focus_description = false;
+                    }
+
+                    show_text_context_menu(
+                        ui,
+                        &output.response,
+                        &mut self.form_description,
+                        output.response.id,
+                        &mut self.last_text_selection,
+                    );
+                }
+            });
+
+        // Show cancel confirmation dialog if there are unsaved changes
+        if self.show_cancel_confirm_dialog {
+            let dialog_esc = ui.input(|i| i.key_pressed(egui::Key::Escape));
+
+            egui::Window::new("Unsaved Changes")
+                .collapsible(false)
+                .resizable(false)
+                .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+                .show(ui.ctx(), |ui| {
+                    ui.label("You have unsaved changes. Are you sure you want to cancel?");
+                    ui.add_space(10.0);
+                    ui.horizontal(|ui| {
+                        if ui.button("Discard Changes").clicked() {
+                            self.cancel_form(is_edit);
+                        }
+                        if ui.button("Continue Editing").clicked() || dialog_esc {
+                            self.show_cancel_confirm_dialog = false;
+                        }
+                    });
+                });
+        }
+    }
+
     /// Helper to show prefix field (used in both form layouts)
     fn show_prefix_field(&mut self, ui: &mut egui::Ui) {
         if self.store.restrict_prefixes && !self.store.allowed_prefixes.is_empty() {
@@ -13611,8 +13915,14 @@ impl eframe::App for RequirementsApp {
                 }
 
                 match &self.current_view {
-                    View::Add => self.show_form_stacked(ui, false),
-                    View::Edit => self.show_form_stacked(ui, true),
+                    View::Add | View::Edit => {
+                        let is_edit = self.current_view == View::Edit;
+                        // Use stacked (horizontal) layout for ListDetailsStacked, vertical for others
+                        match self.layout_mode {
+                            LayoutMode::ListDetailsStacked => self.show_form_stacked(ui, is_edit),
+                            _ => self.show_form_vertical(ui, is_edit),
+                        }
+                    }
                     _ => {}
                 }
             });
