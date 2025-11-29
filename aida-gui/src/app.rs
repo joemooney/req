@@ -1398,17 +1398,113 @@ impl UserSettings {
         config_dir.join("aida_gui_settings.yaml")
     }
 
-    /// Load settings from file, or return defaults if not found
-    pub fn load() -> Self {
-        let path = Self::settings_path();
-        if path.exists() {
-            if let Ok(contents) = std::fs::read_to_string(&path) {
-                if let Ok(settings) = serde_yaml::from_str(&contents) {
-                    return settings;
+    /// Get the themes directory path
+    pub fn themes_dir() -> PathBuf {
+        let themes_dir = dirs::home_dir()
+            .unwrap_or_else(|| PathBuf::from("."))
+            .join(".config")
+            .join("aida")
+            .join("themes");
+
+        // Ensure the directory exists
+        let _ = std::fs::create_dir_all(&themes_dir);
+
+        themes_dir
+    }
+
+    /// Load themes from the themes directory
+    fn load_file_themes() -> Vec<CustomTheme> {
+        let themes_dir = Self::themes_dir();
+        let mut themes = Vec::new();
+
+        if let Ok(entries) = std::fs::read_dir(&themes_dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.extension().map_or(false, |ext| ext == "yaml" || ext == "yml") {
+                    if let Ok(contents) = std::fs::read_to_string(&path) {
+                        if let Ok(theme) = serde_yaml::from_str::<CustomTheme>(&contents) {
+                            themes.push(theme);
+                        }
+                    }
                 }
             }
         }
-        Self::default()
+
+        // Sort themes by name for consistent ordering
+        themes.sort_by(|a, b| a.name.cmp(&b.name));
+        themes
+    }
+
+    /// Save a theme to a file in the themes directory
+    pub fn save_theme_to_file(theme: &CustomTheme) -> Result<PathBuf, String> {
+        let themes_dir = Self::themes_dir();
+
+        // Create a filename from the theme name (sanitize for filesystem)
+        let filename = theme.name
+            .chars()
+            .map(|c| if c.is_alphanumeric() || c == '-' || c == '_' { c } else { '_' })
+            .collect::<String>()
+            .to_lowercase();
+
+        let path = themes_dir.join(format!("{}.yaml", filename));
+
+        let yaml = serde_yaml::to_string(theme)
+            .map_err(|e| format!("Failed to serialize theme: {}", e))?;
+        std::fs::write(&path, yaml)
+            .map_err(|e| format!("Failed to write theme file: {}", e))?;
+
+        Ok(path)
+    }
+
+    /// Delete a theme file from the themes directory
+    pub fn delete_theme_file(theme_name: &str) -> Result<(), String> {
+        let themes_dir = Self::themes_dir();
+
+        // Try to find and delete the file
+        if let Ok(entries) = std::fs::read_dir(&themes_dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.extension().map_or(false, |ext| ext == "yaml" || ext == "yml") {
+                    if let Ok(contents) = std::fs::read_to_string(&path) {
+                        if let Ok(theme) = serde_yaml::from_str::<CustomTheme>(&contents) {
+                            if theme.name == theme_name {
+                                std::fs::remove_file(&path)
+                                    .map_err(|e| format!("Failed to delete theme file: {}", e))?;
+                                return Ok(());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Err(format!("Theme file for '{}' not found", theme_name))
+    }
+
+    /// Load settings from file, or return defaults if not found
+    /// Also loads themes from the themes directory
+    pub fn load() -> Self {
+        let path = Self::settings_path();
+        let mut settings = if path.exists() {
+            if let Ok(contents) = std::fs::read_to_string(&path) {
+                serde_yaml::from_str(&contents).unwrap_or_default()
+            } else {
+                Self::default()
+            }
+        } else {
+            Self::default()
+        };
+
+        // Load themes from files and merge with embedded custom themes
+        let file_themes = Self::load_file_themes();
+        for file_theme in file_themes {
+            // Only add if not already present (embedded themes take precedence by name)
+            if !settings.custom_themes.iter().any(|t| t.name == file_theme.name) {
+                settings.custom_themes.push(file_theme);
+            }
+        }
+
+        settings
     }
 
     /// Save settings to file
@@ -6356,6 +6452,23 @@ impl RequirementsApp {
 
                         self.show_theme_editor = false;
                     }
+
+                    if ui.button("Export to File").on_hover_text(
+                        format!("Save theme to {}", UserSettings::themes_dir().display())
+                    ).clicked() {
+                        match UserSettings::save_theme_to_file(&self.theme_editor_theme) {
+                            Ok(path) => {
+                                self.message = Some((
+                                    format!("Theme exported to {}", path.display()),
+                                    false
+                                ));
+                            }
+                            Err(e) => {
+                                self.message = Some((format!("Failed to export theme: {}", e), true));
+                            }
+                        }
+                    }
+
                     if ui.button("Cancel").clicked() {
                         // Revert to the original theme before editing
                         self.settings_form_theme = self.theme_editor_original_theme.clone();

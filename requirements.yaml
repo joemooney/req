@@ -4249,6 +4249,68 @@ requirements:
           1. Switching to "List / Details" layout (stacked mode)
           2. Select a requirement
           3. Drag the vertical divider between the metadata fields and tabs to resize
+- id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
+  spec_id: MISC-0102
+  prefix_override: MISC
+  title: Miscellaneous
+  description: 'Requirements that are not yet assigned to component/feature '
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 47-Uncategorized
+  created_at: 2025-11-29T19:10:52.867367071Z
+  created_by: Unknown User
+  modified_at: 2025-11-29T19:10:52.867367071Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Child
+    target_id: 3ef749b7-b220-41f8-9a1d-1545d0c43a7f
+    created_at: 2025-11-29T19:12:20.828360522Z
+    created_by: Unknown User
+  - rel_type: Child
+    target_id: 7fab205a-9f74-48fc-9a20-18581388a22f
+    created_at: 2025-11-29T19:27:58.262503497Z
+    created_by: Unknown User
+- id: 3ef749b7-b220-41f8-9a1d-1545d0c43a7f
+  spec_id: FR-0103
+  title: Dynamically update ID preview when Type changes in Edit form
+  description: 'feat: dynamically update ID preview when Type changes in Edit form'
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 47-Uncategorized
+  created_at: 2025-11-29T19:12:20.828353112Z
+  created_by: Unknown User
+  modified_at: 2025-11-29T19:12:20.828353112Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
+    created_at: 2025-11-29T19:12:20.828360522Z
+    created_by: Unknown User
+- id: 7fab205a-9f74-48fc-9a20-18581388a22f
+  spec_id: FR-0104
+  title: Sorting capabilities
+  description: "Ability to sort the list of requirements shown e.g. alphabetically. \n"
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-29T19:27:58.262496482Z
+  created_by: Unknown User
+  modified_at: 2025-11-29T19:27:58.262496482Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
+    created_at: 2025-11-29T19:27:58.262503497Z
+    created_by: Unknown User
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
   spec_id: $USER-001
@@ -4301,8 +4363,8 @@ id_config:
     prefix: CR
     description: Change requests for modifications to existing functionality
 features: []
-next_feature_number: 47
-next_spec_number: 102
+next_feature_number: 48
+next_spec_number: 105
 prefix_counters: {}
 relationship_definitions:
 - name: parent
@@ -4535,6 +4597,7 @@ allowed_prefixes:
 - INBOX
 - KEYBOARD
 - LAYOUT
+- MISC
 - MOUSE
 - REQLIST
 - THEME
