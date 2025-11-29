@@ -1452,7 +1452,7 @@ enum View {
     Edit,
 }
 
-/// Layout mode defines the panel arrangement (cycles through 4 predefined layouts)
+/// Layout mode defines the panel arrangement (cycles through 5 predefined layouts)
 #[derive(Default, Debug, PartialEq, Clone, Copy)]
 enum LayoutMode {
     /// List on left, Details on right (side-by-side) - default
@@ -1464,6 +1464,8 @@ enum LayoutMode {
     SplitListDetails,
     /// Two lists side-by-side, no details
     SplitListOnly,
+    /// Single list only, no details
+    ListOnly,
 }
 
 impl LayoutMode {
@@ -1474,6 +1476,7 @@ impl LayoutMode {
             LayoutMode::ListDetailsStacked => LayoutMode::SplitListDetails,
             LayoutMode::SplitListDetails => LayoutMode::SplitListOnly,
             LayoutMode::SplitListOnly => LayoutMode::ListDetailsSide,
+            LayoutMode::ListOnly => LayoutMode::ListDetailsSide, // Back to default
         }
     }
 
@@ -1483,6 +1486,7 @@ impl LayoutMode {
             LayoutMode::ListDetailsStacked => "List / Details",
             LayoutMode::SplitListDetails => "List | List / Details",
             LayoutMode::SplitListOnly => "List | List",
+            LayoutMode::ListOnly => "List",
         }
     }
 
@@ -1497,9 +1501,10 @@ impl LayoutMode {
     /// Get the layout to transition to when closing the details panel
     fn without_details(&self) -> Self {
         match self {
-            LayoutMode::ListDetailsSide | LayoutMode::ListDetailsStacked => LayoutMode::SplitListOnly,
+            LayoutMode::ListDetailsSide | LayoutMode::ListDetailsStacked => LayoutMode::ListOnly,
             LayoutMode::SplitListDetails => LayoutMode::SplitListOnly,
             LayoutMode::SplitListOnly => LayoutMode::SplitListOnly, // Already no details
+            LayoutMode::ListOnly => LayoutMode::ListOnly, // Already no details
         }
     }
 
@@ -1507,7 +1512,7 @@ impl LayoutMode {
     fn without_split(&self) -> Self {
         match self {
             LayoutMode::SplitListDetails => LayoutMode::ListDetailsStacked,
-            LayoutMode::SplitListOnly => LayoutMode::ListDetailsSide,
+            LayoutMode::SplitListOnly => LayoutMode::ListOnly,
             _ => *self, // Already no split
         }
     }
@@ -11950,6 +11955,12 @@ impl eframe::App for RequirementsApp {
                     self.show_list_panel_with_close(ctx, false);
                     self.show_split_panel_with_close(ctx, Some(panel_width));
                     egui::CentralPanel::default().show(ctx, |_ui| {});
+                }
+                LayoutMode::ListOnly => {
+                    // Single list, no details - full width
+                    egui::CentralPanel::default().show(ctx, |ui| {
+                        self.show_list_panel_content(ui);
+                    });
                 }
             }
         }
