@@ -739,3 +739,32 @@ A chronological record of development sessions and changes made to the Requireme
   - Code patterns and conventions
   - Troubleshooting guide
   - Appendices with file locations and line number references
+
+### Edit/Add Form Redesign
+- **Prompt**: "I really like the Details View layout and wonder if we could reuse/mimic it for the Edit/Add view"
+- **Solution**: Created new `show_form_stacked()` function that mirrors the Detail View layout
+- **Layout Design**:
+  - **Title Bar**: Styled header with editable title field, Save/Cancel buttons, and mode indicator (New/Edit)
+  - **Left Panel** (25% default width, resizable): Metadata fields in a grid
+    - ID (edit mode only)
+    - Prefix dropdown/textbox (respects restrict_prefixes setting)
+    - Type dropdown (Functional, NonFunctional, System, User, ChangeRequest, Bug, Epic, Story, Task, Spike)
+    - Status dropdown (dynamically based on type's allowed statuses)
+    - Priority dropdown (High, Medium, Low)
+    - Feature text field
+    - Owner text field
+    - Tags text field (comma-separated)
+    - Parent (new requirements only, if set)
+    - Custom fields section (type-specific fields)
+  - **Right Panel** (75%, remaining space): Description editor
+    - Header with Preview/Edit toggle and Markdown help link
+    - Full-height text editor or markdown preview
+- **Features**:
+  - Keyboard shortcuts: Ctrl+S to save, ESC to cancel
+  - Cancel confirmation dialog for unsaved changes
+  - Context menu support for text fields
+  - Type change resets status to first valid status
+  - Custom fields support all field types (Text, TextArea, Select, Boolean, Number, Date, User, Requirement)
+- **Helper Functions**:
+  - `show_prefix_field()` - Reusable prefix dropdown/text input
+  - `show_custom_field_editor()` - Reusable custom field renderer for all field types
