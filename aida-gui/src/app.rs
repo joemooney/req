@@ -1756,7 +1756,8 @@ pub struct RequirementsApp {
     show_description_preview: bool, // Toggle preview mode in edit form
 
     // Left panel state
-    left_panel_collapsed: bool, // Whether left panel is manually collapsed
+    left_panel_collapsed: bool,  // Whether left panel is manually collapsed
+    detail_panel_collapsed: bool, // Whether detail panel is collapsed (list-only mode)
 
     // Relationship definition editing
     editing_rel_def: Option<String>, // Name of relationship def being edited (None = adding new)
@@ -2040,6 +2041,7 @@ impl RequirementsApp {
             markdown_cache: CommonMarkCache::default(),
             show_description_preview: false,
             left_panel_collapsed: false,
+            detail_panel_collapsed: false,
             editing_rel_def: None,
             rel_def_form_name: String::new(),
             rel_def_form_display_name: String::new(),
@@ -7189,8 +7191,8 @@ impl RequirementsApp {
                 // Header with optional collapse button
                 ui.horizontal(|ui| {
                     ui.heading("Requirements");
-                    if in_form_view {
-                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if in_form_view {
                             if ui
                                 .button("▶ Hide")
                                 .on_hover_text("Hide requirements list")
@@ -7198,8 +7200,17 @@ impl RequirementsApp {
                             {
                                 self.left_panel_collapsed = true;
                             }
-                        });
-                    }
+                        } else {
+                            // In List/Detail view, show button to hide detail panel
+                            if ui
+                                .button("▶")
+                                .on_hover_text("Hide detail panel (focus on list)")
+                                .clicked()
+                            {
+                                self.detail_panel_collapsed = true;
+                            }
+                        }
+                    });
                 });
                 ui.separator();
 
@@ -7461,6 +7472,242 @@ impl RequirementsApp {
 
                 // Selection remains fixed when scrolling - user must click to change selection
             });
+    }
+
+    /// Show list in the central panel when detail view is collapsed (list-only mode)
+    fn show_list_only_view(&mut self, ui: &mut egui::Ui) {
+        // Header with button to restore detail panel
+        ui.horizontal(|ui| {
+            if ui
+                .button("◀ Show Detail")
+                .on_hover_text("Show detail panel")
+                .clicked()
+            {
+                self.detail_panel_collapsed = false;
+            }
+            ui.separator();
+            ui.heading("Requirements");
+        });
+        ui.separator();
+
+        // Search bar
+        ui.horizontal(|ui| {
+            ui.label("🔍");
+            ui.add(
+                egui::TextEdit::singleline(&mut self.filter_text)
+                    .hint_text("Search (case-insensitive)...")
+                    .desired_width(250.0),
+            );
+
+            // Filter toggle button
+            let filter_active = !self.filter_types.is_empty() || !self.filter_features.is_empty();
+            let filter_btn_text = if filter_active {
+                "🔽 Filters ●"
+            } else {
+                "🔽 Filters"
+            };
+            if ui.button(filter_btn_text).clicked() {
+                self.show_filter_panel = !self.show_filter_panel;
+            }
+        });
+
+        // Perspective and preset selector
+        ui.horizontal(|ui| {
+            ui.label("View:");
+
+            // Determine what to show as selected text
+            let selected_text = if let Some(ref preset_name) = self.active_preset {
+                if self.current_view_matches_active_preset() {
+                    preset_name.clone()
+                } else {
+                    format!("{}*", preset_name) // Modified indicator
+                }
+            } else {
+                self.perspective.label().to_string()
+            };
+
+            // Clone presets for iteration
+            let presets: Vec<ViewPreset> = self.user_settings.view_presets.clone();
+            let mut preset_to_apply: Option<ViewPreset> = None;
+            let mut clear_active_preset = false;
+
+            egui::ComboBox::from_id_salt("perspective_combo_list_only")
+                .selected_text(&selected_text)
+                .show_ui(ui, |ui| {
+                    // Built-in perspectives section
+                    ui.label("Built-in Views");
+                    ui.separator();
+
+                    let is_flat =
+                        self.perspective == Perspective::Flat && self.active_preset.is_none();
+                    let is_parent_child = self.perspective == Perspective::ParentChild
+                        && self.active_preset.is_none();
+                    let is_verification = self.perspective == Perspective::Verification
+                        && self.active_preset.is_none();
+                    let is_references =
+                        self.perspective == Perspective::References && self.active_preset.is_none();
+
+                    if ui
+                        .selectable_label(is_flat, Perspective::Flat.label())
+                        .clicked()
+                    {
+                        self.perspective = Perspective::Flat;
+                        clear_active_preset = true;
+                    }
+                    if ui
+                        .selectable_label(is_parent_child, Perspective::ParentChild.label())
+                        .clicked()
+                    {
+                        self.perspective = Perspective::ParentChild;
+                        clear_active_preset = true;
+                    }
+                    if ui
+                        .selectable_label(is_verification, Perspective::Verification.label())
+                        .clicked()
+                    {
+                        self.perspective = Perspective::Verification;
+                        clear_active_preset = true;
+                    }
+                    if ui
+                        .selectable_label(is_references, Perspective::References.label())
+                        .clicked()
+                    {
+                        self.perspective = Perspective::References;
+                        clear_active_preset = true;
+                    }
+
+                    // User presets section (if any)
+                    if !presets.is_empty() {
+                        ui.separator();
+                        ui.label("Custom Presets");
+                        ui.separator();
+
+                        for preset in &presets {
+                            let is_active = self.active_preset.as_ref() == Some(&preset.name);
+                            if ui.selectable_label(is_active, &preset.name).clicked() {
+                                preset_to_apply = Some(preset.clone());
+                            }
+                        }
+                    }
+                });
+
+            // Apply preset if selected
+            if let Some(preset) = preset_to_apply {
+                self.apply_preset(&preset);
+            }
+            if clear_active_preset {
+                self.active_preset = None;
+            }
+
+            // Direction selector for hierarchical views
+            if matches!(
+                self.perspective,
+                Perspective::ParentChild | Perspective::Verification | Perspective::References
+            ) {
+                egui::ComboBox::from_id_salt("direction_combo_list_only")
+                    .selected_text(self.perspective_direction.label())
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(
+                            &mut self.perspective_direction,
+                            PerspectiveDirection::TopDown,
+                            "Top-down ↓",
+                        );
+                        ui.selectable_value(
+                            &mut self.perspective_direction,
+                            PerspectiveDirection::BottomUp,
+                            "Bottom-up ↑",
+                        );
+                    });
+            }
+
+            // Save As button (shown when view has unsaved changes)
+            if self.has_unsaved_view() {
+                if ui
+                    .button("💾 Save As...")
+                    .on_hover_text("Save current view as a preset")
+                    .clicked()
+                {
+                    self.preset_name_input = self.active_preset.clone().unwrap_or_default();
+                    self.show_save_preset_dialog = true;
+                }
+            }
+
+            // Reset button (shown when not at default)
+            if self.perspective != Perspective::Flat
+                || self.perspective_direction != PerspectiveDirection::TopDown
+                || !self.filter_types.is_empty()
+                || !self.filter_features.is_empty()
+            {
+                if ui
+                    .small_button("↺")
+                    .on_hover_text("Reset to default view")
+                    .clicked()
+                {
+                    self.reset_to_default_view();
+                }
+            }
+        });
+
+        // Collapsible filter panel
+        if self.show_filter_panel {
+            ui.separator();
+            self.show_filter_controls(ui);
+        }
+
+        ui.separator();
+
+        // Requirement list (flat or tree) with drag auto-scroll support
+        let mut scroll_delta_to_apply = 0.0;
+        if self.drag_source.is_some() {
+            if let Some(pointer_pos) = ui.input(|i| i.pointer.hover_pos()) {
+                let available_rect = ui.available_rect_before_wrap();
+                let edge_zone = 50.0;
+                let scroll_speed = 10.0;
+
+                if pointer_pos.y < available_rect.top() + edge_zone
+                    && pointer_pos.y >= available_rect.top()
+                {
+                    let intensity = 1.0 - (pointer_pos.y - available_rect.top()) / edge_zone;
+                    scroll_delta_to_apply = -scroll_speed * intensity;
+                } else if pointer_pos.y > available_rect.bottom() - edge_zone
+                    && pointer_pos.y <= available_rect.bottom()
+                {
+                    let intensity = 1.0 - (available_rect.bottom() - pointer_pos.y) / edge_zone;
+                    scroll_delta_to_apply = scroll_speed * intensity;
+                }
+            }
+        }
+
+        let mut scroll_area = egui::ScrollArea::vertical()
+            .id_salt("requirements_list_scroll_full")
+            .auto_shrink([false, false]);
+
+        if scroll_delta_to_apply != 0.0 {
+            let new_offset = (self.drag_scroll_delta + scroll_delta_to_apply).max(0.0);
+            self.drag_scroll_delta = new_offset;
+            scroll_area = scroll_area.vertical_scroll_offset(new_offset);
+            ui.ctx().request_repaint();
+        }
+
+        let scroll_output = scroll_area.show(ui, |ui| {
+            egui::ScrollArea::horizontal()
+                .id_salt("requirements_list_horizontal_scroll_full")
+                .auto_shrink([false, false])
+                .show(ui, |ui| {
+                    ui.set_min_width(400.0);
+                    match &self.perspective {
+                        Perspective::Flat => {
+                            self.show_flat_list(ui);
+                        }
+                        _ => {
+                            self.show_tree_list(ui);
+                        }
+                    }
+                });
+        });
+
+        // Update stored offset from actual scroll state
+        self.drag_scroll_delta = scroll_output.state.offset.y;
     }
 
     fn show_filter_controls(&mut self, ui: &mut egui::Ui) {
@@ -11053,7 +11300,8 @@ impl eframe::App for RequirementsApp {
         let show_left_panel = if in_form_view {
             screen_width >= min_width_for_side_panel && !self.left_panel_collapsed
         } else {
-            true // Always show in List/Detail view
+            // In List/Detail view, show side panel only if detail panel is NOT collapsed
+            !self.detail_panel_collapsed
         };
 
         if show_left_panel {
@@ -11077,7 +11325,12 @@ impl eframe::App for RequirementsApp {
 
             match &self.current_view {
                 View::List | View::Detail => {
-                    self.show_detail_view(ui);
+                    if self.detail_panel_collapsed {
+                        // Show list in full central panel when detail is collapsed
+                        self.show_list_only_view(ui);
+                    } else {
+                        self.show_detail_view(ui);
+                    }
                 }
                 View::Add => {
                     self.show_form(ui, false);

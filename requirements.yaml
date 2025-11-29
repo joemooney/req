@@ -406,13 +406,30 @@ requirements:
 - id: b9c26c5d-ab38-4e9b-a493-8f4a84f88019
   spec_id: CR-0015
   title: add created by
-  description: ''
-  status: Draft
+  description: |2
+      Changes to aida-core/src/models.rs:
+      1. Added created_by: Option<String> field to the Requirement struct
+      2. Added created_at: Option<DateTime<Utc>> and created_by: Option<String> fields to the Relationship struct
+      3. Added add_relationship_with_creator() function that accepts an optional creator parameter
+      4. Added set_relationship_with_creator() function that accepts an optional creator parameter
+      5. The original add_relationship() and set_relationship() functions now delegate to the _with_creator variants with None
+
+      Changes to aida-gui/src/app.rs:
+      1. When creating a new requirement, created_by is automatically set to self.user_settings.display_name()
+      2. All relationship creation calls now use the _with_creator variants to track who created the relationship
+      3. The detail view now displays:
+        - "Created By:" (if available)
+        - "Created:" (date/time)
+        - "Modified:" (date/time)
+      4. When hovering over a relationship in the Links tab, the tooltip now shows creator info if available
+
+      The fields are optional (Option<>) to maintain backward compatibility with existing YAML data files that don't have these fields.
+  status: Approved
   priority: Medium
   owner: ''
   feature: 5-Uncategorized
   created_at: 2025-11-25T23:03:34.032116653Z
-  modified_at: 2025-11-25T23:05:53.961976672Z
+  modified_at: 2025-11-29T00:49:25.126367254Z
   req_type: ChangeRequest
   dependencies: []
   tags: []
@@ -440,6 +457,37 @@ requirements:
     - field_name: spec_id
       old_value: FR-015
       new_value: CR-015
+  - id: d0462a29-e26e-47b4-8b68-9e4c4d0a0ddb
+    author: '@joe'
+    timestamp: 2025-11-29T00:48:55.727526228Z
+    changes:
+    - field_name: description
+      old_value: ''
+      new_value: |2
+          Changes to aida-core/src/models.rs:
+          1. Added created_by: Option<String> field to the Requirement struct
+          2. Added created_at: Option<DateTime<Utc>> and created_by: Option<String> fields to the Relationship struct
+          3. Added add_relationship_with_creator() function that accepts an optional creator parameter
+          4. Added set_relationship_with_creator() function that accepts an optional creator parameter
+          5. The original add_relationship() and set_relationship() functions now delegate to the _with_creator variants with None
+
+          Changes to aida-gui/src/app.rs:
+          1. When creating a new requirement, created_by is automatically set to self.user_settings.display_name()
+          2. All relationship creation calls now use the _with_creator variants to track who created the relationship
+          3. The detail view now displays:
+            - "Created By:" (if available)
+            - "Created:" (date/time)
+            - "Modified:" (date/time)
+          4. When hovering over a relationship in the Links tab, the tooltip now shows creator info if available
+
+          The fields are optional (Option<>) to maintain backward compatibility with existing YAML data files that don't have these fields.
+  - id: 67a5b7fd-f50d-4d2f-a5d0-16606f649080
+    author: '@joe'
+    timestamp: 2025-11-29T00:49:25.126362926Z
+    changes:
+    - field_name: status
+      old_value: Draft
+      new_value: Approved
 - id: 848840ae-7005-4fab-b478-163f9139359e
   spec_id: COMMENTS-0027
   prefix_override: COMMENTS
@@ -804,6 +852,14 @@ requirements:
     target_id: 1dea6cd9-a23d-43fb-b8bf-e7f51f5be5dd
   - rel_type: Child
     target_id: 72cc760e-c566-4bbc-b7fb-82bf027f1eaa
+  - rel_type: Child
+    target_id: 9aec2046-225d-40e4-aadf-609045e8ab45
+  - rel_type: Child
+    target_id: 5a09caba-1c81-4c8c-bc18-48f677c205b4
+  - rel_type: Child
+    target_id: 01cb13e7-36e9-4dc1-900c-46d22087db4e
+    created_at: 2025-11-29T00:59:16.590242076Z
+    created_by: '@joe'
   history:
   - id: e2ba3669-855e-4b99-9b7f-30300da178c5
     author: '@joe'
@@ -842,6 +898,8 @@ requirements:
     target_id: 9238ec28-2a11-4d0b-90df-f78861f49d72
   - rel_type: Child
     target_id: 7e7f5a93-f0ac-4fde-85eb-8852f43065b8
+  - rel_type: Child
+    target_id: 924b8768-f882-4bb3-ad8f-bbe9c9fd56b8
 - id: 617353d0-7006-4a3c-92ba-49e5218386e2
   spec_id: ADMIN-0031
   prefix_override: ADMIN
@@ -2735,19 +2793,51 @@ requirements:
 - id: d51487eb-36a5-4266-9c79-29a7c5399849
   spec_id: FR-0056
   title: Double cllick Description to enter Edit
-  description: Double click Description to enter Edit, and switch focus to the Description textbox.
+  description: |
+    Double click Description to enter Edit, and switch focus to the Description textbox.
+
+      What was implemented:
+      - Double-clicking on the background area of the Detail view (any empty space not covered by buttons, text, etc.) will now open the Edit form
+       for the currently selected requirement
+      - The feature is disabled when modals are open (URL form, Reference picker, Add comment form) to prevent unintended edits
+      - This works alongside the existing double-click on the Description tab content (which focuses the description field)
+
+      How it works:
+      - Uses egui's interact_bg() method to detect clicks on background/empty areas
+      - Only triggers when no modal dialogs are open
+      - Complements the "✏ Edit" button - just a faster way to start editing
   status: Draft
   priority: Medium
   owner: ''
   feature: 27-Uncategorized
   created_at: 2025-11-27T17:21:11.683638399Z
-  modified_at: 2025-11-27T17:21:11.683638399Z
+  modified_at: 2025-11-29T00:33:16.299815072Z
   req_type: Functional
   dependencies: []
   tags: []
   relationships:
   - rel_type: Parent
     target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
+  history:
+  - id: e60b6eb4-d260-40e8-bcbc-bc5a68cdf088
+    author: '@joe'
+    timestamp: 2025-11-29T00:33:16.299808900Z
+    changes:
+    - field_name: description
+      old_value: Double click Description to enter Edit, and switch focus to the Description textbox.
+      new_value: |
+        Double click Description to enter Edit, and switch focus to the Description textbox.
+
+          What was implemented:
+          - Double-clicking on the background area of the Detail view (any empty space not covered by buttons, text, etc.) will now open the Edit form
+           for the currently selected requirement
+          - The feature is disabled when modals are open (URL form, Reference picker, Add comment form) to prevent unintended edits
+          - This works alongside the existing double-click on the Description tab content (which focuses the description field)
+
+          How it works:
+          - Uses egui's interact_bg() method to detect clicks on background/empty areas
+          - Only triggers when no modal dialogs are open
+          - Complements the "✏ Edit" button - just a faster way to start editing
 - id: 3fe85c39-0da4-477a-9ac5-04ecb9696ec9
   spec_id: FR-0057
   title: Recursive relationships view
@@ -3687,6 +3777,88 @@ requirements:
             - Double-click a requirement to immediately create the reference
             - Single-click to select, then click "Link" button
           4. Click "Cancel" to close without creating a reference
+- id: 9aec2046-225d-40e4-aadf-609045e8ab45
+  spec_id: FR-0093
+  title: Open Additions Requirements List view
+  description: Abilty to have more than one Requirements List views open and drag requirements between, creating a relationship determined by the view to which you drag the relationship to.
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 41-Uncategorized
+  created_at: 2025-11-29T00:32:45.333241402Z
+  modified_at: 2025-11-29T00:32:45.333241402Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
+- id: 924b8768-f882-4bb3-ad8f-bbe9c9fd56b8
+  spec_id: FR-0094
+  title: Pseudo Relations
+  description: 'Completed-By which is a relationship from User to Requirement when a User changes the status to Completed is not a real relationship , but one that is implied by field value and action. '
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 42-Uncategorized
+  created_at: 2025-11-29T00:48:20.890058174Z
+  modified_at: 2025-11-29T00:48:20.890058174Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 4c3bb89e-2d41-4841-b2ff-881bb67fee99
+- id: 5a09caba-1c81-4c8c-bc18-48f677c205b4
+  spec_id: FR-0095
+  title: New Window Menu option
+  description: |
+    In Menu add `New Window` option to open a new session. In the new window the user may choose to switch databases for example or work in the
+      same database.
+
+     New Menu Option:
+      - Added "🪟 New Window" to the Menu dropdown (between "New Project..." and "Restart")
+      - Clicking it spawns a new instance of the application
+
+      Implementation:
+      - Added open_new_window() function that spawns a new process
+      - Works in both development mode (via cargo run) and production mode (direct executable)
+      - Passes through any command-line arguments to the new window
+      - The new window opens independently, allowing users to:
+        - Switch to a different project in the new window
+        - Work with the same project in parallel (e.g., different requirements selected)
+        - Compare requirements side-by-side
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 42-Uncategorized
+  created_at: 2025-11-29T00:54:09.458183354Z
+  modified_at: 2025-11-29T00:54:09.458183354Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
+- id: 01cb13e7-36e9-4dc1-900c-46d22087db4e
+  spec_id: FR-0096
+  title: Collapse/hide Detail View
+  description: Ability to collapse or hide the Detail View so we can focus on the list
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-29T00:59:16.590202157Z
+  created_by: '@joe'
+  modified_at: 2025-11-29T00:59:16.590202157Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
+    created_at: 2025-11-29T00:59:16.590242076Z
+    created_by: '@joe'
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
   spec_id: $USER-001
@@ -3727,8 +3899,8 @@ id_config:
     prefix: CR
     description: Change requests for modifications to existing functionality
 features: []
-next_feature_number: 41
-next_spec_number: 93
+next_feature_number: 43
+next_spec_number: 97
 prefix_counters: {}
 relationship_definitions:
 - name: parent
