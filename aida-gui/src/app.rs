@@ -11293,7 +11293,23 @@ impl RequirementsApp {
                             }
                         }
                     });
-                ui.label("ⓘ").on_hover_text("Prefix selection restricted by project administrator");
+                ui.label("or");
+                ui.add(egui::TextEdit::singleline(&mut self.form_prefix)
+                    .desired_width(80.0)
+                    .hint_text("e.g., SEC"))
+                    .on_hover_text("Custom prefix (A-Z only). Leave blank to use default.");
+
+                // Show validation status
+                let prefix_trimmed = self.form_prefix.trim();
+                if !prefix_trimmed.is_empty() {
+                    if Requirement::validate_prefix(prefix_trimmed).is_some() {
+                        ui.label("✓").on_hover_text("Valid prefix");
+                    } else {
+                        ui.colored_label(egui::Color32::RED, "✗")
+                            .on_hover_text("Prefix must contain only uppercase letters (A-Z)");
+                    }
+                }
+                ui.label("ⓘ").on_hover_text("Dropdown shows allowed prefixes; text box allows custom entry");
             } else {
                 // Unrestricted mode: show text input with optional dropdown
                 let all_prefixes = self.store.get_all_prefixes();
@@ -12308,50 +12324,47 @@ impl RequirementsApp {
 
     /// Helper to show prefix field (used in both form layouts)
     fn show_prefix_field(&mut self, ui: &mut egui::Ui) {
-        if self.store.restrict_prefixes && !self.store.allowed_prefixes.is_empty() {
-            // Restricted mode: show dropdown only
-            let current_display = if self.form_prefix.is_empty() {
-                "(default)".to_string()
+        ui.horizontal(|ui| {
+            // Always show dropdown with existing prefixes
+            let all_prefixes = if self.store.restrict_prefixes && !self.store.allowed_prefixes.is_empty() {
+                self.store.allowed_prefixes.clone()
             } else {
-                self.form_prefix.clone()
+                self.store.get_all_prefixes()
             };
-            egui::ComboBox::new("form_prefix_combo", "")
-                .selected_text(&current_display)
-                .show_ui(ui, |ui| {
-                    if ui.selectable_label(self.form_prefix.is_empty(), "(default)").clicked() {
-                        self.form_prefix.clear();
-                    }
-                    for prefix in &self.store.allowed_prefixes.clone() {
-                        if ui.selectable_label(self.form_prefix == *prefix, prefix).clicked() {
-                            self.form_prefix = prefix.clone();
+
+            if !all_prefixes.is_empty() {
+                egui::ComboBox::new("form_prefix_combo", "")
+                    .selected_text(if self.form_prefix.is_empty() { "(default)" } else { &self.form_prefix })
+                    .width(80.0)
+                    .show_ui(ui, |ui| {
+                        if ui.selectable_label(self.form_prefix.is_empty(), "(default)").clicked() {
+                            self.form_prefix.clear();
                         }
-                    }
-                });
-        } else {
-            // Unrestricted mode: show combo with text input
-            let all_prefixes = self.store.get_all_prefixes();
-            ui.horizontal(|ui| {
-                if !all_prefixes.is_empty() {
-                    egui::ComboBox::new("form_prefix_combo", "")
-                        .selected_text(if self.form_prefix.is_empty() { "(default)" } else { &self.form_prefix })
-                        .width(80.0)
-                        .show_ui(ui, |ui| {
-                            if ui.selectable_label(self.form_prefix.is_empty(), "(default)").clicked() {
-                                self.form_prefix.clear();
+                        for prefix in &all_prefixes {
+                            if ui.selectable_label(self.form_prefix == *prefix, prefix).clicked() {
+                                self.form_prefix = prefix.clone();
                             }
-                            for prefix in &all_prefixes {
-                                if ui.selectable_label(self.form_prefix == *prefix, prefix).clicked() {
-                                    self.form_prefix = prefix.clone();
-                                }
-                            }
-                        });
+                        }
+                    });
+                ui.label("or");
+            }
+
+            // Always show text input for manual entry
+            ui.add(egui::TextEdit::singleline(&mut self.form_prefix)
+                .desired_width(60.0)
+                .hint_text("e.g., SEC"));
+
+            // Show validation status
+            let prefix_trimmed = self.form_prefix.trim();
+            if !prefix_trimmed.is_empty() {
+                if Requirement::validate_prefix(prefix_trimmed).is_some() {
+                    ui.label("✓").on_hover_text("Valid prefix");
                 } else {
-                    ui.add(egui::TextEdit::singleline(&mut self.form_prefix)
-                        .desired_width(60.0)
-                        .hint_text("e.g., SEC"));
+                    ui.colored_label(egui::Color32::RED, "✗")
+                        .on_hover_text("Prefix must contain only uppercase letters (A-Z)");
                 }
-            });
-        }
+            }
+        });
     }
 
     /// Helper to show custom field editor (used in both form layouts)
