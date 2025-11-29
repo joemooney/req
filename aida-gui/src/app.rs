@@ -7813,11 +7813,10 @@ impl RequirementsApp {
                     let response = ui.selectable_label(is_selected, &display);
                     if response.clicked() {
                         self.split_selected_idx = Some(idx);
-                        // Also update main selection to show in detail view
-                        self.selected_idx = Some(idx);
                     }
                     if response.double_clicked() {
                         // Switch to edit mode on double-click
+                        self.split_selected_idx = Some(idx);
                         self.selected_idx = Some(idx);
                         self.load_form_from_requirement(idx);
                         self.pending_view_change = Some(View::Edit);
@@ -7851,9 +7850,9 @@ impl RequirementsApp {
                     let response = ui.selectable_label(is_selected, &display);
                     if response.clicked() {
                         self.split_selected_idx = Some(idx);
-                        self.selected_idx = Some(idx);
                     }
                     if response.double_clicked() {
+                        self.split_selected_idx = Some(idx);
                         self.selected_idx = Some(idx);
                         self.load_form_from_requirement(idx);
                         self.pending_view_change = Some(View::Edit);
