@@ -11617,7 +11617,7 @@ impl eframe::App for RequirementsApp {
         }
 
         // Show split panel (second list view) next to main list if open
-        if self.split_panel_open && !in_form_view && !self.detail_panel_collapsed {
+        if self.split_panel_open && !in_form_view {
             self.show_split_panel(ctx);
         }
 
