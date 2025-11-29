@@ -612,6 +612,11 @@ requirements:
   req_type: Functional
   dependencies: []
   tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 85868242-14f2-4e4a-beba-5103c271ce32
+    created_at: 2025-11-29T04:24:33.736632341Z
+    created_by: '@joe'
   history:
   - id: 80aedc3c-6687-40b1-a420-955ce9032237
     author: '@joe'
@@ -985,6 +990,10 @@ requirements:
   relationships:
   - rel_type: Parent
     target_id: 848840ae-7005-4fab-b478-163f9139359e
+  - rel_type: Child
+    target_id: 2a82a590-b200-42ad-843a-456db9d55359
+    created_at: 2025-11-29T04:24:33.736632341Z
+    created_by: '@joe'
   history:
   - id: d41dae19-bc02-4e0d-964d-7abd554662f5
     author: '@joe'

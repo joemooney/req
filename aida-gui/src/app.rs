@@ -9156,17 +9156,8 @@ impl RequirementsApp {
 
     /// Show detail view with close button
     fn show_detail_view_with_close(&mut self, ui: &mut egui::Ui) {
-        // Add close button if we have details
-        if self.layout_mode.has_details() {
-            ui.horizontal(|ui| {
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui.button("✕").on_hover_text("Close details").clicked() {
-                        self.layout_mode = self.layout_mode.without_details();
-                    }
-                });
-            });
-        }
-        self.show_detail_view(ui);
+        // Pass show_close flag to show_detail_view_internal
+        self.show_detail_view_internal(ui, self.layout_mode.has_details());
     }
 
     /// Helper to show list panel content (search, filters, list)
@@ -9278,6 +9269,13 @@ impl RequirementsApp {
     }
 
     fn show_detail_view(&mut self, ui: &mut egui::Ui) {
+        self.show_detail_view_internal(ui, false);
+    }
+
+    fn show_detail_view_internal(&mut self, ui: &mut egui::Ui, show_close: bool) {
+        // Track if close was clicked
+        let mut close_details = false;
+
         if let Some(idx) = self.selected_idx {
             if let Some(req) = self.store.requirements.get(idx).cloned() {
                 // Buttons need mutable access, so handle them separately
@@ -9298,6 +9296,13 @@ impl RequirementsApp {
                         ui.label("(Archived)");
                     }
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        // Close button (rightmost)
+                        if show_close {
+                            if ui.button("✕").on_hover_text("Close details").clicked() {
+                                close_details = true;
+                            }
+                        }
+
                         if ui.button("✏ Edit").clicked() {
                             load_edit = true;
                         }
@@ -9526,6 +9531,11 @@ impl RequirementsApp {
                 ui.add_space(100.0);
                 ui.heading("Select a requirement from the list");
             });
+        }
+
+        // Handle close button click (must be done outside the nested closures)
+        if close_details {
+            self.layout_mode = self.layout_mode.without_details();
         }
     }
 
