@@ -3096,13 +3096,16 @@ impl RequirementsApp {
                 if !in_form_view {
                     ui.separator();
                     let layout_tooltip = format!(
-                        "Layout: {} (click to cycle, hold for menu)",
+                        "Layout: {} (click to cycle, double-click or hold for menu)",
                         self.layout_mode.label()
                     );
                     let layout_button = ui.button("⊞")
                         .on_hover_text(&layout_tooltip);
 
-                    let _button_id = layout_button.id;
+                    // Check for double-click to show menu
+                    if layout_button.double_clicked() {
+                        self.show_layout_menu = true;
+                    }
 
                     // Track button press timing for long-press detection
                     if layout_button.is_pointer_button_down_on() {
