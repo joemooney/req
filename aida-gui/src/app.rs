@@ -11149,7 +11149,6 @@ impl RequirementsApp {
         let max_size = modal_max_size(ctx);
         let modal_width = 700.0_f32.min(max_size.x);
         let modal_height = 500.0_f32.min(max_size.y);
-        let content_height = (modal_height - 80.0).max(200.0);
 
         egui::Window::new("Markdown Help")
             .collapsible(false)
@@ -11160,18 +11159,21 @@ impl RequirementsApp {
             .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
             .show(ctx, |ui| {
                 let available_width = ui.available_width();
+                let available_height = ui.available_height();
                 let panel_width = (available_width - 10.0) / 2.0; // 10px for separator
+                // Reserve space for close button area (separator + button row)
+                let content_height = (available_height - 40.0).max(200.0);
 
                 ui.horizontal(|ui| {
                     // Left panel: Syntax reference
                     ui.vertical(|ui| {
                         ui.set_width(panel_width);
+                        ui.set_min_height(content_height);
                         ui.heading("Syntax");
                         ui.separator();
 
                         egui::ScrollArea::vertical()
                             .id_salt("markdown_help_syntax")
-                            .max_height(content_height)
                             .show(ui, |ui| {
                                 // Headers
                                 ui.group(|ui| {
@@ -11250,12 +11252,12 @@ impl RequirementsApp {
                     // Right panel: Live preview
                     ui.vertical(|ui| {
                         ui.set_width(panel_width);
+                        ui.set_min_height(content_height);
                         ui.heading("Preview");
                         ui.separator();
 
                         egui::ScrollArea::vertical()
                             .id_salt("markdown_help_preview")
-                            .max_height(content_height)
                             .show(ui, |ui| {
                                 // Sample markdown that demonstrates all features
                                 let sample_markdown = r#"# Heading 1
