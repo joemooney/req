@@ -9272,7 +9272,8 @@ impl RequirementsApp {
         let screen_width = ctx.screen_rect().width();
         let max_panel_width = (screen_width * 0.5).max(350.0);
 
-        egui::SidePanel::left("list_panel_simple")
+        // Use same panel ID as Detail View ("list_panel") for seamless width transition
+        egui::SidePanel::left("list_panel")
             .min_width(150.0)
             .default_width(350.0)
             .max_width(max_panel_width)
@@ -13975,40 +13976,98 @@ impl eframe::App for RequirementsApp {
         let in_form_view = self.current_view == View::Add || self.current_view == View::Edit;
 
         if in_form_view {
-            // In Add/Edit form view, show optional list panel on left
+            // In Add/Edit form view - layout depends on mode
             let show_left_panel = screen_width >= min_width_for_side_panel && !self.left_panel_collapsed;
+            let is_edit = self.current_view == View::Edit;
 
-            if show_left_panel {
-                // Use simplified list panel matching the Detail View layout
-                self.show_list_panel_simple(ctx);
-            }
+            match self.layout_mode {
+                LayoutMode::ListDetailsSide => {
+                    // Use columns approach to match Detail View exactly (50/50 split)
+                    egui::CentralPanel::default().show(ctx, |ui| {
+                        if show_left_panel {
+                            ui.columns(2, |columns| {
+                                // Left column (List) - matches Detail View list column
+                                let col0_rect = columns[0].available_rect_before_wrap();
+                                columns[0].set_clip_rect(col0_rect);
+                                columns[0].vertical(|ui| {
+                                    ui.horizontal(|ui| {
+                                        ui.heading("Requirements");
+                                    });
+                                    // Search bar
+                                    ui.horizontal(|ui| {
+                                        ui.label("🔍");
+                                        ui.add(
+                                            egui::TextEdit::singleline(&mut self.filter_text)
+                                                .hint_text("Search...")
+                                                .desired_width(120.0),
+                                        );
+                                        // Filter toggle button
+                                        let filter_active = !self.filter_types.is_empty() || !self.filter_features.is_empty()
+                                            || !self.filter_prefixes.is_empty() || !self.filter_statuses.is_empty()
+                                            || !self.filter_priorities.is_empty();
+                                        let filter_btn_text = if filter_active { "🔽 ●" } else { "🔽" };
+                                        if ui.button(filter_btn_text).on_hover_text("Filters").clicked() {
+                                            self.show_filter_dialog_list1 = !self.show_filter_dialog_list1;
+                                        }
+                                    });
+                                    ui.separator();
+                                    // Scrollable list
+                                    egui::ScrollArea::vertical()
+                                        .id_salt("list_side_scroll")
+                                        .auto_shrink([false, false])
+                                        .show(ui, |ui| {
+                                            self.show_tree_list(ui);
+                                        });
+                                });
 
-            egui::CentralPanel::default().show(ctx, |ui| {
-                if !show_left_panel {
-                    ui.horizontal(|ui| {
-                        if ui
-                            .button("◀ Show List")
-                            .on_hover_text("Show requirements list")
-                            .clicked()
-                        {
-                            self.left_panel_collapsed = false;
+                                // Right column (Form)
+                                columns[1].vertical(|ui| {
+                                    self.show_form_vertical(ui, is_edit);
+                                });
+                            });
+                        } else {
+                            // No list panel - show button to restore and full-width form
+                            ui.horizontal(|ui| {
+                                if ui
+                                    .button("◀ Show List")
+                                    .on_hover_text("Show requirements list")
+                                    .clicked()
+                                {
+                                    self.left_panel_collapsed = false;
+                                }
+                            });
+                            ui.separator();
+                            self.show_form_vertical(ui, is_edit);
                         }
                     });
-                    ui.separator();
                 }
+                _ => {
+                    // For other layout modes, use SidePanel approach
+                    if show_left_panel {
+                        self.show_list_panel_simple(ctx);
+                    }
 
-                match &self.current_view {
-                    View::Add | View::Edit => {
-                        let is_edit = self.current_view == View::Edit;
-                        // Use stacked (horizontal) layout for ListDetailsStacked, vertical for others
+                    egui::CentralPanel::default().show(ctx, |ui| {
+                        if !show_left_panel {
+                            ui.horizontal(|ui| {
+                                if ui
+                                    .button("◀ Show List")
+                                    .on_hover_text("Show requirements list")
+                                    .clicked()
+                                {
+                                    self.left_panel_collapsed = false;
+                                }
+                            });
+                            ui.separator();
+                        }
+
                         match self.layout_mode {
                             LayoutMode::ListDetailsStacked => self.show_form_stacked(ui, is_edit),
                             _ => self.show_form_vertical(ui, is_edit),
                         }
-                    }
-                    _ => {}
+                    });
                 }
-            });
+            }
         } else {
             // In List/Detail view, use layout mode
             match self.layout_mode {
