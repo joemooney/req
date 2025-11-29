@@ -8722,15 +8722,17 @@ impl RequirementsApp {
                 egui::Sense::click()
             };
 
-            // Calculate size for the label
+            // Calculate size for the label - constrain to available width
+            // available_width already accounts for indent space since we called ui.add_space earlier
+            let available_width = ui.available_width() - 8.0; // account for padding
             let text = egui::WidgetText::from(&label);
             let galley = text.into_galley(
                 ui,
-                Some(egui::TextWrapMode::Extend),
-                f32::INFINITY,
+                Some(egui::TextWrapMode::Truncate),
+                available_width.max(50.0), // minimum width to prevent issues
                 egui::TextStyle::Body,
             );
-            let desired_size = galley.size() + egui::vec2(8.0, 4.0); // padding
+            let desired_size = egui::vec2(available_width.max(50.0), galley.size().y) + egui::vec2(8.0, 4.0); // padding
 
             let (rect, response) = ui.allocate_exact_size(desired_size, sense);
 
