@@ -46,4 +46,4 @@ pub use models::{
 };
 pub use project::determine_requirements_path;
 pub use registry::{get_config_dir, get_registry_path, get_templates_dir, Registry};
-pub use storage::Storage;
+pub use storage::{Storage, StorageError};

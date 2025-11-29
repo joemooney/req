@@ -1575,6 +1575,13 @@ enum SettingsTab {
 }
 
 #[derive(Default, PartialEq, Clone, Copy)]
+enum IdsSubTab {
+    #[default]
+    Format,
+    Prefixes,
+}
+
+#[derive(Default, PartialEq, Clone, Copy)]
 enum FilterTab {
     #[default]
     Root,
@@ -1931,6 +1938,11 @@ pub struct RequirementsApp {
     user_settings: UserSettings,
     show_settings_dialog: bool,
     settings_tab: SettingsTab,
+    ids_subtab: IdsSubTab,
+    // Prefix rename dialog
+    rename_prefix_from: String,
+    rename_prefix_to: String,
+    show_rename_prefix_dialog: bool,
     settings_form_name: String,
     settings_form_email: String,
     settings_form_handle: String,
@@ -2263,6 +2275,10 @@ impl RequirementsApp {
             user_settings,
             show_settings_dialog: false,
             settings_tab: SettingsTab::default(),
+            ids_subtab: IdsSubTab::default(),
+            rename_prefix_from: String::new(),
+            rename_prefix_to: String::new(),
+            show_rename_prefix_dialog: false,
             settings_form_name: String::new(),
             settings_form_email: String::new(),
             settings_form_handle: String::new(),
@@ -3783,16 +3799,20 @@ impl RequirementsApp {
         }
 
         let max_size = modal_max_size(ctx);
+        // Constrain Settings window width to be reasonable - max 800px or 90% of screen
+        let settings_max_width = 800.0_f32.min(max_size.x * 0.9);
 
         egui::Window::new("⚙ Settings")
             .collapsible(false)
             .resizable(true)
             .min_width(400.0)
-            .max_width(max_size.x)
+            .max_width(settings_max_width)
             .max_height(max_size.y)
             .scroll([false, true]) // Enable vertical scrolling for the whole window
             .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
             .show(ctx, |ui| {
+                // Constrain content width to prevent overflow
+                ui.set_max_width(settings_max_width - 30.0);
                 // Tabs
                 ui.horizontal(|ui| {
                     ui.selectable_value(&mut self.settings_tab, SettingsTab::User, "👤 User");
@@ -4567,157 +4587,171 @@ impl RequirementsApp {
     }
 
     fn show_settings_ids_tab(&mut self, ui: &mut egui::Ui) {
-        egui::ScrollArea::vertical().show(ui, |ui| {
-            ui.heading("Requirement ID Configuration");
-        ui.add_space(10.0);
-
-        // Validate current settings against proposed changes
-        let validation = self.store.validate_id_config_change(
-            &self.settings_form_id_format,
-            &self.settings_form_numbering,
-            self.settings_form_digits,
-        );
-
-        egui::Grid::new("settings_project_grid")
-            .num_columns(2)
-            .spacing([20.0, 10.0])
-            .show(ui, |ui| {
-                // ID Format selection
-                ui.label("ID Format:");
-                egui::ComboBox::from_id_salt("settings_id_format_combo")
-                    .selected_text(match self.settings_form_id_format {
-                        IdFormat::SingleLevel => "Single Level (PREFIX-NNN)",
-                        IdFormat::TwoLevel => "Two Level (FEATURE-TYPE-NNN)",
-                    })
-                    .show_ui(ui, |ui| {
-                        ui.selectable_value(
-                            &mut self.settings_form_id_format,
-                            IdFormat::SingleLevel,
-                            "Single Level (PREFIX-NNN)"
-                        ).on_hover_text("e.g., AUTH-001, FR-002");
-                        ui.selectable_value(
-                            &mut self.settings_form_id_format,
-                            IdFormat::TwoLevel,
-                            "Two Level (FEATURE-TYPE-NNN)"
-                        ).on_hover_text("e.g., AUTH-FR-001, PAY-NFR-001");
-                    });
-                ui.end_row();
-
-                // Numbering Strategy selection
-                ui.label("Numbering:");
-                egui::ComboBox::from_id_salt("settings_numbering_combo")
-                    .selected_text(match self.settings_form_numbering {
-                        NumberingStrategy::Global => "Global Sequential",
-                        NumberingStrategy::PerPrefix => "Per Prefix",
-                        NumberingStrategy::PerFeatureType => "Per Feature+Type",
-                    })
-                    .show_ui(ui, |ui| {
-                        ui.selectable_value(
-                            &mut self.settings_form_numbering,
-                            NumberingStrategy::Global,
-                            "Global Sequential"
-                        ).on_hover_text("All requirements share one counter: AUTH-001, FR-002, PAY-003");
-                        ui.selectable_value(
-                            &mut self.settings_form_numbering,
-                            NumberingStrategy::PerPrefix,
-                            "Per Prefix"
-                        ).on_hover_text("Each prefix has its own counter: AUTH-001, FR-001, PAY-001");
-                        // Only show PerFeatureType for TwoLevel format
-                        if self.settings_form_id_format == IdFormat::TwoLevel {
-                            ui.selectable_value(
-                                &mut self.settings_form_numbering,
-                                NumberingStrategy::PerFeatureType,
-                                "Per Feature+Type"
-                            ).on_hover_text("Each feature+type combo has its own counter: AUTH-FR-001, AUTH-NFR-001");
-                        }
-                    });
-                ui.end_row();
-
-                // Number of digits
-                ui.label("Digits:");
-                ui.horizontal(|ui| {
-                    ui.add(egui::Slider::new(&mut self.settings_form_digits, 1..=6)
-                        .step_by(1.0));
-                    ui.label(format!("(e.g., {:0>width$})", 1, width = self.settings_form_digits as usize));
-                });
-                ui.end_row();
-            });
-
-        ui.add_space(10.0);
-
-        // Show validation status
-        if let Some(error) = &validation.error {
-            ui.colored_label(egui::Color32::RED, format!("⚠ {}", error));
-            ui.add_space(5.0);
-        }
-
-        if let Some(warning) = &validation.warning {
-            ui.colored_label(egui::Color32::YELLOW, format!("ℹ {}", warning));
-            ui.add_space(5.0);
-        }
-
-        // Migration button (only show if changes are valid and migration is possible)
-        if validation.valid && validation.can_migrate && validation.affected_count > 0 {
-            ui.add_space(5.0);
-            if ui
-                .button("🔄 Migrate Existing IDs")
-                .on_hover_text("Update all existing requirement IDs to match the new format")
-                .clicked()
-            {
-                self.pending_migration = Some((
-                    self.settings_form_id_format.clone(),
-                    self.settings_form_numbering.clone(),
-                    self.settings_form_digits,
-                ));
-                self.show_migration_dialog = true;
-            }
-        }
-
-        ui.add_space(15.0);
+        // Subtab selector
+        ui.horizontal(|ui| {
+            ui.selectable_value(&mut self.ids_subtab, IdsSubTab::Format, "📐 Format");
+            ui.selectable_value(&mut self.ids_subtab, IdsSubTab::Prefixes, "🏷 Prefixes");
+        });
         ui.separator();
-        ui.add_space(10.0);
-
-        // Show examples based on current settings
-        ui.heading("Example IDs");
         ui.add_space(5.0);
 
-        let width = self.settings_form_digits as usize;
-        let examples = match self.settings_form_id_format {
-            IdFormat::SingleLevel => {
-                vec![
-                    format!("AUTH-{:0>width$}", 1, width = width),
-                    format!("FR-{:0>width$}", 2, width = width),
-                    format!("PAY-{:0>width$}", 3, width = width),
-                ]
-            }
-            IdFormat::TwoLevel => {
-                vec![
-                    format!("AUTH-FR-{:0>width$}", 1, width = width),
-                    format!("AUTH-NFR-{:0>width$}", 2, width = width),
-                    format!("PAY-FR-{:0>width$}", 3, width = width),
-                ]
-            }
-        };
-
-        for example in examples {
-            ui.monospace(&example);
+        match self.ids_subtab {
+            IdsSubTab::Format => self.show_ids_format_subtab(ui),
+            IdsSubTab::Prefixes => self.show_ids_prefixes_subtab(ui),
         }
+    }
 
-        ui.add_space(10.0);
-        if validation.affected_count == 0 {
-            ui.colored_label(
-                egui::Color32::from_rgb(180, 180, 100),
-                "Note: Changes will apply to new requirements only.",
+    fn show_ids_format_subtab(&mut self, ui: &mut egui::Ui) {
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            ui.heading("ID Format Configuration");
+            ui.add_space(10.0);
+
+            // Validate current settings against proposed changes
+            let validation = self.store.validate_id_config_change(
+                &self.settings_form_id_format,
+                &self.settings_form_numbering,
+                self.settings_form_digits,
             );
-        }
+
+            egui::Grid::new("settings_project_grid")
+                .num_columns(2)
+                .spacing([20.0, 10.0])
+                .show(ui, |ui| {
+                    // ID Format selection
+                    ui.label("ID Format:");
+                    egui::ComboBox::from_id_salt("settings_id_format_combo")
+                        .selected_text(match self.settings_form_id_format {
+                            IdFormat::SingleLevel => "Single Level (PREFIX-NNN)",
+                            IdFormat::TwoLevel => "Two Level (FEATURE-TYPE-NNN)",
+                        })
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(
+                                &mut self.settings_form_id_format,
+                                IdFormat::SingleLevel,
+                                "Single Level (PREFIX-NNN)"
+                            ).on_hover_text("e.g., AUTH-001, FR-002");
+                            ui.selectable_value(
+                                &mut self.settings_form_id_format,
+                                IdFormat::TwoLevel,
+                                "Two Level (FEATURE-TYPE-NNN)"
+                            ).on_hover_text("e.g., AUTH-FR-001, PAY-NFR-001");
+                        });
+                    ui.end_row();
+
+                    // Numbering Strategy selection
+                    ui.label("Numbering:");
+                    egui::ComboBox::from_id_salt("settings_numbering_combo")
+                        .selected_text(match self.settings_form_numbering {
+                            NumberingStrategy::Global => "Global Sequential",
+                            NumberingStrategy::PerPrefix => "Per Prefix",
+                            NumberingStrategy::PerFeatureType => "Per Feature+Type",
+                        })
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(
+                                &mut self.settings_form_numbering,
+                                NumberingStrategy::Global,
+                                "Global Sequential"
+                            ).on_hover_text("All requirements share one counter: AUTH-001, FR-002, PAY-003");
+                            ui.selectable_value(
+                                &mut self.settings_form_numbering,
+                                NumberingStrategy::PerPrefix,
+                                "Per Prefix"
+                            ).on_hover_text("Each prefix has its own counter: AUTH-001, FR-001, PAY-001");
+                            // Only show PerFeatureType for TwoLevel format
+                            if self.settings_form_id_format == IdFormat::TwoLevel {
+                                ui.selectable_value(
+                                    &mut self.settings_form_numbering,
+                                    NumberingStrategy::PerFeatureType,
+                                    "Per Feature+Type"
+                                ).on_hover_text("Each feature+type combo has its own counter: AUTH-FR-001, AUTH-NFR-001");
+                            }
+                        });
+                    ui.end_row();
+
+                    // Number of digits
+                    ui.label("Digits:");
+                    ui.horizontal(|ui| {
+                        ui.add(egui::Slider::new(&mut self.settings_form_digits, 1..=6)
+                            .step_by(1.0));
+                        ui.label(format!("(e.g., {:0>width$})", 1, width = self.settings_form_digits as usize));
+                    });
+                    ui.end_row();
+                });
+
+            ui.add_space(10.0);
+
+            // Show validation status
+            if let Some(error) = &validation.error {
+                ui.colored_label(egui::Color32::RED, format!("⚠ {}", error));
+                ui.add_space(5.0);
+            }
+
+            if let Some(warning) = &validation.warning {
+                ui.colored_label(egui::Color32::YELLOW, format!("ℹ {}", warning));
+                ui.add_space(5.0);
+            }
+
+            // Migration button (only show if changes are valid and migration is possible)
+            if validation.valid && validation.can_migrate && validation.affected_count > 0 {
+                ui.add_space(5.0);
+                if ui
+                    .button("🔄 Migrate Existing IDs")
+                    .on_hover_text("Update all existing requirement IDs to match the new format")
+                    .clicked()
+                {
+                    self.pending_migration = Some((
+                        self.settings_form_id_format.clone(),
+                        self.settings_form_numbering.clone(),
+                        self.settings_form_digits,
+                    ));
+                    self.show_migration_dialog = true;
+                }
+            }
 
             ui.add_space(15.0);
             ui.separator();
             ui.add_space(10.0);
 
-            // ID Prefix Management Section
-            ui.heading("ID Prefix Management");
+            // Show examples based on current settings
+            ui.heading("Example IDs");
             ui.add_space(5.0);
+
+            let width = self.settings_form_digits as usize;
+            let examples = match self.settings_form_id_format {
+                IdFormat::SingleLevel => {
+                    vec![
+                        format!("AUTH-{:0>width$}", 1, width = width),
+                        format!("FR-{:0>width$}", 2, width = width),
+                        format!("PAY-{:0>width$}", 3, width = width),
+                    ]
+                }
+                IdFormat::TwoLevel => {
+                    vec![
+                        format!("AUTH-FR-{:0>width$}", 1, width = width),
+                        format!("AUTH-NFR-{:0>width$}", 2, width = width),
+                        format!("PAY-FR-{:0>width$}", 3, width = width),
+                    ]
+                }
+            };
+
+            for example in examples {
+                ui.monospace(&example);
+            }
+
+            ui.add_space(10.0);
+            if validation.affected_count == 0 {
+                ui.colored_label(
+                    egui::Color32::from_rgb(180, 180, 100),
+                    "Note: Changes will apply to new requirements only.",
+                );
+            }
+        });
+    }
+
+    fn show_ids_prefixes_subtab(&mut self, ui: &mut egui::Ui) {
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            ui.heading("Prefix Management");
+            ui.add_space(10.0);
 
             // Toggle for restricting prefixes
             let mut restrict = self.store.restrict_prefixes;
@@ -4730,70 +4764,112 @@ impl RequirementsApp {
                 self.save();
             }
 
+            ui.add_space(10.0);
+            ui.separator();
+            ui.add_space(10.0);
+
+            // Add new prefix section
+            ui.strong("Add New Prefix");
             ui.add_space(5.0);
-
-            // Show used prefixes
-            let used_prefixes = self.store.get_used_prefixes();
-
-            ui.label(format!(
-                "Prefixes in use: {}",
-                if used_prefixes.is_empty() {
-                    "none".to_string()
-                } else {
-                    used_prefixes.join(", ")
-                }
-            ));
-
-            ui.add_space(5.0);
-            ui.label("Allowed Prefixes:");
-
-            // Add new prefix input
             ui.horizontal(|ui| {
-                ui.label("Add prefix:");
                 ui.add(
                     egui::TextEdit::singleline(&mut self.new_prefix_input)
-                        .desired_width(80.0)
+                        .desired_width(100.0)
                         .hint_text("e.g., SEC"),
                 );
 
-                if ui.button("Add").clicked() && !self.new_prefix_input.is_empty() {
+                let can_add = !self.new_prefix_input.is_empty()
+                    && self.new_prefix_input.chars().all(|c| c.is_ascii_alphabetic());
+
+                if ui.add_enabled(can_add, egui::Button::new("➕ Add")).clicked() {
                     let prefix = self.new_prefix_input.to_uppercase();
-                    // Validate: must be uppercase letters only
-                    if prefix.chars().all(|c| c.is_ascii_uppercase()) {
-                        self.store.add_allowed_prefix(&prefix);
-                        self.save();
-                        self.new_prefix_input.clear();
-                    }
+                    self.store.add_allowed_prefix(&prefix);
+                    self.save();
+                    self.new_prefix_input.clear();
                 }
             });
 
+            ui.add_space(10.0);
+            ui.separator();
+            ui.add_space(10.0);
+
+            // Show prefixes in use
+            let used_prefixes = self.store.get_used_prefixes();
+            ui.strong("Prefixes In Use");
             ui.add_space(5.0);
 
-            // List allowed prefixes with delete buttons
+            if used_prefixes.is_empty() {
+                ui.label("No prefixes currently in use.");
+            } else {
+                // Show count of requirements per prefix
+                let mut prefix_counts: Vec<(String, usize)> = used_prefixes.iter().map(|p| {
+                    let count = self.store.requirements.iter()
+                        .filter(|r| r.spec_id.as_ref().map(|id| id.starts_with(p)).unwrap_or(false))
+                        .count();
+                    (p.clone(), count)
+                }).collect();
+                prefix_counts.sort_by(|a, b| a.0.cmp(&b.0));
+
+                egui::ScrollArea::vertical()
+                    .id_salt("used_prefixes_scroll")
+                    .max_height(120.0)
+                    .show(ui, |ui| {
+                        for (prefix, count) in &prefix_counts {
+                            ui.horizontal(|ui| {
+                                ui.monospace(prefix);
+                                ui.label(format!("({} req{})", count, if *count == 1 { "" } else { "s" }));
+
+                                // Rename button
+                                if ui.small_button("✏").on_hover_text("Rename this prefix").clicked() {
+                                    self.rename_prefix_from = prefix.clone();
+                                    self.rename_prefix_to = prefix.clone();
+                                    self.show_rename_prefix_dialog = true;
+                                }
+                            });
+                        }
+                    });
+            }
+
+            ui.add_space(10.0);
+            ui.separator();
+            ui.add_space(10.0);
+
+            // Allowed prefixes list
+            ui.strong("Allowed Prefixes");
+            ui.add_space(5.0);
+
             if self.store.allowed_prefixes.is_empty() {
-                ui.label("No prefixes explicitly allowed (all valid prefixes permitted).");
+                ui.label("No prefixes in allowed list (all valid prefixes permitted).");
             } else {
                 let prefixes_to_show: Vec<String> = self.store.allowed_prefixes.clone();
                 let mut to_remove: Option<String> = None;
 
-                ui.horizontal_wrapped(|ui| {
-                    for prefix in &prefixes_to_show {
-                        let in_use = used_prefixes.contains(prefix);
-                        ui.horizontal(|ui| {
-                            ui.label(prefix);
-                            if in_use {
-                                ui.small("[in use]");
-                            }
-                            if ui
-                                .small_button("×")
-                                .on_hover_text("Remove from allowed list")
-                                .clicked()
-                            {
-                                to_remove = Some(prefix.clone());
-                            }
-                        });
-                    }
-                });
+                egui::ScrollArea::vertical()
+                    .id_salt("allowed_prefixes_scroll")
+                    .max_height(150.0)
+                    .show(ui, |ui| {
+                        for prefix in &prefixes_to_show {
+                            let in_use = used_prefixes.contains(prefix);
+                            ui.horizontal(|ui| {
+                                ui.monospace(prefix);
+                                if in_use {
+                                    ui.colored_label(egui::Color32::from_rgb(100, 180, 100), "[in use]");
+                                } else {
+                                    ui.colored_label(egui::Color32::GRAY, "[unused]");
+                                }
+
+                                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                    if ui
+                                        .small_button("🗑")
+                                        .on_hover_text("Remove from allowed list")
+                                        .clicked()
+                                    {
+                                        to_remove = Some(prefix.clone());
+                                    }
+                                });
+                            });
+                        }
+                    });
 
                 if let Some(prefix) = to_remove {
                     self.store.remove_allowed_prefix(&prefix);
@@ -4801,6 +4877,95 @@ impl RequirementsApp {
                 }
             }
         });
+    }
+
+    fn show_rename_prefix_dialog(&mut self, ctx: &egui::Context) {
+        if !self.show_rename_prefix_dialog {
+            return;
+        }
+
+        let max_size = modal_max_size(ctx);
+        let modal_width = 400.0_f32.min(max_size.x);
+
+        egui::Window::new("Rename Prefix")
+            .collapsible(false)
+            .resizable(false)
+            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+            .fixed_size([modal_width, 0.0])
+            .show(ctx, |ui| {
+                ui.add_space(10.0);
+
+                ui.label(format!("Rename prefix '{}' to:", self.rename_prefix_from));
+                ui.add_space(5.0);
+
+                ui.add(
+                    egui::TextEdit::singleline(&mut self.rename_prefix_to)
+                        .desired_width(150.0)
+                        .hint_text("New prefix"),
+                );
+
+                // Count affected requirements
+                let affected_count = self.store.requirements.iter()
+                    .filter(|r| r.spec_id.as_ref()
+                        .map(|id| id.starts_with(&self.rename_prefix_from))
+                        .unwrap_or(false))
+                    .count();
+
+                ui.add_space(10.0);
+
+                let new_prefix = self.rename_prefix_to.to_uppercase();
+                let is_valid = !new_prefix.is_empty()
+                    && new_prefix.chars().all(|c| c.is_ascii_uppercase());
+                let is_same = new_prefix == self.rename_prefix_from;
+                let target_exists = self.store.get_used_prefixes().contains(&new_prefix)
+                    && new_prefix != self.rename_prefix_from;
+
+                if target_exists {
+                    ui.colored_label(
+                        egui::Color32::from_rgb(200, 180, 100),
+                        format!("⚠ Will merge {} requirement(s) into existing prefix '{}'",
+                            affected_count, new_prefix),
+                    );
+                } else if is_valid && !is_same {
+                    ui.label(format!("Will rename {} requirement(s)", affected_count));
+                }
+
+                ui.add_space(10.0);
+                ui.horizontal(|ui| {
+                    let can_rename = is_valid && !is_same;
+                    if ui.add_enabled(can_rename, egui::Button::new("✓ Rename")).clicked() {
+                        // Perform the rename
+                        self.rename_prefix(&self.rename_prefix_from.clone(), &new_prefix);
+                        self.show_rename_prefix_dialog = false;
+                    }
+                    if ui.button("✗ Cancel").clicked() {
+                        self.show_rename_prefix_dialog = false;
+                    }
+                });
+            });
+    }
+
+    fn rename_prefix(&mut self, from: &str, to: &str) {
+        // Update all requirements with this prefix
+        for req in &mut self.store.requirements {
+            if let Some(ref mut spec_id) = req.spec_id {
+                if spec_id.starts_with(from) {
+                    // Replace the prefix portion
+                    let suffix = &spec_id[from.len()..];
+                    *spec_id = format!("{}{}", to, suffix);
+                }
+            }
+        }
+
+        // Update allowed prefixes list if needed
+        if self.store.allowed_prefixes.contains(&from.to_string()) {
+            self.store.remove_allowed_prefix(from);
+            if !self.store.allowed_prefixes.contains(&to.to_string()) {
+                self.store.add_allowed_prefix(to);
+            }
+        }
+
+        self.save();
     }
 
     fn show_settings_relationships_tab(&mut self, ui: &mut egui::Ui) {
@@ -14598,6 +14763,9 @@ impl eframe::App for RequirementsApp {
 
         // Show migration confirmation dialog
         self.show_migration_confirmation_dialog(ctx);
+
+        // Show rename prefix dialog
+        self.show_rename_prefix_dialog(ctx);
 
         // Show save preset dialogs
         self.show_save_preset_dialog_window(ctx);

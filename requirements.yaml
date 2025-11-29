@@ -4328,6 +4328,14 @@ requirements:
     target_id: 3a4bc953-af23-4573-879e-6dcd1a2f2fb8
     created_at: 2025-11-29T21:31:29.234392023Z
     created_by: Unknown User
+  - rel_type: Child
+    target_id: 6712451d-ed99-4d45-9377-ffef9c9ff049
+    created_at: 2025-11-29T22:08:22.547508430Z
+    created_by: Unknown User
+  - rel_type: Child
+    target_id: 06568b9b-a3d9-4c55-81b7-b51259936801
+    created_at: 2025-11-29T22:12:47.675513054Z
+    created_by: Unknown User
 - id: 3ef749b7-b220-41f8-9a1d-1545d0c43a7f
   spec_id: FR-0103
   title: Dynamically update ID preview when Type changes in Edit form
@@ -4518,6 +4526,54 @@ requirements:
     target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
     created_at: 2025-11-29T21:31:29.234392023Z
     created_by: Unknown User
+- id: 6712451d-ed99-4d45-9377-ffef9c9ff049
+  spec_id: FR-0113
+  title: ''
+  description: Add an artifact tab to the left of History. An artifact is a file on the filesystem that we will render in this artifact tab. For a test requirement it may be a test sepecification yaml file. The goal is to have different types of artifacts that are supported for which we have the ability to render them in aida. The goal is to have something more than a simple link. Possibly it could be something we control and version if we build versioning of requirements into our model.
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 51-Uncategorized
+  created_at: 2025-11-29T22:08:22.547475134Z
+  created_by: Unknown User
+  modified_at: 2025-11-29T22:08:22.547475134Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
+    created_at: 2025-11-29T22:08:22.547508430Z
+    created_by: Unknown User
+- id: 06568b9b-a3d9-4c55-81b7-b51259936801
+  spec_id: FR-0114
+  title: Settings/IDs tab
+  description: |2+
+     IDs tab - you should now see two subtabs:
+      - Format - For ID format configuration (format type, numbering strategy, digits)
+      - Prefixes - For prefix management (add, rename, remove prefixes)
+
+      In the Prefixes subtab, you can:
+      1. Add new prefixes
+      2. See prefixes in use with requirement counts
+      3. Rename prefixes by clicking the pencil (✏) button - renaming to an existing prefix will merge requirements
+      4. See and manage allowed prefixes
+
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-29T22:12:47.675501842Z
+  created_by: Unknown User
+  modified_at: 2025-11-29T22:12:47.675501842Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
+    created_at: 2025-11-29T22:12:47.675513054Z
+    created_by: Unknown User
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
   spec_id: $USER-001
@@ -4570,8 +4626,8 @@ id_config:
     prefix: CR
     description: Change requests for modifications to existing functionality
 features: []
-next_feature_number: 51
-next_spec_number: 113
+next_feature_number: 52
+next_spec_number: 115
 prefix_counters: {}
 relationship_definitions:
 - name: parent
