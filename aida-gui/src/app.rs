@@ -11164,16 +11164,19 @@ impl RequirementsApp {
                 // Reserve space for close button area (separator + button row)
                 let content_height = (available_height - 40.0).max(200.0);
 
+                // Reserve space for heading + separator (approx 30px)
+                let scroll_height = (content_height - 35.0).max(150.0);
+
                 ui.horizontal(|ui| {
                     // Left panel: Syntax reference
                     ui.vertical(|ui| {
                         ui.set_width(panel_width);
-                        ui.set_min_height(content_height);
                         ui.heading("Syntax");
                         ui.separator();
 
                         egui::ScrollArea::vertical()
                             .id_salt("markdown_help_syntax")
+                            .max_height(scroll_height)
                             .show(ui, |ui| {
                                 // Headers
                                 ui.group(|ui| {
@@ -11252,12 +11255,12 @@ impl RequirementsApp {
                     // Right panel: Live preview
                     ui.vertical(|ui| {
                         ui.set_width(panel_width);
-                        ui.set_min_height(content_height);
                         ui.heading("Preview");
                         ui.separator();
 
                         egui::ScrollArea::vertical()
                             .id_salt("markdown_help_preview")
+                            .max_height(scroll_height)
                             .show(ui, |ui| {
                                 // Sample markdown that demonstrates all features
                                 let sample_markdown = r#"# Heading 1
