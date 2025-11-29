@@ -888,3 +888,24 @@ A chronological record of development sessions and changes made to the Requireme
     - Status & Priority Icons dialog
     - View Settings (List 1 and List 2)
 - **Result**: All modal windows now respect window boundaries and show scrollbars when content exceeds available space
+
+### Markdown Help Split Panel with Preview
+- **Prompt**: "For Markdown Help can we have a split panel with the right side showing a preview of the help shown on the left?"
+- **Solution**: Redesigned Markdown Help modal with side-by-side syntax reference and live preview
+- **Implementation** (in `app.rs`, `show_markdown_help_modal()`):
+  - Changed from single column to horizontal split layout using `ui.horizontal()`
+  - Left panel ("Syntax"): Grouped markdown syntax examples organized by category:
+    - Headers (`#`, `##`, `###`)
+    - Text formatting (bold, italic, strikethrough, inline code)
+    - Lists (bullet lists, numbered lists, nested items)
+    - Links (`[text](url)`)
+    - Code blocks (fenced with language)
+    - Quotes (blockquotes with `>`)
+    - Tables (pipe-delimited)
+    - Checkboxes (`- [ ]`, `- [x]`)
+  - Right panel ("Preview"): Live rendered preview using `CommonMarkViewer`
+    - Shows sample markdown demonstrating all syntax from left panel
+    - Uses existing `markdown_cache` for efficient rendering
+  - Both panels have independent scroll areas with unique `id_salt` values
+  - Modal respects max size constraints (90% width, 85% height)
+- **Result**: Users can now see syntax examples on the left and rendered output on the right simultaneously
