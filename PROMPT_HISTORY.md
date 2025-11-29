@@ -768,3 +768,24 @@ A chronological record of development sessions and changes made to the Requireme
 - **Helper Functions**:
   - `show_prefix_field()` - Reusable prefix dropdown/text input
   - `show_custom_field_editor()` - Reusable custom field renderer for all field types
+
+### Layout-Aware Form Views
+- **Prompt**: "The layout for the edit should match the layout we are currently viewing"
+- **Solution**: Form layout now adapts based on current view mode
+- **Implementation**:
+  - `show_form_vertical()` - For List|Details (side-by-side) view:
+    - Metadata grid at top (matching Detail View vertical layout)
+    - Description editor at bottom with scroll
+  - `show_form_stacked()` - For List/Details Stacked view:
+    - Metadata on left (25% resizable panel)
+    - Description on right (75% remaining space)
+  - Form selection logic at call site:
+    - `LayoutMode::ListDetailsStacked` → `show_form_stacked()`
+    - All other modes → `show_form_vertical()`
+- **Both layouts share**:
+  - Styled title bar with editable title field
+  - Save/Cancel buttons with keyboard shortcuts
+  - All metadata fields as dropdowns
+  - Description editor with markdown preview toggle
+  - Custom fields support
+  - Cancel confirmation dialog
