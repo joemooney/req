@@ -9265,6 +9265,67 @@ impl RequirementsApp {
             });
     }
 
+    /// Show simplified list panel for form views (matches Detail View layout)
+    /// Only shows search + filter button, no perspective/preset controls
+    fn show_list_panel_simple(&mut self, ctx: &egui::Context) {
+        egui::SidePanel::left("list_panel_simple")
+            .min_width(150.0)
+            .default_width(350.0)
+            .resizable(true)
+            .show(ctx, |ui| {
+                // Set clip rect to prevent content overflow
+                let clip_rect = ui.available_rect_before_wrap();
+                ui.set_clip_rect(clip_rect);
+
+                // Header with Hide button
+                ui.horizontal(|ui| {
+                    ui.heading("Requirements");
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui
+                            .button("▶ Hide")
+                            .on_hover_text("Hide requirements list")
+                            .clicked()
+                        {
+                            self.left_panel_collapsed = true;
+                        }
+                    });
+                });
+                ui.separator();
+
+                // Simple search bar (matching Detail View)
+                ui.horizontal(|ui| {
+                    ui.label("🔍");
+                    ui.add(
+                        egui::TextEdit::singleline(&mut self.filter_text)
+                            .hint_text("Search...")
+                            .desired_width(120.0),
+                    );
+
+                    // Filter toggle button
+                    let filter_active = !self.filter_types.is_empty()
+                        || !self.filter_features.is_empty()
+                        || !self.filter_prefixes.is_empty()
+                        || !self.filter_statuses.is_empty()
+                        || !self.filter_priorities.is_empty();
+                    let filter_btn_text = if filter_active { "🔽 ●" } else { "🔽" };
+                    if ui.button(filter_btn_text).on_hover_text("Filters").clicked() {
+                        self.show_filter_dialog_list1 = !self.show_filter_dialog_list1;
+                    }
+                });
+                ui.separator();
+
+                // Scrollable list
+                egui::ScrollArea::vertical()
+                    .id_salt("list_panel_simple_scroll")
+                    .auto_shrink([false, false])
+                    .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysVisible)
+                    .show(ui, |ui| {
+                        ui.set_max_width(ui.available_width());
+                        self.show_tree_list(ui);
+                    });
+            });
+    }
+
     /// Show split panel with close button
     fn show_split_panel_with_close(&mut self, ctx: &egui::Context, forced_width: Option<f32>) {
         let mut panel = egui::SidePanel::left("split_panel")
@@ -13900,7 +13961,8 @@ impl eframe::App for RequirementsApp {
             let show_left_panel = screen_width >= min_width_for_side_panel && !self.left_panel_collapsed;
 
             if show_left_panel {
-                self.show_list_panel(ctx, true, None);
+                // Use simplified list panel matching the Detail View layout
+                self.show_list_panel_simple(ctx);
             }
 
             egui::CentralPanel::default().show(ctx, |ui| {
