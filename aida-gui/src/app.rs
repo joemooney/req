@@ -1516,6 +1516,17 @@ impl LayoutMode {
             _ => *self, // Already no split
         }
     }
+
+    /// Get all available layout modes for the menu
+    fn all_modes() -> &'static [LayoutMode] {
+        &[
+            LayoutMode::ListDetailsSide,
+            LayoutMode::ListDetailsStacked,
+            LayoutMode::SplitListDetails,
+            LayoutMode::SplitListOnly,
+            LayoutMode::ListOnly,
+        ]
+    }
 }
 
 /// Perspective defines how requirements are organized in the list
@@ -1823,7 +1834,10 @@ pub struct RequirementsApp {
 
     // Layout state
     left_panel_collapsed: bool,  // Whether left panel is manually collapsed (in form view)
-    layout_mode: LayoutMode,     // Current layout mode (cycles through 4 layouts)
+    layout_mode: LayoutMode,     // Current layout mode (cycles through 5 layouts)
+    layout_button_press_start: Option<std::time::Instant>,  // When layout button was pressed
+    show_layout_menu: bool,      // Whether to show the layout selection menu
+    layout_button_rect: Option<egui::Rect>,  // Position of layout button for popup menu
 
     // Split panel (second requirements list) - used in split layouts
     split_perspective: Perspective,
@@ -2119,6 +2133,9 @@ impl RequirementsApp {
             show_description_preview: false,
             left_panel_collapsed: false,
             layout_mode: LayoutMode::ListDetailsSide,
+            layout_button_press_start: None,
+            show_layout_menu: false,
+            layout_button_rect: None,
             split_perspective: Perspective::default(),
             split_perspective_direction: PerspectiveDirection::default(),
             split_filter_text: String::new(),
@@ -3074,19 +3091,42 @@ impl RequirementsApp {
                 }
 
                 // Layout cycle button (only show in List/Detail view, not in Add/Edit forms)
+                // Quick click cycles, long press (hold) shows menu
                 let in_form_view = self.current_view == View::Add || self.current_view == View::Edit;
                 if !in_form_view {
                     ui.separator();
                     let layout_tooltip = format!(
-                        "Layout: {} (click to cycle)",
+                        "Layout: {} (click to cycle, hold for menu)",
                         self.layout_mode.label()
                     );
-                    if ui.button("⊞")
-                        .on_hover_text(&layout_tooltip)
-                        .clicked()
-                    {
-                        self.layout_mode = self.layout_mode.next();
+                    let layout_button = ui.button("⊞")
+                        .on_hover_text(&layout_tooltip);
+
+                    let _button_id = layout_button.id;
+
+                    // Track button press timing for long-press detection
+                    if layout_button.is_pointer_button_down_on() {
+                        if self.layout_button_press_start.is_none() {
+                            self.layout_button_press_start = Some(std::time::Instant::now());
+                        }
+                        // Check if held long enough (300ms) to show menu
+                        if let Some(start) = self.layout_button_press_start {
+                            if start.elapsed() >= std::time::Duration::from_millis(300) {
+                                self.show_layout_menu = true;
+                            }
+                        }
+                    } else {
+                        // Button released
+                        if let Some(start) = self.layout_button_press_start.take() {
+                            // If it was a quick click (< 300ms) and menu isn't showing, cycle
+                            if start.elapsed() < std::time::Duration::from_millis(300) && !self.show_layout_menu {
+                                self.layout_mode = self.layout_mode.next();
+                            }
+                        }
                     }
+
+                    // Store button position for the popup menu
+                    self.layout_button_rect = Some(layout_button.rect);
                 }
 
                 ui.separator();
@@ -9124,6 +9164,58 @@ impl RequirementsApp {
             });
     }
 
+    /// Show layout menu popup (triggered by long-press on layout button)
+    fn show_layout_menu_popup(&mut self, ctx: &egui::Context) {
+        if !self.show_layout_menu {
+            return;
+        }
+
+        // Get the button rect for positioning
+        let button_rect = match self.layout_button_rect {
+            Some(rect) => rect,
+            None => return,
+        };
+
+        // Create a popup area below the button
+        let popup_pos = egui::pos2(button_rect.left(), button_rect.bottom() + 2.0);
+
+        egui::Area::new(egui::Id::new("layout_menu_popup"))
+            .order(egui::Order::Foreground)
+            .fixed_pos(popup_pos)
+            .show(ctx, |ui| {
+                egui::Frame::popup(ui.style())
+                    .show(ui, |ui| {
+                        ui.set_min_width(150.0);
+                        for mode in LayoutMode::all_modes() {
+                            let is_current = *mode == self.layout_mode;
+                            let label = if is_current {
+                                format!("✓ {}", mode.label())
+                            } else {
+                                format!("   {}", mode.label())
+                            };
+                            if ui.selectable_label(is_current, label).clicked() {
+                                self.layout_mode = *mode;
+                                self.show_layout_menu = false;
+                            }
+                        }
+                    });
+            });
+
+        // Close menu on click outside
+        if ctx.input(|i| i.pointer.any_click()) {
+            // Check if click was inside the popup area - approximate bounds check
+            let popup_rect = egui::Rect::from_min_size(
+                popup_pos,
+                egui::vec2(160.0, 120.0), // Approximate popup size
+            );
+            if let Some(pos) = ctx.input(|i| i.pointer.interact_pos()) {
+                if !popup_rect.contains(pos) && !button_rect.contains(pos) {
+                    self.show_layout_menu = false;
+                }
+            }
+        }
+    }
+
     fn show_detail_view(&mut self, ui: &mut egui::Ui) {
         if let Some(idx) = self.selected_idx {
             if let Some(req) = self.store.requirements.get(idx).cloned() {
@@ -11973,6 +12065,9 @@ impl eframe::App for RequirementsApp {
 
         // Show icon editor dialog
         self.show_icon_editor_dialog(ctx);
+
+        // Show layout menu popup (triggered by long-press on layout button)
+        self.show_layout_menu_popup(ctx);
 
         // Show project dialogs
         self.show_switch_project_dialog(ctx);
