@@ -11333,10 +11333,10 @@ impl eframe::App for RequirementsApp {
         let show_left_panel = if in_form_view {
             screen_width >= min_width_for_side_panel && !self.left_panel_collapsed
         } else {
-            // In List/Detail view, show side panel if:
-            // - detail panel is collapsed (list-only mode), OR
-            // - list panel is NOT collapsed (normal mode)
-            self.detail_panel_collapsed || !self.list_panel_collapsed
+            // In List/Detail view, show side panel only if:
+            // - detail panel is NOT collapsed (otherwise list is shown in central panel), AND
+            // - list panel is NOT collapsed
+            !self.detail_panel_collapsed && !self.list_panel_collapsed
         };
 
         if show_left_panel {

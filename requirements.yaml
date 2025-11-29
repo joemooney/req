@@ -853,8 +853,6 @@ requirements:
   - rel_type: Child
     target_id: 72cc760e-c566-4bbc-b7fb-82bf027f1eaa
   - rel_type: Child
-    target_id: 9aec2046-225d-40e4-aadf-609045e8ab45
-  - rel_type: Child
     target_id: 5a09caba-1c81-4c8c-bc18-48f677c205b4
   - rel_type: Child
     target_id: 01cb13e7-36e9-4dc1-900c-46d22087db4e
@@ -3792,7 +3790,9 @@ requirements:
   tags: []
   relationships:
   - rel_type: Parent
-    target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
+    target_id: 5a09caba-1c81-4c8c-bc18-48f677c205b4
+    created_at: 2025-11-29T01:23:19.372658881Z
+    created_by: '@joe'
 - id: 924b8768-f882-4bb3-ad8f-bbe9c9fd56b8
   spec_id: FR-0094
   title: Pseudo Relations
@@ -3840,6 +3840,10 @@ requirements:
   relationships:
   - rel_type: Parent
     target_id: 320d571f-ef11-4560-88fc-07bebc1d0c2c
+  - rel_type: Child
+    target_id: 9aec2046-225d-40e4-aadf-609045e8ab45
+    created_at: 2025-11-29T01:23:19.372658881Z
+    created_by: '@joe'
 - id: 01cb13e7-36e9-4dc1-900c-46d22087db4e
   spec_id: FR-0096
   title: Collapse/hide Detail View
@@ -3862,7 +3866,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 43-Uncategorized
   created_at: 2025-11-29T00:59:16.590202157Z
   created_by: '@joe'
   modified_at: 2025-11-29T01:10:31.344832Z
@@ -3937,7 +3941,7 @@ id_config:
     prefix: CR
     description: Change requests for modifications to existing functionality
 features: []
-next_feature_number: 43
+next_feature_number: 44
 next_spec_number: 97
 prefix_counters: {}
 relationship_definitions:
