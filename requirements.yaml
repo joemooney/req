@@ -364,11 +364,11 @@ requirements:
       - Reset to Base: Quickly revert to default Dark or Light settings
       - Persistent: Custom themes are saved to user settings and appear in the theme dropdown
   status: Completed
-  priority: Medium
+  priority: High
   owner: ''
   feature: 5-Uncategorized
   created_at: 2025-11-25T23:02:47.788464927Z
-  modified_at: 2025-11-28T20:14:10.168243089Z
+  modified_at: 2025-11-29T17:30:04.008722318Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -414,6 +414,13 @@ requirements:
           - Live preview panel: See UI elements with your current customizations in real-time
           - Reset to Base: Quickly revert to default Dark or Light settings
           - Persistent: Custom themes are saved to user settings and appear in the theme dropdown
+  - id: 54ba83ea-2553-4ae8-924c-20a5e1567ca4
+    author: Unknown User
+    timestamp: 2025-11-29T17:30:04.008721721Z
+    changes:
+    - field_name: priority
+      old_value: Medium
+      new_value: High
 - id: b9c26c5d-ab38-4e9b-a493-8f4a84f88019
   spec_id: CR-0015
   title: add created by
@@ -4056,7 +4063,7 @@ requirements:
 - id: d0650db4-0021-4496-8620-f7f6bf8dbc87
   spec_id: FR-0100
   title: Details View layout
-  description: |+
+  description: |
     Details View Panel should display with the tabs (Description. Links etc.) at the bottom of the panel when the Details View panel is displayed on the right (as currently implemented). But if the Details View panel is displayed at the bottom (in in List/Details) then a better use of space is to split the Details View panel so that the ID, Type, Status and other non-wide fields are displayed in a vertical column on the left and on the right side of the panel we show the tabs.
 
       Implemented responsive detail view layout based on orientation:
@@ -4084,13 +4091,26 @@ requirements:
       2. Select a requirement and observe the horizontal split in the details panel
       3. Compare with "List | Details" mode which uses the traditional vertical layout
 
+    updated the stacked detail view layout with:
+
+      1. Resizable split - Uses egui::SidePanel with .resizable(true) for the metadata fields on the left
+      2. 25%/75% default split - Metadata panel defaults to 25% width, tabs get 75%
+      3. Draggable divider - You can drag the divider between the two sections to resize
+      4. Min/max constraints - Metadata panel has minimum 150px and maximum 50% of available width
+      5. Full tab labels - Since there's more space now, restored full tab labels like "📄 Description"
+      instead of "📄 Desc"
+
+      The GUI is running - you can test by:
+      1. Switching to "List / Details" layout (stacked mode)
+      2. Select a requirement
+      3. Drag the vertical divider between the metadata fields and tabs to resize
   status: Draft
   priority: Medium
   owner: ''
   feature: 46-Uncategorized
   created_at: 2025-11-29T04:39:50.207441032Z
   created_by: '@joe'
-  modified_at: 2025-11-29T17:03:18.334376049Z
+  modified_at: 2025-11-29T17:11:05.691277298Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -4141,6 +4161,80 @@ requirements:
           2. Select a requirement and observe the horizontal split in the details panel
           3. Compare with "List | Details" mode which uses the traditional vertical layout
 
+  - id: f10b6dbc-52ed-413b-9b0d-de830670b93a
+    author: '@joe'
+    timestamp: 2025-11-29T17:11:05.691274510Z
+    changes:
+    - field_name: description
+      old_value: |+
+        Details View Panel should display with the tabs (Description. Links etc.) at the bottom of the panel when the Details View panel is displayed on the right (as currently implemented). But if the Details View panel is displayed at the bottom (in in List/Details) then a better use of space is to split the Details View panel so that the ID, Type, Status and other non-wide fields are displayed in a vertical column on the left and on the right side of the panel we show the tabs.
+
+          Implemented responsive detail view layout based on orientation:
+
+          1. Added is_details_stacked() method to LayoutMode enum (line 1533) that returns true for
+          ListDetailsStacked and SplitListDetails layouts where details are displayed at the bottom.
+          2. Modified show_detail_view_internal() to accept a stacked parameter that determines the layout
+          orientation.
+          3. Modified show_detail_view_with_close() to pass the correct stacked value based on
+          layout_mode.is_details_stacked().
+          4. Implemented two different layouts:
+
+            - Side layout (right): Traditional vertical layout with metadata grid at top, tabs below, and tab
+          content at bottom - unchanged from before.
+            - Stacked layout (bottom): New horizontal split layout with:
+                - Left column: Metadata fields (ID, Status, Priority, Type, Feature, Owner, Tags, Created By,
+          Created, Modified) in a scrollable grid
+              - Right column: Compact tab bar (📄 Desc, 💬 (n), 🔗 (n), 📜 (n)) with tab content below
+
+          This improves space utilization in stacked layouts ("List/Details" and "List|List/Details") where
+          horizontal space is more abundant than vertical space.
+
+          The GUI is running - you can test by:
+          1. Opening the app and clicking the layout button to cycle to "List / Details" mode
+          2. Select a requirement and observe the horizontal split in the details panel
+          3. Compare with "List | Details" mode which uses the traditional vertical layout
+
+      new_value: |
+        Details View Panel should display with the tabs (Description. Links etc.) at the bottom of the panel when the Details View panel is displayed on the right (as currently implemented). But if the Details View panel is displayed at the bottom (in in List/Details) then a better use of space is to split the Details View panel so that the ID, Type, Status and other non-wide fields are displayed in a vertical column on the left and on the right side of the panel we show the tabs.
+
+          Implemented responsive detail view layout based on orientation:
+
+          1. Added is_details_stacked() method to LayoutMode enum (line 1533) that returns true for
+          ListDetailsStacked and SplitListDetails layouts where details are displayed at the bottom.
+          2. Modified show_detail_view_internal() to accept a stacked parameter that determines the layout
+          orientation.
+          3. Modified show_detail_view_with_close() to pass the correct stacked value based on
+          layout_mode.is_details_stacked().
+          4. Implemented two different layouts:
+
+            - Side layout (right): Traditional vertical layout with metadata grid at top, tabs below, and tab
+          content at bottom - unchanged from before.
+            - Stacked layout (bottom): New horizontal split layout with:
+                - Left column: Metadata fields (ID, Status, Priority, Type, Feature, Owner, Tags, Created By,
+          Created, Modified) in a scrollable grid
+              - Right column: Compact tab bar (📄 Desc, 💬 (n), 🔗 (n), 📜 (n)) with tab content below
+
+          This improves space utilization in stacked layouts ("List/Details" and "List|List/Details") where
+          horizontal space is more abundant than vertical space.
+
+          The GUI is running - you can test by:
+          1. Opening the app and clicking the layout button to cycle to "List / Details" mode
+          2. Select a requirement and observe the horizontal split in the details panel
+          3. Compare with "List | Details" mode which uses the traditional vertical layout
+
+        updated the stacked detail view layout with:
+
+          1. Resizable split - Uses egui::SidePanel with .resizable(true) for the metadata fields on the left
+          2. 25%/75% default split - Metadata panel defaults to 25% width, tabs get 75%
+          3. Draggable divider - You can drag the divider between the two sections to resize
+          4. Min/max constraints - Metadata panel has minimum 150px and maximum 50% of available width
+          5. Full tab labels - Since there's more space now, restored full tab labels like "📄 Description"
+          instead of "📄 Desc"
+
+          The GUI is running - you can test by:
+          1. Switching to "List / Details" layout (stacked mode)
+          2. Select a requirement
+          3. Drag the vertical divider between the metadata fields and tabs to resize
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
   spec_id: $USER-001

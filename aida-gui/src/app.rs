@@ -9633,20 +9633,33 @@ impl RequirementsApp {
                     .rounding(2.0)
                     .show(ui, |ui| {
                         ui.horizontal(|ui| {
-                            // Title text with optional custom color and size
-                            let title_text = egui::RichText::new(&req.title)
-                                .size(18.0 * title_bar_font_size)
-                                .strong();
-                            let title_text = if let Some(color) = title_bar_text {
-                                title_text.color(color)
-                            } else {
-                                title_text
-                            };
-                            ui.label(title_text);
+                            // Reserve space for buttons: Actions (~90px) + Edit (~60px) + Close (~30px) + spacing
+                            let buttons_width = if show_close { 220.0 } else { 180.0 };
+                            let available_width = ui.available_width();
+                            let title_max_width = (available_width - buttons_width).max(100.0);
 
-                            if is_archived {
-                                ui.label("(Archived)");
-                            }
+                            // Title text with truncation to ensure buttons remain visible
+                            ui.allocate_ui_with_layout(
+                                egui::vec2(title_max_width, ui.available_height()),
+                                egui::Layout::left_to_right(egui::Align::Center),
+                                |ui| {
+                                    ui.set_clip_rect(ui.available_rect_before_wrap());
+                                    let title_text = egui::RichText::new(&req.title)
+                                        .size(18.0 * title_bar_font_size)
+                                        .strong();
+                                    let title_text = if let Some(color) = title_bar_text {
+                                        title_text.color(color)
+                                    } else {
+                                        title_text
+                                    };
+                                    ui.add(egui::Label::new(title_text).truncate());
+
+                                    if is_archived {
+                                        ui.label("(Archived)");
+                                    }
+                                },
+                            );
+
                             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                                 // Close button (rightmost)
                                 if show_close {
