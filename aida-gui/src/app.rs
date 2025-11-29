@@ -7207,11 +7207,17 @@ impl RequirementsApp {
         }
     }
 
-    fn show_list_panel(&mut self, ctx: &egui::Context, in_form_view: bool) {
-        egui::SidePanel::left("list_panel")
+    fn show_list_panel(&mut self, ctx: &egui::Context, in_form_view: bool, forced_width: Option<f32>) {
+        let mut panel = egui::SidePanel::left("list_panel")
             .min_width(200.0) // Allow narrower panel
-            .default_width(400.0)
-            .show(ctx, |ui| {
+            .default_width(400.0);
+
+        // Apply forced width if provided (for equal split when detail is collapsed)
+        if let Some(width) = forced_width {
+            panel = panel.exact_width(width);
+        }
+
+        panel.show(ctx, |ui| {
                 // Header with optional collapse button
                 ui.horizontal(|ui| {
                     ui.heading("Requirements");
@@ -7518,11 +7524,17 @@ impl RequirementsApp {
     }
 
     /// Show split panel (second requirements list) on the left side (next to main list)
-    fn show_split_panel(&mut self, ctx: &egui::Context) {
-        egui::SidePanel::left("split_panel")
+    fn show_split_panel(&mut self, ctx: &egui::Context, forced_width: Option<f32>) {
+        let mut panel = egui::SidePanel::left("split_panel")
             .min_width(200.0)
-            .default_width(350.0)
-            .show(ctx, |ui| {
+            .default_width(350.0);
+
+        // Apply forced width if provided (for equal split when detail is collapsed)
+        if let Some(width) = forced_width {
+            panel = panel.exact_width(width);
+        }
+
+        panel.show(ctx, |ui| {
                 // Header with close button
                 ui.horizontal(|ui| {
                     ui.heading("Requirements");
@@ -11603,8 +11615,22 @@ impl eframe::App for RequirementsApp {
         let min_width_for_side_panel = 900.0; // Minimum width to show side panel in edit mode
         let in_form_view = self.current_view == View::Add || self.current_view == View::Edit;
 
+        // Determine if both panels should have equal width (when detail is collapsed and split is open)
+        let split_equal_width = self.detail_panel_collapsed && self.split_panel_open && !in_form_view;
+
+        // Calculate equal width for both panels when in split-equal mode
+        let equal_panel_width: Option<f32> = if split_equal_width {
+            // Split screen width equally between the two panels (minus some margin for resizers)
+            Some((screen_width - 20.0) / 2.0)
+        } else {
+            None
+        };
+
         let show_left_panel = if in_form_view {
             screen_width >= min_width_for_side_panel && !self.left_panel_collapsed
+        } else if split_equal_width {
+            // When split-equal mode, always show main list panel
+            true
         } else {
             // In List/Detail view, show side panel only if:
             // - detail panel is NOT collapsed (otherwise list is shown in central panel), AND
@@ -11613,12 +11639,12 @@ impl eframe::App for RequirementsApp {
         };
 
         if show_left_panel {
-            self.show_list_panel(ctx, in_form_view);
+            self.show_list_panel(ctx, in_form_view, equal_panel_width);
         }
 
         // Show split panel (second list view) next to main list if open
         if self.split_panel_open && !in_form_view {
-            self.show_split_panel(ctx);
+            self.show_split_panel(ctx, equal_panel_width);
         }
 
         egui::CentralPanel::default().show(ctx, |ui| {
