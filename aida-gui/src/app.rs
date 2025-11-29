@@ -1885,6 +1885,7 @@ pub struct RequirementsApp {
     // View presets
     active_preset: Option<String>, // Name of currently active preset (None = custom/unsaved)
     show_save_preset_dialog: bool, // Show the save preset dialog
+    show_split_save_preset_dialog: bool, // Show the save preset dialog for List 2
     preset_name_input: String,     // Name input for new preset
     show_delete_preset_confirm: Option<String>, // Name of preset to confirm deletion
 
@@ -2186,6 +2187,7 @@ impl RequirementsApp {
             show_rel_def_form: false,
             active_preset: None,
             show_save_preset_dialog: false,
+            show_split_save_preset_dialog: false,
             preset_name_input: String::new(),
             show_delete_preset_confirm: None,
             current_key_context: KeyContext::RequirementsList,
@@ -2380,6 +2382,45 @@ impl RequirementsApp {
         }
 
         self.active_preset = Some(name);
+
+        // Save settings
+        if let Err(e) = self.user_settings.save() {
+            self.message = Some((format!("Failed to save preset: {}", e), true));
+        } else {
+            self.message = Some(("View preset saved".to_string(), false));
+        }
+    }
+
+    /// Save current List 2 (split) view as a preset
+    fn save_split_view_as_preset(&mut self, name: String) {
+        let preset = ViewPreset::new(
+            name.clone(),
+            self.split_perspective.clone(),
+            self.split_perspective_direction,
+            &self.split_filter_types,
+            &self.split_filter_features,
+            &self.split_filter_prefixes,
+            &HashSet::new(), // No child filters for split view
+            &HashSet::new(),
+            &HashSet::new(),
+            true,
+        );
+
+        // Check if preset with this name already exists
+        if let Some(existing) = self
+            .user_settings
+            .view_presets
+            .iter_mut()
+            .find(|p| p.name == name)
+        {
+            // Update existing preset
+            *existing = preset;
+        } else {
+            // Add new preset
+            self.user_settings.view_presets.push(preset);
+        }
+
+        self.split_active_preset = Some(name);
 
         // Save settings
         if let Err(e) = self.user_settings.save() {
@@ -11794,6 +11835,98 @@ impl RequirementsApp {
             });
     }
 
+    fn show_split_save_preset_dialog_window(&mut self, ctx: &egui::Context) {
+        if !self.show_split_save_preset_dialog {
+            return;
+        }
+
+        egui::Window::new("💾 Save View Preset - List 2")
+            .collapsible(false)
+            .resizable(false)
+            .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
+            .show(ctx, |ui| {
+                ui.set_min_width(300.0);
+
+                ui.label("Enter a name for this view preset:");
+                ui.add_space(5.0);
+
+                let response = ui.add(
+                    egui::TextEdit::singleline(&mut self.preset_name_input)
+                        .hint_text("Preset name")
+                        .desired_width(280.0),
+                );
+
+                // Focus the text field when dialog opens
+                if response.gained_focus() || self.preset_name_input.is_empty() {
+                    response.request_focus();
+                }
+
+                // Check if name already exists
+                let name_exists = self
+                    .user_settings
+                    .view_presets
+                    .iter()
+                    .any(|p| p.name == self.preset_name_input);
+
+                if name_exists {
+                    ui.colored_label(
+                        egui::Color32::YELLOW,
+                        "⚠ This will overwrite existing preset",
+                    );
+                }
+
+                ui.add_space(10.0);
+
+                // Show current view settings summary
+                ui.group(|ui| {
+                    ui.label("Current View Settings (List 2):");
+                    ui.label(format!("  Perspective: {}", self.split_perspective.label()));
+                    if self.split_perspective != Perspective::Flat {
+                        ui.label(format!(
+                            "  Direction: {}",
+                            self.split_perspective_direction.label()
+                        ));
+                    }
+                    if !self.split_filter_types.is_empty() {
+                        let types: Vec<_> = self
+                            .split_filter_types
+                            .iter()
+                            .map(|t| format!("{:?}", t))
+                            .collect();
+                        ui.label(format!("  Type filters: {}", types.join(", ")));
+                    }
+                    if !self.split_filter_features.is_empty() {
+                        let features: Vec<_> = self.split_filter_features.iter().cloned().collect();
+                        ui.label(format!("  Feature filters: {}", features.join(", ")));
+                    }
+                });
+
+                ui.add_space(10.0);
+
+                ui.horizontal(|ui| {
+                    let can_save = !self.preset_name_input.trim().is_empty();
+
+                    if ui
+                        .add_enabled(can_save, egui::Button::new("Save"))
+                        .clicked()
+                        || (can_save && ui.input(|i| i.key_pressed(egui::Key::Enter)))
+                    {
+                        let name = self.preset_name_input.trim().to_string();
+                        self.save_split_view_as_preset(name);
+                        self.show_split_save_preset_dialog = false;
+                        self.preset_name_input.clear();
+                    }
+
+                    if ui.button("Cancel").clicked()
+                        || ui.input(|i| i.key_pressed(egui::Key::Escape))
+                    {
+                        self.show_split_save_preset_dialog = false;
+                        self.preset_name_input.clear();
+                    }
+                });
+            });
+    }
+
     fn show_delete_preset_confirmation_dialog(&mut self, ctx: &egui::Context) {
         let preset_name = match &self.show_delete_preset_confirm {
             Some(name) => name.clone(),
@@ -11828,21 +11961,94 @@ impl RequirementsApp {
             });
     }
 
-    /// Show filter dialog for List 1
+    /// Show view settings dialog for List 1
     fn show_filter_dialog_list1(&mut self, ctx: &egui::Context) {
         if !self.show_filter_dialog_list1 {
             return;
         }
 
         let mut open = true;
-        egui::Window::new("Filters - List 1")
+        egui::Window::new("View Settings")
             .collapsible(false)
             .resizable(true)
-            .default_width(400.0)
+            .default_width(450.0)
             .open(&mut open)
             .show(ctx, |ui| {
+                // View mode section
+                ui.heading("View Mode");
+                ui.add_space(5.0);
+
+                ui.horizontal(|ui| {
+                    ui.label("Perspective:");
+                    egui::ComboBox::from_id_salt("view_dialog_perspective")
+                        .selected_text(self.perspective.label())
+                        .show_ui(ui, |ui| {
+                            if ui.selectable_label(
+                                self.perspective == Perspective::Flat,
+                                Perspective::Flat.label(),
+                            ).clicked() {
+                                self.perspective = Perspective::Flat;
+                                self.active_preset = None;
+                            }
+                            if ui.selectable_label(
+                                self.perspective == Perspective::ParentChild,
+                                Perspective::ParentChild.label(),
+                            ).clicked() {
+                                self.perspective = Perspective::ParentChild;
+                                self.active_preset = None;
+                            }
+                            if ui.selectable_label(
+                                self.perspective == Perspective::Verification,
+                                Perspective::Verification.label(),
+                            ).clicked() {
+                                self.perspective = Perspective::Verification;
+                                self.active_preset = None;
+                            }
+                            if ui.selectable_label(
+                                self.perspective == Perspective::References,
+                                Perspective::References.label(),
+                            ).clicked() {
+                                self.perspective = Perspective::References;
+                                self.active_preset = None;
+                            }
+                        });
+                });
+
+                // Direction selector (only for non-Flat perspectives)
+                if self.perspective != Perspective::Flat {
+                    ui.horizontal(|ui| {
+                        ui.label("Direction:");
+                        egui::ComboBox::from_id_salt("view_dialog_direction")
+                            .selected_text(self.perspective_direction.label())
+                            .show_ui(ui, |ui| {
+                                if ui.selectable_label(
+                                    self.perspective_direction == PerspectiveDirection::TopDown,
+                                    PerspectiveDirection::TopDown.label(),
+                                ).clicked() {
+                                    self.perspective_direction = PerspectiveDirection::TopDown;
+                                    self.active_preset = None;
+                                }
+                                if ui.selectable_label(
+                                    self.perspective_direction == PerspectiveDirection::BottomUp,
+                                    PerspectiveDirection::BottomUp.label(),
+                                ).clicked() {
+                                    self.perspective_direction = PerspectiveDirection::BottomUp;
+                                    self.active_preset = None;
+                                }
+                            });
+                    });
+                }
+
+                ui.add_space(10.0);
+                ui.separator();
+                ui.add_space(5.0);
+
+                // Filters section
+                ui.heading("Filters");
+                ui.add_space(5.0);
+
                 egui::ScrollArea::vertical()
-                    .max_height(400.0)
+                    .max_height(300.0)
                     .show(ui, |ui| {
                         // Type filters
                         ui.label("Type Filters:");
@@ -11868,11 +12074,13 @@ impl RequirementsApp {
                                     } else {
                                         self.filter_types.remove(&req_type);
                                     }
+                                    self.active_preset = None;
                                 }
                             }
 
                             if ui.small_button("Clear").clicked() {
                                 self.filter_types.clear();
+                                self.active_preset = None;
                             }
                         });
 
@@ -11898,11 +12106,13 @@ impl RequirementsApp {
                                     } else {
                                         self.filter_features.remove(feature);
                                     }
+                                    self.active_preset = None;
                                 }
                             }
 
                             if ui.small_button("Clear").clicked() {
                                 self.filter_features.clear();
+                                self.active_preset = None;
                             }
                         });
 
@@ -11920,11 +12130,13 @@ impl RequirementsApp {
                                         } else {
                                             self.filter_prefixes.remove(prefix);
                                         }
+                                        self.active_preset = None;
                                     }
                                 }
 
                                 if ui.small_button("Clear").clicked() {
                                     self.filter_prefixes.clear();
+                                    self.active_preset = None;
                                 }
                             });
                         }
@@ -11948,11 +12160,13 @@ impl RequirementsApp {
                                     } else {
                                         self.filter_statuses.remove(&status);
                                     }
+                                    self.active_preset = None;
                                 }
                             }
 
                             if ui.small_button("Clear").clicked() {
                                 self.filter_statuses.clear();
+                                self.active_preset = None;
                             }
                         });
 
@@ -11974,11 +12188,13 @@ impl RequirementsApp {
                                     } else {
                                         self.filter_priorities.remove(&priority);
                                     }
+                                    self.active_preset = None;
                                 }
                             }
 
                             if ui.small_button("Clear").clicked() {
                                 self.filter_priorities.clear();
+                                self.active_preset = None;
                             }
                         });
 
@@ -11992,6 +12208,10 @@ impl RequirementsApp {
                     });
 
                 ui.add_space(10.0);
+                ui.separator();
+                ui.add_space(5.0);
+
+                // Action buttons
                 ui.horizontal(|ui| {
                     if ui.button("Clear All Filters").clicked() {
                         self.filter_types.clear();
@@ -11999,7 +12219,13 @@ impl RequirementsApp {
                         self.filter_prefixes.clear();
                         self.filter_statuses.clear();
                         self.filter_priorities.clear();
+                        self.active_preset = None;
                     }
+
+                    if ui.button("💾 Save As...").clicked() {
+                        self.show_save_preset_dialog = true;
+                    }
+
                     if ui.button("Close").clicked() {
                         self.show_filter_dialog_list1 = false;
                     }
@@ -12011,21 +12237,94 @@ impl RequirementsApp {
         }
     }
 
-    /// Show filter dialog for List 2
+    /// Show view settings dialog for List 2
     fn show_filter_dialog_list2(&mut self, ctx: &egui::Context) {
         if !self.show_filter_dialog_list2 {
             return;
         }
 
         let mut open = true;
-        egui::Window::new("Filters - List 2")
+        egui::Window::new("View Settings - List 2")
             .collapsible(false)
             .resizable(true)
-            .default_width(400.0)
+            .default_width(450.0)
             .open(&mut open)
             .show(ctx, |ui| {
+                // View mode section
+                ui.heading("View Mode");
+                ui.add_space(5.0);
+
+                ui.horizontal(|ui| {
+                    ui.label("Perspective:");
+                    egui::ComboBox::from_id_salt("view_dialog_perspective_list2")
+                        .selected_text(self.split_perspective.label())
+                        .show_ui(ui, |ui| {
+                            if ui.selectable_label(
+                                self.split_perspective == Perspective::Flat,
+                                Perspective::Flat.label(),
+                            ).clicked() {
+                                self.split_perspective = Perspective::Flat;
+                                self.split_active_preset = None;
+                            }
+                            if ui.selectable_label(
+                                self.split_perspective == Perspective::ParentChild,
+                                Perspective::ParentChild.label(),
+                            ).clicked() {
+                                self.split_perspective = Perspective::ParentChild;
+                                self.split_active_preset = None;
+                            }
+                            if ui.selectable_label(
+                                self.split_perspective == Perspective::Verification,
+                                Perspective::Verification.label(),
+                            ).clicked() {
+                                self.split_perspective = Perspective::Verification;
+                                self.split_active_preset = None;
+                            }
+                            if ui.selectable_label(
+                                self.split_perspective == Perspective::References,
+                                Perspective::References.label(),
+                            ).clicked() {
+                                self.split_perspective = Perspective::References;
+                                self.split_active_preset = None;
+                            }
+                        });
+                });
+
+                // Direction selector (only for non-Flat perspectives)
+                if self.split_perspective != Perspective::Flat {
+                    ui.horizontal(|ui| {
+                        ui.label("Direction:");
+                        egui::ComboBox::from_id_salt("view_dialog_direction_list2")
+                            .selected_text(self.split_perspective_direction.label())
+                            .show_ui(ui, |ui| {
+                                if ui.selectable_label(
+                                    self.split_perspective_direction == PerspectiveDirection::TopDown,
+                                    PerspectiveDirection::TopDown.label(),
+                                ).clicked() {
+                                    self.split_perspective_direction = PerspectiveDirection::TopDown;
+                                    self.split_active_preset = None;
+                                }
+                                if ui.selectable_label(
+                                    self.split_perspective_direction == PerspectiveDirection::BottomUp,
+                                    PerspectiveDirection::BottomUp.label(),
+                                ).clicked() {
+                                    self.split_perspective_direction = PerspectiveDirection::BottomUp;
+                                    self.split_active_preset = None;
+                                }
+                            });
+                    });
+                }
+
+                ui.add_space(10.0);
+                ui.separator();
+                ui.add_space(5.0);
+
+                // Filters section
+                ui.heading("Filters");
+                ui.add_space(5.0);
+
                 egui::ScrollArea::vertical()
-                    .max_height(400.0)
+                    .max_height(300.0)
                     .show(ui, |ui| {
                         // Type filters
                         ui.label("Type Filters:");
@@ -12051,11 +12350,13 @@ impl RequirementsApp {
                                     } else {
                                         self.split_filter_types.remove(&req_type);
                                     }
+                                    self.split_active_preset = None;
                                 }
                             }
 
                             if ui.small_button("Clear").clicked() {
                                 self.split_filter_types.clear();
+                                self.split_active_preset = None;
                             }
                         });
 
@@ -12081,11 +12382,13 @@ impl RequirementsApp {
                                     } else {
                                         self.split_filter_features.remove(feature);
                                     }
+                                    self.split_active_preset = None;
                                 }
                             }
 
                             if ui.small_button("Clear").clicked() {
                                 self.split_filter_features.clear();
+                                self.split_active_preset = None;
                             }
                         });
 
@@ -12103,11 +12406,13 @@ impl RequirementsApp {
                                         } else {
                                             self.split_filter_prefixes.remove(prefix);
                                         }
+                                        self.split_active_preset = None;
                                     }
                                 }
 
                                 if ui.small_button("Clear").clicked() {
                                     self.split_filter_prefixes.clear();
+                                    self.split_active_preset = None;
                                 }
                             });
                         }
@@ -12131,11 +12436,13 @@ impl RequirementsApp {
                                     } else {
                                         self.split_filter_statuses.remove(&status);
                                     }
+                                    self.split_active_preset = None;
                                 }
                             }
 
                             if ui.small_button("Clear").clicked() {
                                 self.split_filter_statuses.clear();
+                                self.split_active_preset = None;
                             }
                         });
 
@@ -12157,16 +12464,23 @@ impl RequirementsApp {
                                     } else {
                                         self.split_filter_priorities.remove(&priority);
                                     }
+                                    self.split_active_preset = None;
                                 }
                             }
 
                             if ui.small_button("Clear").clicked() {
                                 self.split_filter_priorities.clear();
+                                self.split_active_preset = None;
                             }
                         });
+
                     });
 
                 ui.add_space(10.0);
+                ui.separator();
+                ui.add_space(5.0);
+
+                // Action buttons
                 ui.horizontal(|ui| {
                     if ui.button("Clear All Filters").clicked() {
                         self.split_filter_types.clear();
@@ -12174,7 +12488,13 @@ impl RequirementsApp {
                         self.split_filter_prefixes.clear();
                         self.split_filter_statuses.clear();
                         self.split_filter_priorities.clear();
+                        self.split_active_preset = None;
                     }
+
+                    if ui.button("💾 Save As...").clicked() {
+                        self.show_split_save_preset_dialog = true;
+                    }
+
                     if ui.button("Close").clicked() {
                         self.show_filter_dialog_list2 = false;
                     }
@@ -12687,8 +13007,9 @@ impl eframe::App for RequirementsApp {
         // Show migration confirmation dialog
         self.show_migration_confirmation_dialog(ctx);
 
-        // Show save preset dialog
+        // Show save preset dialogs
         self.show_save_preset_dialog_window(ctx);
+        self.show_split_save_preset_dialog_window(ctx);
 
         // Show delete preset confirmation dialog
         self.show_delete_preset_confirmation_dialog(ctx);
