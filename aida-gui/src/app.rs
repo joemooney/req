@@ -1387,9 +1387,15 @@ impl Default for UserSettings {
 impl UserSettings {
     /// Get the default settings file path
     fn settings_path() -> PathBuf {
-        dirs::home_dir()
+        let config_dir = dirs::home_dir()
             .unwrap_or_else(|| PathBuf::from("."))
-            .join(".requirements_gui_settings.yaml")
+            .join(".config")
+            .join("aida");
+
+        // Ensure the directory exists
+        let _ = std::fs::create_dir_all(&config_dir);
+
+        config_dir.join("aida_gui_settings.yaml")
     }
 
     /// Load settings from file, or return defaults if not found
