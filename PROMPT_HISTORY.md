@@ -798,3 +798,17 @@ A chronological record of development sessions and changes made to the Requireme
   2. **Title width**: Changed from `available_width * 0.6` to `(available - button_space).max(200.0)` where `button_space = 180.0`, making title expand to use all available width
   3. **Removed mode indicator**: Removed the "Edit"/"New" label that appeared next to the title, reducing visual clutter
 - **Result**: Switching between Detail View and Edit View now feels seamless with consistent sizing and appearance
+
+### Simplified List Panel in Edit View
+- **Prompt**: User feedback via screenshots showing list panel width jump when entering Edit view - expanded filter bar with View/Perspective/Direction controls was making the list panel much wider in Edit mode compared to Detail mode
+- **Root Cause**: Edit view was using `show_list_panel()` which includes expanded filter bar (Hide, Filters, View, Parent/Child, Top-down, Save As, refresh). Detail view only shows simple search + filter button.
+- **Solution**: Created `show_list_panel_simple()` function
+- **Implementation**:
+  - New function `show_list_panel_simple()` (lines 9268-9327) with simplified content:
+    - Header with Hide button
+    - Search bar with Search... hint (120.0 width to match Detail View)
+    - Filter dropdown button only
+    - Scrollable list
+  - No perspective/preset/direction controls (these made panel wider)
+  - Changed form view to use `show_list_panel_simple()` instead of `show_list_panel()`
+- **Result**: List panel now maintains consistent width when switching between Detail and Edit views
