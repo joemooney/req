@@ -254,6 +254,7 @@ impl SqliteBackend {
                 history,
                 archived,
                 custom_status,
+                custom_priority: None, // TODO: Load from database when column is added
                 custom_fields,
                 urls,
             });
@@ -683,6 +684,7 @@ impl DatabaseBackend for SqliteBackend {
                     history,
                     archived,
                     custom_status,
+                    custom_priority: None, // TODO: Load from database when column is added
                     custom_fields,
                     urls,
                 }))

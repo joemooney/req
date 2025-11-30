@@ -321,6 +321,10 @@ pub struct CustomTypeDefinition {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub statuses: Vec<String>,
 
+    /// Custom priorities for this type (if empty, uses default priorities)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub priorities: Vec<String>,
+
     /// Additional custom fields for this type
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub custom_fields: Vec<CustomFieldDefinition>,
@@ -343,6 +347,7 @@ impl CustomTypeDefinition {
             description: None,
             prefix: None,
             statuses: Vec::new(),
+            priorities: Vec::new(),
             custom_fields: Vec::new(),
             built_in: false,
             color: None,
@@ -357,6 +362,7 @@ impl CustomTypeDefinition {
             description: None,
             prefix: None,
             statuses: Vec::new(),
+            priorities: Vec::new(),
             custom_fields: Vec::new(),
             built_in: true,
             color: None,
@@ -372,6 +378,12 @@ impl CustomTypeDefinition {
     /// Sets custom statuses
     pub fn with_statuses(mut self, statuses: Vec<&str>) -> Self {
         self.statuses = statuses.into_iter().map(String::from).collect();
+        self
+    }
+
+    /// Sets custom priorities
+    pub fn with_priorities(mut self, priorities: Vec<&str>) -> Self {
+        self.priorities = priorities.into_iter().map(String::from).collect();
         self
     }
 
@@ -405,6 +417,20 @@ impl CustomTypeDefinition {
             ]
         } else {
             self.statuses.clone()
+        }
+    }
+
+    /// Gets the priorities for this type, falling back to defaults if none specified
+    pub fn get_priorities(&self) -> Vec<String> {
+        if self.priorities.is_empty() {
+            // Default priorities
+            vec![
+                "High".to_string(),
+                "Medium".to_string(),
+                "Low".to_string(),
+            ]
+        } else {
+            self.priorities.clone()
         }
     }
 }
@@ -1472,6 +1498,11 @@ pub struct Requirement {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub custom_status: Option<String>,
 
+    /// Custom priority string (for types with custom priorities)
+    /// If set, this takes precedence over the `priority` enum field
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub custom_priority: Option<String>,
+
     /// Custom field values (key = field name, value = field value as string)
     #[serde(default, skip_serializing_if = "std::collections::HashMap::is_empty")]
     pub custom_fields: std::collections::HashMap<String, String>,
@@ -1511,6 +1542,7 @@ impl Requirement {
             history: Vec::new(),
             archived: false,
             custom_status: None,
+            custom_priority: None,
             custom_fields: std::collections::HashMap::new(),
             urls: Vec::new(),
         }
@@ -1545,6 +1577,35 @@ impl Requirement {
             other => {
                 // Custom status - keep enum at Draft but store custom value
                 self.custom_status = Some(other.to_string());
+            }
+        }
+    }
+
+    /// Gets the effective priority string, preferring custom_priority if set
+    pub fn effective_priority(&self) -> String {
+        self.custom_priority
+            .clone()
+            .unwrap_or_else(|| self.priority.to_string())
+    }
+
+    /// Sets the priority from a string, using custom_priority for non-standard values
+    pub fn set_priority_from_str(&mut self, priority_str: &str) {
+        match priority_str {
+            "High" => {
+                self.priority = RequirementPriority::High;
+                self.custom_priority = None;
+            }
+            "Medium" => {
+                self.priority = RequirementPriority::Medium;
+                self.custom_priority = None;
+            }
+            "Low" => {
+                self.priority = RequirementPriority::Low;
+                self.custom_priority = None;
+            }
+            other => {
+                // Custom priority - keep enum at Medium but store custom value
+                self.custom_priority = Some(other.to_string());
             }
         }
     }
@@ -1808,6 +1869,19 @@ impl RequirementsStore {
                     "Approved".to_string(),
                     "Completed".to_string(),
                     "Rejected".to_string(),
+                ]
+            })
+    }
+
+    /// Gets the available priorities for a requirement type
+    pub fn get_priorities_for_type(&self, req_type: &RequirementType) -> Vec<String> {
+        self.get_type_definition(req_type)
+            .map(|td| td.get_priorities())
+            .unwrap_or_else(|| {
+                vec![
+                    "High".to_string(),
+                    "Medium".to_string(),
+                    "Low".to_string(),
                 ]
             })
     }

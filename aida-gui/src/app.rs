@@ -1910,6 +1910,7 @@ pub struct RequirementsApp {
     form_status_string: String, // Status as string (for custom type statuses)
     form_custom_fields: HashMap<String, String>, // Custom field values
     form_priority: RequirementPriority,
+    form_priority_string: String, // Priority as string (for custom type priorities)
     form_type: RequirementType,
     form_owner: String,
     form_feature: String,
@@ -2112,9 +2113,11 @@ pub struct RequirementsApp {
     type_def_form_description: String,
     type_def_form_prefix: String,
     type_def_form_statuses: Vec<String>, // Editable list of statuses
+    type_def_form_priorities: Vec<String>, // Editable list of priorities
     type_def_form_fields: Vec<CustomFieldDefinition>, // Editable list of custom fields
     show_type_def_form: bool,
     new_status_input: String, // Input for adding new status
+    new_priority_input: String, // Input for adding new priority
     // Custom field form (for adding/editing fields within type)
     editing_field_idx: Option<usize>, // Index of field being edited (None = adding new)
     field_form_name: String,
@@ -2162,6 +2165,7 @@ pub struct RequirementsApp {
     original_form_description: String,
     original_form_status_string: String,
     original_form_priority: RequirementPriority,
+    original_form_priority_string: String,
     original_form_type: RequirementType,
     original_form_owner: String,
     original_form_feature: String,
@@ -2263,6 +2267,7 @@ impl RequirementsApp {
             form_status_string: String::from("Draft"),
             form_custom_fields: HashMap::new(),
             form_priority: RequirementPriority::Medium,
+            form_priority_string: String::from("Medium"),
             form_type: RequirementType::Functional,
             form_owner: String::new(),
             form_feature: String::from("Uncategorized"),
@@ -2417,9 +2422,11 @@ impl RequirementsApp {
             type_def_form_description: String::new(),
             type_def_form_prefix: String::new(),
             type_def_form_statuses: Vec::new(),
+            type_def_form_priorities: Vec::new(),
             type_def_form_fields: Vec::new(),
             show_type_def_form: false,
             new_status_input: String::new(),
+            new_priority_input: String::new(),
             editing_field_idx: None,
             field_form_name: String::new(),
             field_form_label: String::new(),
@@ -2460,6 +2467,7 @@ impl RequirementsApp {
             original_form_description: String::new(),
             original_form_status_string: String::new(),
             original_form_priority: RequirementPriority::Medium,
+            original_form_priority_string: String::new(),
             original_form_type: RequirementType::Functional,
             original_form_owner: String::new(),
             original_form_feature: String::new(),
@@ -2963,6 +2971,7 @@ impl RequirementsApp {
             self.form_status_string = req.effective_status();
             self.form_custom_fields = req.custom_fields.clone();
             self.form_priority = req.priority.clone();
+            self.form_priority_string = req.effective_priority();
             self.form_type = req.req_type.clone();
             self.form_owner = req.owner.clone();
             self.form_feature = req.feature.clone();
@@ -2981,6 +2990,7 @@ impl RequirementsApp {
         self.original_form_description = self.form_description.clone();
         self.original_form_status_string = self.form_status_string.clone();
         self.original_form_priority = self.form_priority.clone();
+        self.original_form_priority_string = self.form_priority_string.clone();
         self.original_form_type = self.form_type.clone();
         self.original_form_owner = self.form_owner.clone();
         self.original_form_feature = self.form_feature.clone();
@@ -2994,7 +3004,7 @@ impl RequirementsApp {
         self.form_title != self.original_form_title
             || self.form_description != self.original_form_description
             || self.form_status_string != self.original_form_status_string
-            || self.form_priority != self.original_form_priority
+            || self.form_priority_string != self.original_form_priority_string
             || self.form_type != self.original_form_type
             || self.form_owner != self.original_form_owner
             || self.form_feature != self.original_form_feature
@@ -3030,7 +3040,8 @@ impl RequirementsApp {
         let mut req = Requirement::new(self.form_title.clone(), self.form_description.clone());
         // Set status from string (handles both standard and custom statuses)
         req.set_status_from_str(&self.form_status_string);
-        req.priority = self.form_priority.clone();
+        // Set priority from string (handles both standard and custom priorities)
+        req.set_priority_from_str(&self.form_priority_string);
         req.req_type = self.form_type.clone();
         req.owner = self.form_owner.clone();
         req.feature = self.form_feature.clone();
@@ -3204,14 +3215,15 @@ impl RequirementsApp {
             }
             req.custom_fields = self.form_custom_fields.clone();
 
-            // Track priority change
-            if self.form_priority != req.priority {
+            // Track priority change (use effective_priority for comparison)
+            let old_priority = req.effective_priority();
+            if self.form_priority_string != old_priority {
                 changes.push(Requirement::field_change(
                     "priority",
-                    format!("{:?}", req.priority),
-                    format!("{:?}", self.form_priority),
+                    old_priority,
+                    self.form_priority_string.clone(),
                 ));
-                req.priority = self.form_priority.clone();
+                req.set_priority_from_str(&self.form_priority_string);
             }
 
             // Track type change
@@ -5636,6 +5648,11 @@ impl RequirementsApp {
                     "Completed".to_string(),
                     "Rejected".to_string(),
                 ];
+                self.type_def_form_priorities = vec![
+                    "High".to_string(),
+                    "Medium".to_string(),
+                    "Low".to_string(),
+                ];
                 self.type_def_form_fields.clear();
                 self.show_type_def_form = true;
             }
@@ -5778,6 +5795,7 @@ impl RequirementsApp {
                             type_def.description.clone().unwrap_or_default();
                         self.type_def_form_prefix = type_def.prefix.clone().unwrap_or_default();
                         self.type_def_form_statuses = type_def.statuses.clone();
+                        self.type_def_form_priorities = type_def.priorities.clone();
                         self.type_def_form_fields = type_def.custom_fields.clone();
                         self.show_type_def_form = true;
                     }
@@ -5975,6 +5993,68 @@ impl RequirementsApp {
 
         ui.add_space(15.0);
 
+        // Priorities section
+        ui.heading("Priorities");
+        ui.add_space(5.0);
+
+        // Display current priorities with remove buttons
+        let mut priority_to_remove: Option<usize> = None;
+        ui.horizontal_wrapped(|ui| {
+            for (idx, priority) in self.type_def_form_priorities.iter().enumerate() {
+                ui.group(|ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(priority);
+                        if ui
+                            .small_button("✕")
+                            .on_hover_text("Remove priority")
+                            .clicked()
+                        {
+                            priority_to_remove = Some(idx);
+                        }
+                    });
+                });
+            }
+        });
+
+        if let Some(idx) = priority_to_remove {
+            // Check if priority is in use before removing
+            let priority_name = &self.type_def_form_priorities[idx];
+            if let Some(ref editing_name) = self.editing_type_def {
+                let in_use = self.store.requirements.iter().any(|r| {
+                    format!("{:?}", r.req_type) == *editing_name
+                        && r.custom_priority.as_ref() == Some(priority_name)
+                });
+                if in_use {
+                    self.message = Some((
+                        format!("Cannot remove '{}': priority is in use", priority_name),
+                        true,
+                    ));
+                } else {
+                    self.type_def_form_priorities.remove(idx);
+                }
+            } else {
+                self.type_def_form_priorities.remove(idx);
+            }
+        }
+
+        // Add new priority
+        ui.horizontal(|ui| {
+            ui.add(
+                egui::TextEdit::singleline(&mut self.new_priority_input)
+                    .hint_text("New priority name")
+                    .desired_width(150.0),
+            );
+            if ui.button("Add Priority").clicked() && !self.new_priority_input.is_empty() {
+                if !self.type_def_form_priorities.contains(&self.new_priority_input) {
+                    self.type_def_form_priorities
+                        .push(self.new_priority_input.clone());
+                    self.new_priority_input.clear();
+                }
+            }
+        });
+
+        ui.add_space(15.0);
+
         // Custom fields section
         ui.heading("Custom Fields");
         ui.add_space(5.0);
@@ -6075,7 +6155,8 @@ impl RequirementsApp {
         ui.horizontal(|ui| {
             let can_save = !self.type_def_form_name.is_empty()
                 && !self.type_def_form_display_name.is_empty()
-                && !self.type_def_form_statuses.is_empty();
+                && !self.type_def_form_statuses.is_empty()
+                && !self.type_def_form_priorities.is_empty();
 
             if ui
                 .add_enabled(can_save, egui::Button::new("💾 Save"))
@@ -6094,6 +6175,9 @@ impl RequirementsApp {
         }
         if self.type_def_form_statuses.is_empty() {
             ui.small("At least one status is required.");
+        }
+        if self.type_def_form_priorities.is_empty() {
+            ui.small("At least one priority is required.");
         }
     }
 
@@ -6275,6 +6359,7 @@ impl RequirementsApp {
                 Some(self.type_def_form_prefix.to_uppercase())
             },
             statuses: self.type_def_form_statuses.clone(),
+            priorities: self.type_def_form_priorities.clone(),
             custom_fields: self.type_def_form_fields.clone(),
             built_in: if let Some(ref editing_name) = self.editing_type_def {
                 // Preserve built_in status when editing
@@ -9969,22 +10054,38 @@ impl RequirementsApp {
             None => return,
         };
 
-        // Get the options based on field type
+        // Get the target requirement to determine its type
+        let target_req = self.quick_change_target_id
+            .and_then(|id| self.store.requirements.iter().find(|r| r.id == id));
+
+        // Find the type definition for this requirement
+        let type_def = target_req.and_then(|req| {
+            let type_name = req.req_type.to_string();
+            self.store.type_definitions.iter().find(|t| t.name == type_name)
+        });
+
+        // Get the options based on field type and type definition
         let (title, options): (&str, Vec<String>) = match field {
             QuickChangeField::Status => {
-                ("Change Status", vec![
-                    RequirementStatus::Draft.to_string(),
-                    RequirementStatus::Approved.to_string(),
-                    RequirementStatus::Completed.to_string(),
-                    RequirementStatus::Rejected.to_string(),
-                ])
+                let statuses = type_def
+                    .map(|t| t.get_statuses())
+                    .unwrap_or_else(|| vec![
+                        "Draft".to_string(),
+                        "Approved".to_string(),
+                        "Completed".to_string(),
+                        "Rejected".to_string(),
+                    ]);
+                ("Change Status", statuses)
             }
             QuickChangeField::Priority => {
-                ("Change Priority", vec![
-                    RequirementPriority::High.to_string(),
-                    RequirementPriority::Medium.to_string(),
-                    RequirementPriority::Low.to_string(),
-                ])
+                let priorities = type_def
+                    .map(|t| t.get_priorities())
+                    .unwrap_or_else(|| vec![
+                        "High".to_string(),
+                        "Medium".to_string(),
+                        "Low".to_string(),
+                    ]);
+                ("Change Priority", priorities)
             }
         };
         let num_options = options.len();
@@ -10096,20 +10197,38 @@ impl RequirementsApp {
     /// Apply a quick change to the selected requirement
     fn apply_quick_change(&mut self, field: QuickChangeField, selected_idx: usize) {
         let Some(target_id) = self.quick_change_target_id else { return };
+
+        // Get the requirement's type to look up type-specific options
+        let req_type_name = self.store.requirements.iter()
+            .find(|r| r.id == target_id)
+            .map(|r| r.req_type.to_string());
+
+        // Find the type definition for this requirement's type
+        let type_def = req_type_name.as_ref().and_then(|type_name| {
+            self.store.type_definitions.iter().find(|t| t.name == *type_name)
+        });
+
         let Some(req) = self.store.requirements.iter_mut().find(|r| r.id == target_id) else { return };
 
         match field {
             QuickChangeField::Status => {
-                let statuses = [
-                    RequirementStatus::Draft,
-                    RequirementStatus::Approved,
-                    RequirementStatus::Completed,
-                    RequirementStatus::Rejected,
-                ];
-                let new_status = statuses.get(selected_idx).cloned().unwrap_or(RequirementStatus::Draft);
-                let old_status = req.status.clone();
-                if old_status != new_status {
-                    req.status = new_status.clone();
+                // Get type-specific statuses or default
+                let statuses = type_def
+                    .map(|t| t.get_statuses())
+                    .unwrap_or_else(|| vec![
+                        "Draft".to_string(),
+                        "Approved".to_string(),
+                        "Completed".to_string(),
+                        "Rejected".to_string(),
+                    ]);
+
+                let new_status_str = statuses.get(selected_idx)
+                    .cloned()
+                    .unwrap_or_else(|| "Draft".to_string());
+                let old_status_str = req.effective_status();
+
+                if old_status_str != new_status_str {
+                    req.set_status_from_str(&new_status_str);
                     req.modified_at = chrono::Utc::now();
                     req.history.push(aida_core::models::HistoryEntry {
                         id: uuid::Uuid::new_v4(),
@@ -10117,8 +10236,8 @@ impl RequirementsApp {
                         timestamp: chrono::Utc::now(),
                         changes: vec![aida_core::models::FieldChange {
                             field_name: "status".to_string(),
-                            old_value: old_status.to_string(),
-                            new_value: new_status.to_string(),
+                            old_value: old_status_str,
+                            new_value: new_status_str,
                         }],
                     });
                     if let Err(e) = self.storage.save(&self.store) {
@@ -10127,15 +10246,22 @@ impl RequirementsApp {
                 }
             }
             QuickChangeField::Priority => {
-                let priorities = [
-                    RequirementPriority::High,
-                    RequirementPriority::Medium,
-                    RequirementPriority::Low,
-                ];
-                let new_priority = priorities.get(selected_idx).cloned().unwrap_or(RequirementPriority::Medium);
-                let old_priority = req.priority.clone();
-                if old_priority != new_priority {
-                    req.priority = new_priority.clone();
+                // Get type-specific priorities or default
+                let priorities = type_def
+                    .map(|t| t.get_priorities())
+                    .unwrap_or_else(|| vec![
+                        "High".to_string(),
+                        "Medium".to_string(),
+                        "Low".to_string(),
+                    ]);
+
+                let new_priority_str = priorities.get(selected_idx)
+                    .cloned()
+                    .unwrap_or_else(|| "Medium".to_string());
+                let old_priority_str = req.effective_priority();
+
+                if old_priority_str != new_priority_str {
+                    req.set_priority_from_str(&new_priority_str);
                     req.modified_at = chrono::Utc::now();
                     req.history.push(aida_core::models::HistoryEntry {
                         id: uuid::Uuid::new_v4(),
@@ -10143,8 +10269,8 @@ impl RequirementsApp {
                         timestamp: chrono::Utc::now(),
                         changes: vec![aida_core::models::FieldChange {
                             field_name: "priority".to_string(),
-                            old_value: old_priority.to_string(),
-                            new_value: new_priority.to_string(),
+                            old_value: old_priority_str,
+                            new_value: new_priority_str,
                         }],
                     });
                     if let Err(e) = self.storage.save(&self.store) {
@@ -11830,20 +11956,23 @@ fn main() {
 
             ui.add_space(16.0);
             ui.label("Priority:");
+            // Get priorities for current type
+            let priorities = self.store.get_priorities_for_type(&self.form_type);
             egui::ComboBox::new("priority_combo", "")
-                .selected_text(format!("{:?}", self.form_priority))
+                .selected_text(&self.form_priority_string)
                 .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut self.form_priority, RequirementPriority::High, "High");
-                    ui.selectable_value(
-                        &mut self.form_priority,
-                        RequirementPriority::Medium,
-                        "Medium",
-                    );
-                    ui.selectable_value(&mut self.form_priority, RequirementPriority::Low, "Low");
+                    for priority in &priorities {
+                        if ui
+                            .selectable_label(self.form_priority_string == *priority, priority)
+                            .clicked()
+                        {
+                            self.form_priority_string = priority.clone();
+                        }
+                    }
                 });
         });
 
-        // If type changed, check if current status is valid for new type
+        // If type changed, check if current status/priority is valid for new type
         if type_changed {
             let statuses = self.store.get_statuses_for_type(&self.form_type);
             if !statuses.contains(&self.form_status_string) {
@@ -11852,6 +11981,14 @@ fn main() {
                     .first()
                     .cloned()
                     .unwrap_or_else(|| "Draft".to_string());
+            }
+            let priorities = self.store.get_priorities_for_type(&self.form_type);
+            if !priorities.contains(&self.form_priority_string) {
+                // Reset to first available priority for new type
+                self.form_priority_string = priorities
+                    .first()
+                    .cloned()
+                    .unwrap_or_else(|| "Medium".to_string());
             }
             // Clear custom fields when type changes (they may not be relevant)
             self.form_custom_fields.clear();
