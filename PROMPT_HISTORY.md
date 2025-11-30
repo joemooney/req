@@ -988,3 +988,34 @@ A chronological record of development sessions and changes made to the Requireme
     - Uses character count (not byte count) for proper Unicode handling
 - **Result**: When adding a new requirement, typing in the description automatically populates the title until the user either edits the title manually or presses Enter in the description
 
+
+### Copy for Claude Code Feature
+- **Prompt**: "Add an 'Actions → AI → Implement in Claude Code' button that formats an approved requirement and copies it to clipboard"
+- **Solution**: Added "Copy for Claude Code" button to AI submenu
+- **Implementation** (in `aida-gui/src/app.rs`):
+  - Added helper function `format_requirement_for_claude_code()`:
+    - Creates formatted prompt with requirement ID, title, type, priority, feature
+    - Includes description and tags
+    - Adds implementation task instructions
+  - Added button state tracking variable `copy_for_claude_code_idx`
+  - Added button in AI submenu with separator
+  - Button only enabled when requirement status is "Approved"
+  - Shows tooltip "Requirement must be Approved to implement" when disabled
+  - Fixed `on_disabled_hover_text()` ownership issue by shadowing `response` variable
+  - Copies formatted text to clipboard and primary selection
+  - Shows toast notification confirming copy
+- **Result**: Users can now copy approved requirements in a format ready for Claude Code to implement
+
+
+### Background AI Find Duplicates Requirement
+- **Prompt**: "The AI 'Find Duplicates' takes time and should run in the background like 'Evaluate Requirement' and store the results in AI Evaluation with a button execute suggestion is there is one."
+- **Solution**: Added FR-0148 requirement to track this enhancement
+- **Implementation**:
+  - Created requirement FR-0148 "Background AI Find Duplicates" via CLI
+  - Updated REQUIREMENTS.md with new "AI Integration" section (section 12)
+  - Documented current behavior: Find Duplicates runs synchronously blocking UI
+  - Required behavior: Run in background thread like Evaluate action
+  - Results should appear in AI Evaluation panel
+  - Should have "Execute Suggestion" button for actionable duplicate findings
+- **Result**: Feature request captured as FR-0148 for future implementation
+

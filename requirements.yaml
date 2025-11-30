@@ -5654,14 +5654,28 @@ requirements:
 - id: 9ace4d56-9a8d-47cd-8779-4e6963d303f3
   spec_id: FR-0128
   title: Support "Folder" status.
-  description: "Support \"Folder\" status.\nRationale: although counterintuitive, status is a highly informative field and I use it as an icon in the Requirements List view. But in a hierarchy of requirements, there are some container requirements that do not need to be considered in terms of status and a folder icon indicating that they are only organizational would useful. Such a status is easily filtered for reports and metrics etc. but makes tool use much easier. "
+  description: |-
+    ## Overview
+    The system shall support a "Folder" status value for requirements that serve as organizational containers in a hierarchical structure.
+
+    ## Behavior
+    - The system shall display a folder icon for requirements with "Folder" status in the Requirements List view
+    - The system shall allow filtering requirements by "Folder" status
+    - The system shall exclude "Folder" status requirements from completion metrics and status reports by default
+
+    ## Acceptance Criteria
+    - [ ] "Folder" is available as a selectable status value when creating or editing requirements
+    - [ ] Requirements with "Folder" status display a distinct folder icon in list views
+    - [ ] Status filters include "Folder" as a filter option
+    - [ ] Metrics dashboards exclude "Folder" requirements from status counts unless explicitly included
+    - [ ] Child requirements under a "Folder" parent are not affected by the parent's status
   status: Approved
   priority: Medium
   owner: ''
   feature: 61-Uncategorized
   created_at: 2025-11-30T02:10:08.382814924Z
   created_by: Unknown User
-  modified_at: 2025-11-30T19:52:41.704043356Z
+  modified_at: 2025-11-30T20:30:28.364209774Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -5687,6 +5701,77 @@ requirements:
     - field_name: status
       old_value: Draft
       new_value: Approved
+  - id: 22058bbd-6ae2-48bd-9a34-727cbe4d8ad0
+    author: Unknown User
+    timestamp: 2025-11-30T20:28:49.078971328Z
+    changes:
+    - field_name: description
+      old_value: "Support \"Folder\" status.\nRationale: although counterintuitive, status is a highly informative field and I use it as an icon in the Requirements List view. But in a hierarchy of requirements, there are some container requirements that do not need to be considered in terms of status and a folder icon indicating that they are only organizational would useful. Such a status is easily filtered for reports and metrics etc. but makes tool use much easier. "
+      new_value: "Support \"Folder\" requirement Status value.\nRationale: although counterintuitive, status is a highly informative field and I use it as an icon in the Requirements List view. But in a hierarchy of requirements, there are some container requirements that do not need to be considered in terms of status and a folder icon indicating that they are only organizational would useful. Such a status is easily filtered for reports and metrics etc. but makes tool use much easier. "
+  - id: 548401de-db70-4c81-b94d-0fa37083ed2b
+    author: ''
+    timestamp: 2025-11-30T20:30:28.364220188Z
+    changes:
+    - field_name: description
+      old_value: "Support \"Folder\" requirement Status value.\nRationale: although counterintuitive, status is a highly informative field and I use it as an icon in the Requirements List view. But in a hierarchy of requirements, there are some container requirements that do not need to be considered in terms of status and a folder icon indicating that they are only organizational would useful. Such a status is easily filtered for reports and metrics etc. but makes tool use much easier. "
+      new_value: |-
+        ## Overview
+        The system shall support a "Folder" status value for requirements that serve as organizational containers in a hierarchical structure.
+
+        ## Behavior
+        - The system shall display a folder icon for requirements with "Folder" status in the Requirements List view
+        - The system shall allow filtering requirements by "Folder" status
+        - The system shall exclude "Folder" status requirements from completion metrics and status reports by default
+
+        ## Acceptance Criteria
+        - [ ] "Folder" is available as a selectable status value when creating or editing requirements
+        - [ ] Requirements with "Folder" status display a distinct folder icon in list views
+        - [ ] Status filters include "Folder" as a filter option
+        - [ ] Metrics dashboards exclude "Folder" requirements from status counts unless explicitly included
+        - [ ] Child requirements under a "Folder" parent are not affected by the parent's status
+  ai_evaluation:
+    evaluation:
+      quality_score: 6
+      issues:
+      - type: vague_language
+        severity: medium
+        text: The requirement uses informal language ('Support "Folder" status') rather than formal 'shall/must' statements
+        suggestion: 'Rewrite as: ''The system shall support a "Folder" status value for requirements that serve as organizational containers'''
+      - type: missing_criteria
+        severity: medium
+        text: No acceptance criteria defined for how the Folder status should behave
+        suggestion: 'Add specific acceptance criteria: display behavior, filtering behavior, metric exclusion rules'
+      - type: incomplete
+        severity: low
+        text: Does not specify the icon to be used or how it differs visually from other status icons
+        suggestion: Specify the visual representation or reference a UI specification
+      - type: incomplete
+        severity: low
+        text: Does not clarify interaction with existing status transitions or workflows
+        suggestion: Specify if Folder status requirements can transition to other statuses or are permanently organizational
+      strengths:
+      - Clear rationale explaining why the feature is needed
+      - Specific use case identified (organizational hierarchy containers)
+      - Acknowledges filtering and reporting considerations
+      suggested_improvements:
+        description: |-
+          ## Overview
+          The system shall support a "Folder" status value for requirements that serve as organizational containers in a hierarchical structure.
+
+          ## Behavior
+          - The system shall display a folder icon for requirements with "Folder" status in the Requirements List view
+          - The system shall allow filtering requirements by "Folder" status
+          - The system shall exclude "Folder" status requirements from completion metrics and status reports by default
+
+          ## Acceptance Criteria
+          - [ ] "Folder" is available as a selectable status value when creating or editing requirements
+          - [ ] Requirements with "Folder" status display a distinct folder icon in list views
+          - [ ] Status filters include "Folder" as a filter option
+          - [ ] Metrics dashboards exclude "Folder" requirements from status counts unless explicitly included
+          - [ ] Child requirements under a "Folder" parent are not affected by the parent's status
+        rationale: Formalizes the requirement with 'shall' language, adds concrete acceptance criteria for testability, and clarifies the expected behavior in different contexts (display, filtering, metrics)
+    evaluated_at: 2025-11-30T20:29:17.526842822Z
+    content_hash: c04d4dbcf36c5ddf
 - id: 6111bb0c-9309-4fa5-ad73-9106f46b49e9
   spec_id: FR-0129
   title: Status/Priority per type
@@ -5818,6 +5903,10 @@ requirements:
     target_id: d61fa9f5-9f5f-4390-b7fb-32c1759ddd50
     created_at: 2025-11-30T19:15:20.316632488Z
     created_by: Unknown User
+  - rel_type: Child
+    target_id: 5a5a7d31-6842-4082-ac45-6831e102fde5
+    created_at: 2025-11-30T20:33:27.308653515Z
+    created_by: Unknown User
   history:
   - id: 516738ee-2ec8-487f-aa4a-2f4153889c6f
     author: Unknown User
@@ -5894,6 +5983,10 @@ requirements:
   - rel_type: Child
     target_id: ca771251-b95b-4c6e-bb2f-64f0be7153ff
     created_at: 2025-11-30T19:39:37.373448419Z
+    created_by: Unknown User
+  - rel_type: Child
+    target_id: 9a4e932f-0922-4d2f-8c0c-131525b09801
+    created_at: 2025-11-30T22:17:36.822862901Z
     created_by: Unknown User
 - id: 8fce7d22-6ef3-44da-8284-c7af30ca8ea2
   spec_id: FR-0135
@@ -6146,14 +6239,55 @@ requirements:
 - id: d61fa9f5-9f5f-4390-b7fb-32c1759ddd50
   spec_id: FR-0141
   title: AI Prompts in settings
-  description: "AI Prompts in settings\n\nDo you think we should store the prompts we use for AI in the settings so that we can customize. I assume they are hardcoded right now? For example, if this was a requirement, then the AI evaluation prompt should know that the description may take the form of a question intended for the AI Evalation to ponder and translate into a formal requirement or a suggestions that this is a dumb idea and should be rejected (maybe more politely stated). We may have different prompts for different requirement types and maybe some general text that applies to all types.\n\nCurrent State\n\n  The prompts in prompts.rs are static and hardcoded. They're well-structured but not customizable.\n\n  Proposed Design for Customizable AI Prompts\n\n  Storage Location Options:\n\n  1. Project settings (requirements.yaml) - Per-project customization\n  2. User settings (global ~/.config/aida/settings.yaml) - User defaults\n  3. Both - Project-level overrides user-level defaults\n\n  Prompt Structure:\n\n  ai_prompts:\n\n# General context prepended to ALL prompts\n    global_context: |\n      This project follows agile methodology. Requirements may be written as\n      questions or rough ideas that need refinement. When evaluating:\n      - Questions in descriptions should be interpreted as requests for AI \n        to formalize into proper requirements\n      - Vague ideas should be clarified, not rejected\n      - Suggest \"Reject\" only for truly unfeasible or duplicate requirements\n\n# Per-action prompts (evaluation, duplicates, relationships, improve, generate_children)\n    evaluation:\n      # Override the entire prompt template (use {project_context}, {req_context}, etc. placeholders)\n      template: null  # null = use default\n\n      # Or just add extra instructions to the default prompt\n      additional_instructions: |\n        Consider that descriptions may be informal questions or brainstorming \n        notes rather than formal requirements. Help formalize them.\n\n# Per-type customization\n   type_prompts:\n      Functional:\n        evaluation_extra: |\n          For functional requirements, ensure there are clear acceptance criteria.\n      Story:\n        evaluation_extra: |\n          User stories should follow \"As a [user], I want [feature], so that [benefit]\" format.\n      Epic:\n        evaluation_extra: |\n          Epics are high-level and should be decomposable into Stories/Tasks.\n          Focus on business value rather than implementation details.\n\n# Key Features:\n\n  1. Global context - Applied to all prompts (your project philosophy)\n  2. Per-action customization - Override or extend each prompt type\n  3. Per-type customization - Different instructions for Epics vs Stories vs Tasks\n  4. Inheritance - User settings → Project settings → Type-specific → Default\n\n# Benefits:\n\n  - Descriptions can be informal questions/ideas for AI to formalize\n  - AI can recommend \"Reject\" status for bad ideas politely\n  - Different requirement types get appropriate evaluation criteria\n  - Teams can encode their methodology (Agile, Waterfall, SAFe, etc.)\n\n  Would you like me to implement this? It would involve:\n  1. Adding prompt configuration to RequirementsStore in models\n  2. Modifying prompts.rs to use configurable templates\n  3. Adding a \"Prompts\" tab in Settings UI\n  4. Default prompts remain if no customization is provided\n\ncustomizable AI prompts feature has been fully implemented. Here's a summary of what was completed:\n\n  Summary\n\n  Customizable AI Prompts Configuration has been implemented with the following components:\n\n  Data Models (aida-core/src/models.rs)\n\n  - AiPromptConfig - Top-level configuration containing global context and action-specific configs\n  - AiActionPromptConfig - Per-action configuration (evaluate, duplicates, relationships, improve, generate_children) with optional custom\n  templates and additional instructions\n  - AiTypePromptConfig - Per-requirement-type specific instructions\n\n  Prompt Building (aida-core/src/ai/prompts.rs)\n\n  All 5 prompt builder functions now support:\n  - Custom templates with placeholder replacement ({project_context}, {req_context}, {global_context}, etc.)\n  - Global context that applies to all prompts\n  - Additional instructions per action\n  - Type-specific instructions based on requirement type\n\n  Settings UI (aida-gui/src/app.rs)\n\n  New \"AI\" tab in Settings with:\n  - Global Context editor - applies to all AI prompts\n  - Evaluation Prompt section with additional instructions\n  - Improve Description Prompt section\n  - Generate Children Prompt section\n  - Type-Specific Instructions section with add/remove capability\n  - Template Placeholders reference guide showing available placeholders\n\n  Other Changes\n\n  - Added ai_prompts field to SQLite backend initialization\n  - Fixed test helpers in prompts.rs to use correct model types\n  - All 42 tests pass\n\n  The changes have been committed and pushed to GitHub.\n\n"
+  description: |-
+    # AI Prompts Configuration
+
+    The system shall provide customizable AI prompts for requirement evaluation and improvement.
+
+    ## Functional Requirements
+
+    - The system shall store AI prompt configurations in project settings (`requirements.yaml`)
+    - The system shall support global context that applies to all AI prompts
+    - The system shall allow per-action prompt customization (evaluate, duplicates, relationships, improve, generate_children)
+    - The system shall support per-requirement-type specific instructions
+    - The system shall use default prompts when no customization is provided
+
+    ## UI Requirements
+
+    - The Settings UI shall include an "AI" tab for prompt configuration
+    - The AI tab shall provide editors for:
+      - Global context
+      - Evaluation prompt additional instructions
+      - Improve description prompt additional instructions
+      - Generate children prompt additional instructions
+      - Type-specific instructions with add/remove capability
+    - The UI shall display available template placeholders for reference
+
+    ## Acceptance Criteria
+
+    - [ ] User can edit global AI context via Settings > AI tab
+    - [ ] User can add additional instructions per AI action
+    - [ ] User can define type-specific instructions for any requirement type
+    - [ ] Custom prompts are persisted to `requirements.yaml`
+    - [ ] AI features use configured prompts with placeholder substitution
+    - [ ] Default prompts function correctly when no customization exists
+
+    ## Implementation Status
+
+    **Status: Implemented**
+
+    Components completed:
+    - `AiPromptConfig`, `AiActionPromptConfig`, `AiTypePromptConfig` models
+    - Prompt building with template/placeholder support in `prompts.rs`
+    - Settings UI with AI tab
+    - SQLite backend support
   status: Draft
   priority: Medium
   owner: ''
   feature: 65-Uncategorized
   created_at: 2025-11-30T19:15:20.316591111Z
   created_by: Unknown User
-  modified_at: 2025-11-30T20:02:01.968543996Z
+  modified_at: 2025-11-30T20:24:36.162473421Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -6206,6 +6340,132 @@ requirements:
     - field_name: description
       old_value: "AI Prompts in settings\n\nDo you think we should store the prompts we use for AI in the settings so that we can customize. I assume they are hardcoded right now? For example, if this was a requirement, then the AI evaluation prompt should know that the description may take the form of a question intended for the AI Evalation to ponder and translate into a formal requirement or a suggestions that this is a dumb idea and should be rejected (maybe more politely stated). We may have different prompts for different requirement types and maybe some general text that applies to all types.\n\nCurrent State\n\n  The prompts in prompts.rs are static and hardcoded. They're well-structured but not customizable.\n\n  Proposed Design for Customizable AI Prompts\n\n  Storage Location Options:\n\n  1. Project settings (requirements.yaml) - Per-project customization\n  2. User settings (global ~/.config/aida/settings.yaml) - User defaults\n  3. Both - Project-level overrides user-level defaults\n\n  Prompt Structure:\n\n  ai_prompts:\n\n# General context prepended to ALL prompts\n    global_context: |\n      This project follows agile methodology. Requirements may be written as\n      questions or rough ideas that need refinement. When evaluating:\n      - Questions in descriptions should be interpreted as requests for AI \n        to formalize into proper requirements\n      - Vague ideas should be clarified, not rejected\n      - Suggest \"Reject\" only for truly unfeasible or duplicate requirements\n\n# Per-action prompts (evaluation, duplicates, relationships, improve, generate_children)\n    evaluation:\n      # Override the entire prompt template (use {project_context}, {req_context}, etc. placeholders)\n      template: null  # null = use default\n\n      # Or just add extra instructions to the default prompt\n      additional_instructions: |\n        Consider that descriptions may be informal questions or brainstorming \n        notes rather than formal requirements. Help formalize them.\n\n# Per-type customization\n   type_prompts:\n      Functional:\n        evaluation_extra: |\n          For functional requirements, ensure there are clear acceptance criteria.\n      Story:\n        evaluation_extra: |\n          User stories should follow \"As a [user], I want [feature], so that [benefit]\" format.\n      Epic:\n        evaluation_extra: |\n          Epics are high-level and should be decomposable into Stories/Tasks.\n          Focus on business value rather than implementation details.\n\n# Key Features:\n\n  1. Global context - Applied to all prompts (your project philosophy)\n  2. Per-action customization - Override or extend each prompt type\n  3. Per-type customization - Different instructions for Epics vs Stories vs Tasks\n  4. Inheritance - User settings → Project settings → Type-specific → Default\n\n# Benefits:\n\n  - Descriptions can be informal questions/ideas for AI to formalize\n  - AI can recommend \"Reject\" status for bad ideas politely\n  - Different requirement types get appropriate evaluation criteria\n  - Teams can encode their methodology (Agile, Waterfall, SAFe, etc.)\n\n  Would you like me to implement this? It would involve:\n  1. Adding prompt configuration to RequirementsStore in models\n  2. Modifying prompts.rs to use configurable templates\n  3. Adding a \"Prompts\" tab in Settings UI\n  4. Default prompts remain if no customization is provided\n"
       new_value: "AI Prompts in settings\n\nDo you think we should store the prompts we use for AI in the settings so that we can customize. I assume they are hardcoded right now? For example, if this was a requirement, then the AI evaluation prompt should know that the description may take the form of a question intended for the AI Evalation to ponder and translate into a formal requirement or a suggestions that this is a dumb idea and should be rejected (maybe more politely stated). We may have different prompts for different requirement types and maybe some general text that applies to all types.\n\nCurrent State\n\n  The prompts in prompts.rs are static and hardcoded. They're well-structured but not customizable.\n\n  Proposed Design for Customizable AI Prompts\n\n  Storage Location Options:\n\n  1. Project settings (requirements.yaml) - Per-project customization\n  2. User settings (global ~/.config/aida/settings.yaml) - User defaults\n  3. Both - Project-level overrides user-level defaults\n\n  Prompt Structure:\n\n  ai_prompts:\n\n# General context prepended to ALL prompts\n    global_context: |\n      This project follows agile methodology. Requirements may be written as\n      questions or rough ideas that need refinement. When evaluating:\n      - Questions in descriptions should be interpreted as requests for AI \n        to formalize into proper requirements\n      - Vague ideas should be clarified, not rejected\n      - Suggest \"Reject\" only for truly unfeasible or duplicate requirements\n\n# Per-action prompts (evaluation, duplicates, relationships, improve, generate_children)\n    evaluation:\n      # Override the entire prompt template (use {project_context}, {req_context}, etc. placeholders)\n      template: null  # null = use default\n\n      # Or just add extra instructions to the default prompt\n      additional_instructions: |\n        Consider that descriptions may be informal questions or brainstorming \n        notes rather than formal requirements. Help formalize them.\n\n# Per-type customization\n   type_prompts:\n      Functional:\n        evaluation_extra: |\n          For functional requirements, ensure there are clear acceptance criteria.\n      Story:\n        evaluation_extra: |\n          User stories should follow \"As a [user], I want [feature], so that [benefit]\" format.\n      Epic:\n        evaluation_extra: |\n          Epics are high-level and should be decomposable into Stories/Tasks.\n          Focus on business value rather than implementation details.\n\n# Key Features:\n\n  1. Global context - Applied to all prompts (your project philosophy)\n  2. Per-action customization - Override or extend each prompt type\n  3. Per-type customization - Different instructions for Epics vs Stories vs Tasks\n  4. Inheritance - User settings → Project settings → Type-specific → Default\n\n# Benefits:\n\n  - Descriptions can be informal questions/ideas for AI to formalize\n  - AI can recommend \"Reject\" status for bad ideas politely\n  - Different requirement types get appropriate evaluation criteria\n  - Teams can encode their methodology (Agile, Waterfall, SAFe, etc.)\n\n  Would you like me to implement this? It would involve:\n  1. Adding prompt configuration to RequirementsStore in models\n  2. Modifying prompts.rs to use configurable templates\n  3. Adding a \"Prompts\" tab in Settings UI\n  4. Default prompts remain if no customization is provided\n\ncustomizable AI prompts feature has been fully implemented. Here's a summary of what was completed:\n\n  Summary\n\n  Customizable AI Prompts Configuration has been implemented with the following components:\n\n  Data Models (aida-core/src/models.rs)\n\n  - AiPromptConfig - Top-level configuration containing global context and action-specific configs\n  - AiActionPromptConfig - Per-action configuration (evaluate, duplicates, relationships, improve, generate_children) with optional custom\n  templates and additional instructions\n  - AiTypePromptConfig - Per-requirement-type specific instructions\n\n  Prompt Building (aida-core/src/ai/prompts.rs)\n\n  All 5 prompt builder functions now support:\n  - Custom templates with placeholder replacement ({project_context}, {req_context}, {global_context}, etc.)\n  - Global context that applies to all prompts\n  - Additional instructions per action\n  - Type-specific instructions based on requirement type\n\n  Settings UI (aida-gui/src/app.rs)\n\n  New \"AI\" tab in Settings with:\n  - Global Context editor - applies to all AI prompts\n  - Evaluation Prompt section with additional instructions\n  - Improve Description Prompt section\n  - Generate Children Prompt section\n  - Type-Specific Instructions section with add/remove capability\n  - Template Placeholders reference guide showing available placeholders\n\n  Other Changes\n\n  - Added ai_prompts field to SQLite backend initialization\n  - Fixed test helpers in prompts.rs to use correct model types\n  - All 42 tests pass\n\n  The changes have been committed and pushed to GitHub.\n\n"
+  - id: eff9f61f-b47d-4e27-aef5-fb4d6dd21d98
+    author: Unknown User
+    timestamp: 2025-11-30T20:20:29.440075254Z
+    changes:
+    - field_name: description
+      old_value: "AI Prompts in settings\n\nDo you think we should store the prompts we use for AI in the settings so that we can customize. I assume they are hardcoded right now? For example, if this was a requirement, then the AI evaluation prompt should know that the description may take the form of a question intended for the AI Evalation to ponder and translate into a formal requirement or a suggestions that this is a dumb idea and should be rejected (maybe more politely stated). We may have different prompts for different requirement types and maybe some general text that applies to all types.\n\nCurrent State\n\n  The prompts in prompts.rs are static and hardcoded. They're well-structured but not customizable.\n\n  Proposed Design for Customizable AI Prompts\n\n  Storage Location Options:\n\n  1. Project settings (requirements.yaml) - Per-project customization\n  2. User settings (global ~/.config/aida/settings.yaml) - User defaults\n  3. Both - Project-level overrides user-level defaults\n\n  Prompt Structure:\n\n  ai_prompts:\n\n# General context prepended to ALL prompts\n    global_context: |\n      This project follows agile methodology. Requirements may be written as\n      questions or rough ideas that need refinement. When evaluating:\n      - Questions in descriptions should be interpreted as requests for AI \n        to formalize into proper requirements\n      - Vague ideas should be clarified, not rejected\n      - Suggest \"Reject\" only for truly unfeasible or duplicate requirements\n\n# Per-action prompts (evaluation, duplicates, relationships, improve, generate_children)\n    evaluation:\n      # Override the entire prompt template (use {project_context}, {req_context}, etc. placeholders)\n      template: null  # null = use default\n\n      # Or just add extra instructions to the default prompt\n      additional_instructions: |\n        Consider that descriptions may be informal questions or brainstorming \n        notes rather than formal requirements. Help formalize them.\n\n# Per-type customization\n   type_prompts:\n      Functional:\n        evaluation_extra: |\n          For functional requirements, ensure there are clear acceptance criteria.\n      Story:\n        evaluation_extra: |\n          User stories should follow \"As a [user], I want [feature], so that [benefit]\" format.\n      Epic:\n        evaluation_extra: |\n          Epics are high-level and should be decomposable into Stories/Tasks.\n          Focus on business value rather than implementation details.\n\n# Key Features:\n\n  1. Global context - Applied to all prompts (your project philosophy)\n  2. Per-action customization - Override or extend each prompt type\n  3. Per-type customization - Different instructions for Epics vs Stories vs Tasks\n  4. Inheritance - User settings → Project settings → Type-specific → Default\n\n# Benefits:\n\n  - Descriptions can be informal questions/ideas for AI to formalize\n  - AI can recommend \"Reject\" status for bad ideas politely\n  - Different requirement types get appropriate evaluation criteria\n  - Teams can encode their methodology (Agile, Waterfall, SAFe, etc.)\n\n  Would you like me to implement this? It would involve:\n  1. Adding prompt configuration to RequirementsStore in models\n  2. Modifying prompts.rs to use configurable templates\n  3. Adding a \"Prompts\" tab in Settings UI\n  4. Default prompts remain if no customization is provided\n\ncustomizable AI prompts feature has been fully implemented. Here's a summary of what was completed:\n\n  Summary\n\n  Customizable AI Prompts Configuration has been implemented with the following components:\n\n  Data Models (aida-core/src/models.rs)\n\n  - AiPromptConfig - Top-level configuration containing global context and action-specific configs\n  - AiActionPromptConfig - Per-action configuration (evaluate, duplicates, relationships, improve, generate_children) with optional custom\n  templates and additional instructions\n  - AiTypePromptConfig - Per-requirement-type specific instructions\n\n  Prompt Building (aida-core/src/ai/prompts.rs)\n\n  All 5 prompt builder functions now support:\n  - Custom templates with placeholder replacement ({project_context}, {req_context}, {global_context}, etc.)\n  - Global context that applies to all prompts\n  - Additional instructions per action\n  - Type-specific instructions based on requirement type\n\n  Settings UI (aida-gui/src/app.rs)\n\n  New \"AI\" tab in Settings with:\n  - Global Context editor - applies to all AI prompts\n  - Evaluation Prompt section with additional instructions\n  - Improve Description Prompt section\n  - Generate Children Prompt section\n  - Type-Specific Instructions section with add/remove capability\n  - Template Placeholders reference guide showing available placeholders\n\n  Other Changes\n\n  - Added ai_prompts field to SQLite backend initialization\n  - Fixed test helpers in prompts.rs to use correct model types\n  - All 42 tests pass\n\n  The changes have been committed and pushed to GitHub.\n\n"
+      new_value: "AI Prompts in settings\n\nDo you think we should store the prompts we use for AI in the settings so that we can customize. I assume they are hardcoded right now? For example, if this was a requirement, then the AI evaluation prompt should know that the description may take the form of a question intended for the AI Evalation to ponder and translate into a formal requirement or a suggestions that this is a dumb idea and should be rejected (maybe more politely stated). We may have different prompts for different requirement types and maybe some general text that applies to all types.\n\nCurrent State\n\n  The prompts in prompts.rs are static and hardcoded. They're well-structured but not customizable.\n\n  Proposed Design for Customizable AI Prompts\n\n  Storage Location Options:\n\n  1. Project settings (requirements.yaml) - Per-project customization\n  2. User settings (global ~/.config/aida/settings.yaml) - User defaults\n  3. Both - Project-level overrides user-level defaults\n\n  Prompt Structure:\n\n  ai_prompts:\n\n# General context prepended to ALL prompts\n    global_context: |\n      This project follows agile methodology. Requirements may be written as\n      questions or rough ideas that need refinement. When evaluating:\n      - Questions in descriptions should be interpreted as requests for AI \n        to formalize into proper requirements\n      - Vague ideas should be clarified, not rejected\n      - Suggest \"Reject\" only for truly unfeasible or duplicate requirements\n\n# Per-action prompts (evaluation, duplicates, relationships, improve, generate_children)\n    evaluation:\n      # Override the entire prompt template (use {project_context}, {req_context}, etc. placeholders)\n      template: null  # null = use default\n\n      # Or just add extra instructions to the default prompt\n      additional_instructions: |\n        Consider that descriptions may be informal questions or brainstorming \n        notes rather than formal requirements. Help formalize them.\n\n# Per-type customization\n   type_prompts:\n      Functional:\n        evaluation_extra: |\n          For functional requirements, ensure there are clear acceptance criteria.\n      Story:\n        evaluation_extra: |\n          User stories should follow \"As a [user], I want [feature], so that [benefit]\" format.\n      Epic:\n        evaluation_extra: |\n          Epics are high-level and should be decomposable into Stories/Tasks.\n          Focus on business value rather than implementation details.\n\n# Key Features:\n\n  1. Global context - Applied to all prompts (your project philosophy)\n  2. Per-action customization - Override or extend each prompt type\n  3. Per-type customization - Different instructions for Epics vs Stories vs Tasks\n  4. Inheritance - User settings → Project settings → Type-specific → Default\n\n# Benefits:\n\n  - Descriptions can be informal questions/ideas for AI to formalize\n  - AI can recommend \"Reject\" status for bad ideas politely\n  - Different requirement types get appropriate evaluation criteria\n  - Teams can encode their methodology (Agile, Waterfall, SAFe, etc.)\n\n  Would you like me to implement this? It would involve:\n  1. Adding prompt configuration to RequirementsStore in models\n  2. Modifying prompts.rs to use configurable templates\n  3. Adding a \"Prompts\" tab in Settings UI\n  4. Default prompts remain if no customization is provided\n\ncustomizable AI prompts feature has been fully implemented. Here's a summary of what was completed:\n\n  Summary\n\n  Customizable AI Prompts Configuration has been implemented with the following components:\n\n  Data Models (aida-core/src/models.rs)\n\n  - AiPromptConfig - Top-level configuration containing global context and action-specific configs\n  - AiActionPromptConfig - Per-action configuration (evaluate, duplicates, relationships, improve, generate_children) with optional custom\n  templates and additional instructions\n  - AiTypePromptConfig - Per-requirement-type specific instructions\n\n  Prompt Building (aida-core/src/ai/prompts.rs)\n\n  All 5 prompt builder functions now support:\n  - Custom templates with placeholder replacement ({project_context}, {req_context}, {global_context}, etc.)\n  - Global context that applies to all prompts\n  - Additional instructions per action\n  - Type-specific instructions based on requirement type\n\n  Settings UI (aida-gui/src/app.rs)\n\n  New \"AI\" tab in Settings with:\n  - Global Context editor - applies to all AI prompts\n  - Evaluation Prompt section with additional instructions\n  - Improve Description Prompt section\n  - Generate Children Prompt section\n  - Type-Specific Instructions section with add/remove capability\n  - Template Placeholders reference guide showing available placeholders\n\n  Other Changes\n\n  - Added ai_prompts field to SQLite backend initialization\n  - Fixed test helpers in prompts.rs to use correct model types\n  - All 42 tests pass\n\n  The changes have been committed and pushed to GitHub.\n\n\n Summary\n\n  1. Added AI prompt configuration to your project (requirements.yaml):\n    - Global context that tells the AI requirements can be questions/ideas that need transformation\n    - Evaluation instructions for scoring quality and flagging issues\n    - Improve instructions for converting to Markdown format with acceptance criteria\n    - Generate children instructions for breaking down requirements\n    - Type-specific instructions for Functional, NonFunctional, User, System, and ChangeRequest types\n  2. Created a reusable template (templates/ai-prompts-standard.yaml):\n    - This can be used as a starting point for new projects\n    - Future enhancement: Implement template selection when creating new projects\n\n  How to Use\n\n  The configuration is now active in your project. When you use AI features (Evaluate, Improve, Generate Children), the prompts will include:\n  - The global context about question/idea transformation\n  - Markdown formatting requirements\n  - Type-specific guidance based on the requirement type\n\n  You can customize these in the Settings UI under the \"AI\" tab, or by editing the ai_prompts section in requirements.yaml directly.\n\n  Future Enhancement Ideas\n\n  For the template system you mentioned:\n  1. Store templates in ~/.aida/templates/ or project templates/ directory\n  2. Add a \"New Project\" wizard that lets you select a template\n  3. Templates could include: AI prompts, type definitions, relationship definitions, ID format preferences\n  4. Could have templates for different methodologies (Agile, Waterfall, SAFe, etc.)\n"
+  - id: e6815c6e-c6e5-4090-84b8-63b35a85baf2
+    author: ''
+    timestamp: 2025-11-30T20:24:36.162480333Z
+    changes:
+    - field_name: description
+      old_value: "AI Prompts in settings\n\nDo you think we should store the prompts we use for AI in the settings so that we can customize. I assume they are hardcoded right now? For example, if this was a requirement, then the AI evaluation prompt should know that the description may take the form of a question intended for the AI Evalation to ponder and translate into a formal requirement or a suggestions that this is a dumb idea and should be rejected (maybe more politely stated). We may have different prompts for different requirement types and maybe some general text that applies to all types.\n\nCurrent State\n\n  The prompts in prompts.rs are static and hardcoded. They're well-structured but not customizable.\n\n  Proposed Design for Customizable AI Prompts\n\n  Storage Location Options:\n\n  1. Project settings (requirements.yaml) - Per-project customization\n  2. User settings (global ~/.config/aida/settings.yaml) - User defaults\n  3. Both - Project-level overrides user-level defaults\n\n  Prompt Structure:\n\n  ai_prompts:\n\n# General context prepended to ALL prompts\n    global_context: |\n      This project follows agile methodology. Requirements may be written as\n      questions or rough ideas that need refinement. When evaluating:\n      - Questions in descriptions should be interpreted as requests for AI \n        to formalize into proper requirements\n      - Vague ideas should be clarified, not rejected\n      - Suggest \"Reject\" only for truly unfeasible or duplicate requirements\n\n# Per-action prompts (evaluation, duplicates, relationships, improve, generate_children)\n    evaluation:\n      # Override the entire prompt template (use {project_context}, {req_context}, etc. placeholders)\n      template: null  # null = use default\n\n      # Or just add extra instructions to the default prompt\n      additional_instructions: |\n        Consider that descriptions may be informal questions or brainstorming \n        notes rather than formal requirements. Help formalize them.\n\n# Per-type customization\n   type_prompts:\n      Functional:\n        evaluation_extra: |\n          For functional requirements, ensure there are clear acceptance criteria.\n      Story:\n        evaluation_extra: |\n          User stories should follow \"As a [user], I want [feature], so that [benefit]\" format.\n      Epic:\n        evaluation_extra: |\n          Epics are high-level and should be decomposable into Stories/Tasks.\n          Focus on business value rather than implementation details.\n\n# Key Features:\n\n  1. Global context - Applied to all prompts (your project philosophy)\n  2. Per-action customization - Override or extend each prompt type\n  3. Per-type customization - Different instructions for Epics vs Stories vs Tasks\n  4. Inheritance - User settings → Project settings → Type-specific → Default\n\n# Benefits:\n\n  - Descriptions can be informal questions/ideas for AI to formalize\n  - AI can recommend \"Reject\" status for bad ideas politely\n  - Different requirement types get appropriate evaluation criteria\n  - Teams can encode their methodology (Agile, Waterfall, SAFe, etc.)\n\n  Would you like me to implement this? It would involve:\n  1. Adding prompt configuration to RequirementsStore in models\n  2. Modifying prompts.rs to use configurable templates\n  3. Adding a \"Prompts\" tab in Settings UI\n  4. Default prompts remain if no customization is provided\n\ncustomizable AI prompts feature has been fully implemented. Here's a summary of what was completed:\n\n  Summary\n\n  Customizable AI Prompts Configuration has been implemented with the following components:\n\n  Data Models (aida-core/src/models.rs)\n\n  - AiPromptConfig - Top-level configuration containing global context and action-specific configs\n  - AiActionPromptConfig - Per-action configuration (evaluate, duplicates, relationships, improve, generate_children) with optional custom\n  templates and additional instructions\n  - AiTypePromptConfig - Per-requirement-type specific instructions\n\n  Prompt Building (aida-core/src/ai/prompts.rs)\n\n  All 5 prompt builder functions now support:\n  - Custom templates with placeholder replacement ({project_context}, {req_context}, {global_context}, etc.)\n  - Global context that applies to all prompts\n  - Additional instructions per action\n  - Type-specific instructions based on requirement type\n\n  Settings UI (aida-gui/src/app.rs)\n\n  New \"AI\" tab in Settings with:\n  - Global Context editor - applies to all AI prompts\n  - Evaluation Prompt section with additional instructions\n  - Improve Description Prompt section\n  - Generate Children Prompt section\n  - Type-Specific Instructions section with add/remove capability\n  - Template Placeholders reference guide showing available placeholders\n\n  Other Changes\n\n  - Added ai_prompts field to SQLite backend initialization\n  - Fixed test helpers in prompts.rs to use correct model types\n  - All 42 tests pass\n\n  The changes have been committed and pushed to GitHub.\n\n\n Summary\n\n  1. Added AI prompt configuration to your project (requirements.yaml):\n    - Global context that tells the AI requirements can be questions/ideas that need transformation\n    - Evaluation instructions for scoring quality and flagging issues\n    - Improve instructions for converting to Markdown format with acceptance criteria\n    - Generate children instructions for breaking down requirements\n    - Type-specific instructions for Functional, NonFunctional, User, System, and ChangeRequest types\n  2. Created a reusable template (templates/ai-prompts-standard.yaml):\n    - This can be used as a starting point for new projects\n    - Future enhancement: Implement template selection when creating new projects\n\n  How to Use\n\n  The configuration is now active in your project. When you use AI features (Evaluate, Improve, Generate Children), the prompts will include:\n  - The global context about question/idea transformation\n  - Markdown formatting requirements\n  - Type-specific guidance based on the requirement type\n\n  You can customize these in the Settings UI under the \"AI\" tab, or by editing the ai_prompts section in requirements.yaml directly.\n\n  Future Enhancement Ideas\n\n  For the template system you mentioned:\n  1. Store templates in ~/.aida/templates/ or project templates/ directory\n  2. Add a \"New Project\" wizard that lets you select a template\n  3. Templates could include: AI prompts, type definitions, relationship definitions, ID format preferences\n  4. Could have templates for different methodologies (Agile, Waterfall, SAFe, etc.)\n"
+      new_value: |-
+        # AI Prompts Configuration
+
+        The system shall provide customizable AI prompts for requirement evaluation and improvement.
+
+        ## Functional Requirements
+
+        - The system shall store AI prompt configurations in project settings (`requirements.yaml`)
+        - The system shall support global context that applies to all AI prompts
+        - The system shall allow per-action prompt customization (evaluate, duplicates, relationships, improve, generate_children)
+        - The system shall support per-requirement-type specific instructions
+        - The system shall use default prompts when no customization is provided
+
+        ## UI Requirements
+
+        - The Settings UI shall include an "AI" tab for prompt configuration
+        - The AI tab shall provide editors for:
+          - Global context
+          - Evaluation prompt additional instructions
+          - Improve description prompt additional instructions
+          - Generate children prompt additional instructions
+          - Type-specific instructions with add/remove capability
+        - The UI shall display available template placeholders for reference
+
+        ## Acceptance Criteria
+
+        - [ ] User can edit global AI context via Settings > AI tab
+        - [ ] User can add additional instructions per AI action
+        - [ ] User can define type-specific instructions for any requirement type
+        - [ ] Custom prompts are persisted to `requirements.yaml`
+        - [ ] AI features use configured prompts with placeholder substitution
+        - [ ] Default prompts function correctly when no customization exists
+
+        ## Implementation Status
+
+        **Status: Implemented**
+
+        Components completed:
+        - `AiPromptConfig`, `AiActionPromptConfig`, `AiTypePromptConfig` models
+        - Prompt building with template/placeholder support in `prompts.rs`
+        - Settings UI with AI tab
+        - SQLite backend support
+  ai_evaluation:
+    evaluation:
+      quality_score: 3
+      issues:
+      - type: incomplete
+        severity: high
+        text: This is a conversation log/design discussion rather than a formal requirement. It contains the full implementation history, design decisions, and completion summary rather than specifying what the system shall do.
+        suggestion: Extract the core requirement from this discussion and create a formal requirement statement. This appears to document an already-implemented feature, so consider marking it as Completed and creating a clean requirement description.
+      - type: ambiguous
+        severity: medium
+        text: The description mixes questions ('Do you think we should...'), design proposals, implementation details, and completion summaries. It's unclear what remains to be done vs what is already implemented.
+        suggestion: 'Separate into: (1) A formal requirement describing what the system shall support, (2) Design documentation for the implementation approach, (3) Update status to reflect current state.'
+      - type: missing_criteria
+        severity: medium
+        text: No clear acceptance criteria defined despite the detailed implementation being described.
+        suggestion: 'Add acceptance criteria such as: ''User can edit AI prompts via Settings UI'', ''Custom prompts are persisted to project/user settings'', ''Default prompts used when no customization provided''.'
+      - type: vague_language
+        severity: low
+        text: Uses informal language like 'Do you think', 'Would you like me to implement this' rather than formal requirement language.
+        suggestion: Convert to formal requirement statements using 'shall' or 'must' language.
+      strengths:
+      - Comprehensive design rationale and implementation approach documented
+      - Clear benefits articulated (customization, methodology support, inheritance)
+      - Implementation appears complete with detailed summary of changes
+      - Good technical detail about storage locations, prompt structure, and UI components
+      suggested_improvements:
+        description: |-
+          # AI Prompts Configuration
+
+          The system shall provide customizable AI prompts for requirement evaluation and improvement.
+
+          ## Functional Requirements
+
+          - The system shall store AI prompt configurations in project settings (`requirements.yaml`)
+          - The system shall support global context that applies to all AI prompts
+          - The system shall allow per-action prompt customization (evaluate, duplicates, relationships, improve, generate_children)
+          - The system shall support per-requirement-type specific instructions
+          - The system shall use default prompts when no customization is provided
+
+          ## UI Requirements
+
+          - The Settings UI shall include an "AI" tab for prompt configuration
+          - The AI tab shall provide editors for:
+            - Global context
+            - Evaluation prompt additional instructions
+            - Improve description prompt additional instructions
+            - Generate children prompt additional instructions
+            - Type-specific instructions with add/remove capability
+          - The UI shall display available template placeholders for reference
+
+          ## Acceptance Criteria
+
+          - [ ] User can edit global AI context via Settings > AI tab
+          - [ ] User can add additional instructions per AI action
+          - [ ] User can define type-specific instructions for any requirement type
+          - [ ] Custom prompts are persisted to `requirements.yaml`
+          - [ ] AI features use configured prompts with placeholder substitution
+          - [ ] Default prompts function correctly when no customization exists
+
+          ## Implementation Status
+
+          **Status: Implemented**
+
+          Components completed:
+          - `AiPromptConfig`, `AiActionPromptConfig`, `AiTypePromptConfig` models
+          - Prompt building with template/placeholder support in `prompts.rs`
+          - Settings UI with AI tab
+          - SQLite backend support
+        rationale: The original description is a valuable design discussion but not a proper requirement. The improved version extracts the formal requirements using 'shall' language, adds clear acceptance criteria, organizes by functional area, and notes the implementation status. The original discussion could be preserved in a design document or requirement comments.
+    evaluated_at: 2025-11-30T20:23:44.594217643Z
+    content_hash: 4f36382addbe2184
 - id: 652d7124-8cf8-422b-875c-0f9784eeb3df
   spec_id: FR-0142
   title: AI Evaluation Apply button to replace with suggested description
@@ -6286,6 +6546,143 @@ requirements:
     target_id: 631c854b-cc3c-4bac-bb37-087f2ed5ce72
     created_at: 2025-11-30T20:01:10.871102037Z
     created_by: Unknown User
+- id: 5a5a7d31-6842-4082-ac45-6831e102fde5
+  spec_id: FR-0145
+  title: Enhanced template support
+  description: "Enhanced template support\n  \n\nFor the template system you mentioned:\n  1. Store templates in ~/.aida/templates/ or project templates/ directory\n  2. Add a \"New Project\" wizard that lets you select a template\n  3. Templates could include: AI prompts, type definitions, relationship definitions, ID format preferences\n  4. Could have templates for different methodologies (Agile, Waterfall, SAFe, etc.)"
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 68-Uncategorized
+  created_at: 2025-11-30T20:33:27.308613097Z
+  created_by: Unknown User
+  modified_at: 2025-11-30T20:33:27.308613097Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 9e9ea9a2-0734-44b8-b911-f76f5aabc4ac
+    created_at: 2025-11-30T20:33:27.308653515Z
+    created_by: Unknown User
+- id: 62ea913d-8f31-4349-b043-5fe49b102671
+  spec_id: FR-0146
+  title: Support Folder status for organizational containers
+  description: |-
+    The system shall support a "Folder" status value for requirements that serve as organizational containers in a hierarchical structure.
+
+    ## Behavior
+
+    - The system shall display a folder icon for requirements with "Folder" status in the Requirements List view
+    - The system shall allow filtering requirements by "Folder" status
+    - The system shall exclude "Folder" status requirements from completion metrics and status reports by default
+
+    ## Acceptance Criteria
+
+    - "Folder" is available as a selectable status value when creating or editing requirements
+    - Requirements with "Folder" status display a distinct folder icon in list views
+    - Status filters include "Folder" as a filter option
+    - Metrics dashboards exclude "Folder" requirements from status counts unless explicitly included
+    - Child requirements under a "Folder" parent are not affected by the parent's status
+  status: Approved
+  priority: Medium
+  owner: ''
+  feature: 2-Uncategorized
+  created_at: 2025-11-30T20:34:15.691110691Z
+  modified_at: 2025-11-30T20:37:06.471462342Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  history:
+  - id: f3ff0ef1-54d8-46b3-a697-d4c37914717c
+    author: Unknown User
+    timestamp: 2025-11-30T20:37:06.471458685Z
+    changes:
+    - field_name: status
+      old_value: Draft
+      new_value: Approved
+- id: 9a4e932f-0922-4d2f-8c0c-131525b09801
+  spec_id: FR-0147
+  title: AI Implement Button
+  description: |+
+    AI Implement Button
+
+    "Copy for Claude Code" feature. Here's a summary of what was done:
+
+      Implementation Complete
+
+      Added a new button "Copy for Claude Code" in the Actions → AI submenu that:
+
+      1. Location: Appears at the bottom of the AI submenu (after a separator), making it easy to find
+        - Path: Actions → AI → Copy for Claude Code
+      2. Availability: Only enabled when the requirement has status "Approved"
+        - Shows a helpful tooltip when disabled: "Requirement must be Approved to implement"
+      3. Formatted Output: When clicked, copies a well-structured prompt to clipboard including:
+        - Requirement ID and title
+        - Type, Priority, and Feature
+        - Full description
+        - Tags (if any)
+        - Implementation instructions with guidance on:
+            - Following project patterns
+          - Adding tests
+          - Updating status when done
+      4. User Feedback: Shows a toast notification confirming the copy with the requirement ID
+      5. Linux Support: Also copies to the PRIMARY selection for middle-click paste
+
+      Example Output
+
+      When you click "Copy for Claude Code" on an approved requirement, this gets copied to your clipboard:
+
+      # Implement Requirement: FR-0001 - User Authentication
+
+      **Type:** Functional
+      **Priority:** High
+      **Feature:** 1-Authentication
+
+      ## Description
+
+      The system shall provide secure user authentication...
+
+      ## Tags
+
+      - security
+      - authentication
+
+      ## Implementation Task
+
+      Please implement this requirement in the codebase. After implementation:
+      1. Ensure the code follows the project's existing patterns and style
+      2. Add appropriate tests if applicable
+      3. Update the requirement status to 'Completed' when done
+
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 69-Uncategorized
+  created_at: 2025-11-30T22:17:36.822832980Z
+  created_by: Unknown User
+  modified_at: 2025-11-30T22:17:36.822832980Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 4de3b4f0-b157-4d50-8549-e98153d2324d
+    created_at: 2025-11-30T22:17:36.822862901Z
+    created_by: Unknown User
+- id: a36d92fa-f60d-4107-8ed2-f496f556965e
+  spec_id: FR-0148
+  title: Background AI Find Duplicates
+  description: The AI 'Find Duplicates' action shall run in a background thread (similar to 'Evaluate Requirement') to avoid blocking the UI. Results shall be stored in the AI Evaluation panel. When duplicates are found, an 'Execute Suggestion' button shall be provided to take action on the results.
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 6-AI-Integration
+  created_at: 2025-11-30T22:23:50.301414820Z
+  modified_at: 2025-11-30T22:23:50.301414820Z
+  req_type: Functional
+  dependencies: []
+  tags: []
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
   spec_id: $USER-001
@@ -6338,8 +6735,8 @@ id_config:
     prefix: CR
     description: Change requests for modifications to existing functionality
 features: []
-next_feature_number: 68
-next_spec_number: 145
+next_feature_number: 70
+next_spec_number: 149
 prefix_counters: {}
 relationship_definitions:
 - name: parent
@@ -6585,6 +6982,7 @@ ai_prompts:
     - Formal requirements with clear "shall" or "must" statements
     - Questions or ideas that need to be transformed into formal requirements
     - Rough notes that need refinement
+    - Output from AI conversation with explanation of an implementation or recommendations, possible successive responses.
 
     When evaluating or improving requirements:
     - Descriptions should be formatted in Markdown

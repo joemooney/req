@@ -185,3 +185,23 @@
 - **REQ-EXPORT-001**: System shall support mapping export format (UUID/SPEC-ID mapping)
 - **REQ-EXPORT-002**: System shall support JSON export format
 - **REQ-EXPORT-003**: System shall support output to file or stdout
+
+## 12. AI Integration
+
+### 12.1 AI Actions
+- **REQ-AI-001**: System shall support AI-powered requirement evaluation
+- **REQ-AI-002**: System shall support AI-powered duplicate detection
+- **REQ-AI-003**: System shall support AI-powered relationship suggestion
+- **REQ-AI-004**: System shall support AI-powered description improvement
+- **REQ-AI-005**: System shall support AI-powered child requirement generation
+- **REQ-AI-006**: System shall provide customizable AI prompts via YAML templates
+
+### 12.2 Background Processing
+- **REQ-AI-007**: Evaluate Requirement action shall run in background thread to avoid blocking UI
+- **REQ-AI-008**: Find Duplicates action shall run in background thread to avoid blocking UI (FR-0148)
+- **REQ-AI-009**: AI results shall be displayed in AI Evaluation panel
+- **REQ-AI-010**: AI suggestions shall have actionable "Execute" buttons when applicable
+
+### 12.3 Claude Code Integration
+- **REQ-AI-011**: System shall provide "Copy for Claude Code" action for approved requirements
+- **REQ-AI-012**: Copied text shall format requirement with implementation instructions
