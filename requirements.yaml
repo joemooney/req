@@ -4356,6 +4356,10 @@ requirements:
     target_id: 67ac8e49-171e-4c6e-a441-96be45810d55
     created_at: 2025-11-30T01:25:06.024027182Z
     created_by: Unknown User
+  - rel_type: Child
+    target_id: c2ac61cd-36a3-4dce-acaa-7b057b1be97d
+    created_at: 2025-11-30T01:34:30.555715874Z
+    created_by: Unknown User
 - id: 3ef749b7-b220-41f8-9a1d-1545d0c43a7f
   spec_id: FR-0103
   title: Dynamically update ID preview when Type changes in Edit form
@@ -4926,16 +4930,22 @@ requirements:
 - id: 631c854b-cc3c-4bac-bb37-087f2ed5ce72
   spec_id: FR-0123
   title: Requirements List context menus for quick actions
-  description: |-
+  description: |+
     Requirements List context menus for quick actions
     when you press 's' in the requirements list, open a popup menu to allow you to update the status showing a menu of statuses you can up/down/enter/esc to change the current status, the current status should be selected upon popup. Likewise 'p' for priority.
+
+    The current behavior is that it is opening the edit dialog, perhaps make this an option in the settings, but the default behavior should
+      be to make the change and keep us in viewing the Details and not go into edit mode. Also, the pop-ups requirements lists quick action popups
+      should probably not be active if we are in edit mode since that may be confusing.
+
+
   status: Approved
   priority: Medium
   owner: ''
   feature: 57-Uncategorized
   created_at: 2025-11-30T01:05:46.342405088Z
   created_by: Unknown User
-  modified_at: 2025-11-30T01:13:29.670197892Z
+  modified_at: 2025-11-30T01:31:06.368495541Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -4963,6 +4973,23 @@ requirements:
     - field_name: status
       old_value: Draft
       new_value: Approved
+  - id: 344428ea-d7cf-480c-a225-f110a8b9e7cb
+    author: Unknown User
+    timestamp: 2025-11-30T01:31:06.368494849Z
+    changes:
+    - field_name: description
+      old_value: |-
+        Requirements List context menus for quick actions
+        when you press 's' in the requirements list, open a popup menu to allow you to update the status showing a menu of statuses you can up/down/enter/esc to change the current status, the current status should be selected upon popup. Likewise 'p' for priority.
+      new_value: |+
+        Requirements List context menus for quick actions
+        when you press 's' in the requirements list, open a popup menu to allow you to update the status showing a menu of statuses you can up/down/enter/esc to change the current status, the current status should be selected upon popup. Likewise 'p' for priority.
+
+        The current behavior is that it is opening the edit dialog, perhaps make this an option in the settings, but the default behavior should
+          be to make the change and keep us in viewing the Details and not go into edit mode. Also, the pop-ups requirements lists quick action popups
+          should probably not be active if we are in edit mode since that may be confusing.
+
+
 - id: db05a93d-4ade-49fb-aaba-b6eedf4ec846
   spec_id: FR-0124
   title: Status dropdown should have Other subdropdown f...
@@ -4975,7 +5002,7 @@ requirements:
   feature: 57-Uncategorized
   created_at: 2025-11-30T01:19:52.674508726Z
   created_by: Unknown User
-  modified_at: 2025-11-30T01:19:52.674508726Z
+  modified_at: 2025-11-30T01:26:32.128521510Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -4984,6 +5011,21 @@ requirements:
     target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
     created_at: 2025-11-30T01:19:52.674566786Z
     created_by: Unknown User
+  history:
+  - id: e8310d56-b964-4934-88d3-a60487475969
+    author: ''
+    timestamp: 2025-11-30T01:26:22.262715178Z
+    changes:
+    - field_name: status
+      old_value: Draft
+      new_value: Approved
+  - id: c8d62a75-9566-4852-9961-95fb9ea5a12d
+    author: Unknown User
+    timestamp: 2025-11-30T01:26:32.128520683Z
+    changes:
+    - field_name: status
+      old_value: Approved
+      new_value: Draft
 - id: 67ac8e49-171e-4c6e-a441-96be45810d55
   spec_id: FR-0125
   title: Equals '=' to apply same set of changes to anot...
@@ -4993,7 +5035,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 58-Uncategorized
   created_at: 2025-11-30T01:25:06.024019614Z
   created_by: Unknown User
   modified_at: 2025-11-30T01:25:06.024019614Z
@@ -5004,6 +5046,27 @@ requirements:
   - rel_type: Parent
     target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
     created_at: 2025-11-30T01:25:06.024027182Z
+    created_by: Unknown User
+- id: c2ac61cd-36a3-4dce-acaa-7b057b1be97d
+  spec_id: FR-0126
+  title: Allow multiple key bindings to the same action
+  description: |-
+    Allow multiple key bindings to the same action
+    I want j/k to move up/down (like vim) in addition to the up/down arrow keys, so I need key bindings allow multiple bindings to the same thing
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-30T01:34:30.555708742Z
+  created_by: Unknown User
+  modified_at: 2025-11-30T01:34:30.555708742Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
+    created_at: 2025-11-30T01:34:30.555715874Z
     created_by: Unknown User
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
@@ -5057,8 +5120,8 @@ id_config:
     prefix: CR
     description: Change requests for modifications to existing functionality
 features: []
-next_feature_number: 58
-next_spec_number: 126
+next_feature_number: 59
+next_spec_number: 127
 prefix_counters: {}
 relationship_definitions:
 - name: parent

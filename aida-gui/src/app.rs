@@ -8339,23 +8339,26 @@ impl RequirementsApp {
                     };
                     ui.painter().galley(text_pos, galley, text_color);
 
-                    if response.clicked() {
-                        self.split_selected_idx = Some(idx);
-                        self.focused_list = FocusedList::List2;
-                        // Sync List 1 when navigation is locked
-                        if self.navigation_locked {
-                            self.selected_idx = Some(idx);
-                            self.scroll_to_requirement = Some(req_id);
-                            self.pending_view_change = Some(View::Detail);
+                    // Block interactions when status popup is open
+                    if !self.show_status_popup {
+                        if response.clicked() {
+                            self.split_selected_idx = Some(idx);
+                            self.focused_list = FocusedList::List2;
+                            // Sync List 1 when navigation is locked
+                            if self.navigation_locked {
+                                self.selected_idx = Some(idx);
+                                self.scroll_to_requirement = Some(req_id);
+                                self.pending_view_change = Some(View::Detail);
+                            }
                         }
-                    }
-                    if response.double_clicked() {
-                        // Switch to edit mode on double-click
-                        self.split_selected_idx = Some(idx);
-                        self.selected_idx = Some(idx);
-                        self.focused_list = FocusedList::List2;
-                        self.load_form_from_requirement(idx);
-                        self.pending_view_change = Some(View::Edit);
+                        if response.double_clicked() {
+                            // Switch to edit mode on double-click
+                            self.split_selected_idx = Some(idx);
+                            self.selected_idx = Some(idx);
+                            self.focused_list = FocusedList::List2;
+                            self.load_form_from_requirement(idx);
+                            self.pending_view_change = Some(View::Edit);
+                        }
                     }
                 }
             }
@@ -8417,22 +8420,25 @@ impl RequirementsApp {
                     };
                     ui.painter().galley(text_pos, galley, text_color);
 
-                    if response.clicked() {
-                        self.split_selected_idx = Some(idx);
-                        self.focused_list = FocusedList::List2;
-                        // Sync List 1 when navigation is locked
-                        if self.navigation_locked {
-                            self.selected_idx = Some(idx);
-                            self.scroll_to_requirement = Some(req_id);
-                            self.pending_view_change = Some(View::Detail);
+                    // Block interactions when status popup is open
+                    if !self.show_status_popup {
+                        if response.clicked() {
+                            self.split_selected_idx = Some(idx);
+                            self.focused_list = FocusedList::List2;
+                            // Sync List 1 when navigation is locked
+                            if self.navigation_locked {
+                                self.selected_idx = Some(idx);
+                                self.scroll_to_requirement = Some(req_id);
+                                self.pending_view_change = Some(View::Detail);
+                            }
                         }
-                    }
-                    if response.double_clicked() {
-                        self.split_selected_idx = Some(idx);
-                        self.selected_idx = Some(idx);
-                        self.focused_list = FocusedList::List2;
-                        self.load_form_from_requirement(idx);
-                        self.pending_view_change = Some(View::Edit);
+                        if response.double_clicked() {
+                            self.split_selected_idx = Some(idx);
+                            self.selected_idx = Some(idx);
+                            self.focused_list = FocusedList::List2;
+                            self.load_form_from_requirement(idx);
+                            self.pending_view_change = Some(View::Edit);
+                        }
                     }
                 }
             }
@@ -9425,17 +9431,19 @@ impl RequirementsApp {
         };
         ui.painter().galley(text_pos, galley, text_color);
 
-        // Handle interactions
-        if response.double_clicked() {
-            // Double-click opens for editing
-            self.selected_idx = Some(idx);
-            self.focused_list = FocusedList::List1;
-            self.load_form_from_requirement(idx);
-            self.pending_view_change = Some(View::Edit);
-        } else if response.clicked() {
-            self.selected_idx = Some(idx);
-            self.focused_list = FocusedList::List1;
-            self.pending_view_change = Some(View::Detail);
+        // Handle interactions (block when status popup is open to prevent click pass-through)
+        if !self.show_status_popup {
+            if response.double_clicked() {
+                // Double-click opens for editing
+                self.selected_idx = Some(idx);
+                self.focused_list = FocusedList::List1;
+                self.load_form_from_requirement(idx);
+                self.pending_view_change = Some(View::Edit);
+            } else if response.clicked() {
+                self.selected_idx = Some(idx);
+                self.focused_list = FocusedList::List1;
+                self.pending_view_change = Some(View::Detail);
+            }
         }
 
         if response.drag_started() {
@@ -14510,8 +14518,9 @@ impl eframe::App for RequirementsApp {
                 self.pending_save = true;
             }
 
-            // 's' key to open status popup (only in list/detail view, without modifiers)
-            if nav_context_active && !self.show_status_popup {
+            // 's' key to open status popup (only in list/detail view, not in edit/add mode, without modifiers)
+            let not_in_form = !matches!(self.current_view, View::Add | View::Edit);
+            if nav_context_active && !self.show_status_popup && not_in_form {
                 let s_pressed = ctx.input(|i| {
                     i.key_pressed(egui::Key::S) && !i.modifiers.ctrl && !i.modifiers.alt && !i.modifiers.shift
                 });
