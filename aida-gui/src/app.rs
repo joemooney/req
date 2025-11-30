@@ -2041,6 +2041,7 @@ pub struct RequirementsApp {
     show_status_popup: bool,              // Whether to show the status change popup
     status_popup_selected: usize,         // Currently highlighted status index in popup
     status_popup_target_id: Option<Uuid>, // Requirement being modified
+    status_popup_consumed_action: bool,   // True if popup consumed a key this frame (prevents pass-through)
 
     // Split panel (second requirements list) - used in split layouts
     split_perspective: Perspective,
@@ -2360,6 +2361,7 @@ impl RequirementsApp {
             show_status_popup: false,
             status_popup_selected: 0,
             status_popup_target_id: None,
+            status_popup_consumed_action: false,
             split_perspective: Perspective::default(),
             split_perspective_direction: PerspectiveDirection::default(),
             split_filter_text: String::new(),
@@ -9999,6 +10001,7 @@ impl RequirementsApp {
         if close_popup {
             self.show_status_popup = false;
             self.status_popup_target_id = None;
+            self.status_popup_consumed_action = true;
             return;
         }
 
@@ -10032,6 +10035,7 @@ impl RequirementsApp {
             }
             self.show_status_popup = false;
             self.status_popup_target_id = None;
+            self.status_popup_consumed_action = true;
             return;
         }
 
@@ -10087,6 +10091,7 @@ impl RequirementsApp {
                                 }
                                 self.show_status_popup = false;
                                 self.status_popup_target_id = None;
+                                self.status_popup_consumed_action = true;
                             }
                         }
 
@@ -10104,6 +10109,7 @@ impl RequirementsApp {
                 if !popup_rect.contains(pos) {
                     self.show_status_popup = false;
                     self.status_popup_target_id = None;
+                    self.status_popup_consumed_action = true;
                 }
             }
         }
@@ -14256,6 +14262,9 @@ fn main() {
 
 impl eframe::App for RequirementsApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Reset per-frame flags at the start of each frame
+        self.status_popup_consumed_action = false;
+
         // Update window title based on database name and title
         // Format: "Name - Title" or just "Title" or just "Name" or "Requirements Manager"
         let title = match (self.store.name.is_empty(), self.store.title.is_empty()) {
@@ -14480,11 +14489,14 @@ impl eframe::App for RequirementsApp {
             }
 
             // Edit keybinding (context-aware)
-            if self.user_settings.keybindings.is_pressed(
-                KeyAction::Edit,
-                ctx,
-                self.current_key_context,
-            ) {
+            // Skip if status popup just consumed an action (prevents Enter key pass-through)
+            if !self.status_popup_consumed_action
+                && self.user_settings.keybindings.is_pressed(
+                    KeyAction::Edit,
+                    ctx,
+                    self.current_key_context,
+                )
+            {
                 if let Some(idx) = self.selected_idx {
                     self.load_form_from_requirement(idx);
                     self.pending_view_change = Some(View::Edit);

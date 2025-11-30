@@ -4683,7 +4683,7 @@ requirements:
             - Once a newline is entered, auto-sync is disabled
 - id: cc937e52-dd05-4dd9-a75b-ae5cc8ca95b9
   spec_id: FR-0111
-  title: Modal dialoags 'x' icon to close in top right
+  title: Modal dialogs 'x' icon to close in top right
   description: Modal dialoags 'x' icon to close in top right, make sense?
   status: Draft
   priority: Medium
@@ -4691,7 +4691,7 @@ requirements:
   feature: 50-Uncategorized
   created_at: 2025-11-29T21:30:28.397453888Z
   created_by: Unknown User
-  modified_at: 2025-11-29T21:30:28.397453888Z
+  modified_at: 2025-11-30T01:35:27.760190178Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -4700,6 +4700,14 @@ requirements:
     target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
     created_at: 2025-11-29T21:30:28.397461271Z
     created_by: Unknown User
+  history:
+  - id: b5149508-7cf6-42a7-9435-a11de05203bf
+    author: Unknown User
+    timestamp: 2025-11-30T01:35:27.760188704Z
+    changes:
+    - field_name: title
+      old_value: Modal dialoags 'x' icon to close in top right
+      new_value: Modal dialogs 'x' icon to close in top right
 - id: 3a4bc953-af23-4573-879e-6dcd1a2f2fb8
   spec_id: FR-0112
   title: Role support
@@ -4760,13 +4768,13 @@ requirements:
       3. Rename prefixes by clicking the pencil (✏) button - renaming to an existing prefix will merge requirements
       4. See and manage allowed prefixes
 
-  status: Draft
+  status: Approved
   priority: Medium
   owner: ''
   feature: 52-Uncategorized
   created_at: 2025-11-29T22:12:47.675501842Z
   created_by: Unknown User
-  modified_at: 2025-11-29T22:12:47.675501842Z
+  modified_at: 2025-11-30T01:37:04.122708035Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -4775,6 +4783,14 @@ requirements:
     target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
     created_at: 2025-11-29T22:12:47.675513054Z
     created_by: Unknown User
+  history:
+  - id: c12a3584-ae7b-4e75-934c-be07c2368024
+    author: ''
+    timestamp: 2025-11-30T01:37:04.122711366Z
+    changes:
+    - field_name: status
+      old_value: Draft
+      new_value: Approved
 - id: afe27507-684f-4ad3-b80b-39c58d9875e8
   spec_id: FR-0115
   title: When I edit a theme the changes to be reflected globally and reverted if I click cancel
@@ -4930,7 +4946,7 @@ requirements:
 - id: 631c854b-cc3c-4bac-bb37-087f2ed5ce72
   spec_id: FR-0123
   title: Requirements List context menus for quick actions
-  description: |+
+  description: |
     Requirements List context menus for quick actions
     when you press 's' in the requirements list, open a popup menu to allow you to update the status showing a menu of statuses you can up/down/enter/esc to change the current status, the current status should be selected upon popup. Likewise 'p' for priority.
 
@@ -4939,13 +4955,16 @@ requirements:
       should probably not be active if we are in edit mode since that may be confusing.
 
 
+    The current behavior is that it is opening the edit dialog, perhaps make this an option in the settings, but the default behavior should
+      be to make the change and keep us in viewing the Details and not go into edit mode. Also, the pop-ups requirements lists quick action popups
+      should probably not be active if we are in edit mode since that may be confusing.
   status: Approved
   priority: Medium
   owner: ''
   feature: 57-Uncategorized
   created_at: 2025-11-30T01:05:46.342405088Z
   created_by: Unknown User
-  modified_at: 2025-11-30T01:31:06.368495541Z
+  modified_at: 2025-11-30T01:36:12.660431327Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -4990,6 +5009,32 @@ requirements:
           should probably not be active if we are in edit mode since that may be confusing.
 
 
+  - id: 40e9b17b-3893-4e32-9032-1da15f9122d7
+    author: Unknown User
+    timestamp: 2025-11-30T01:36:12.660430478Z
+    changes:
+    - field_name: description
+      old_value: |+
+        Requirements List context menus for quick actions
+        when you press 's' in the requirements list, open a popup menu to allow you to update the status showing a menu of statuses you can up/down/enter/esc to change the current status, the current status should be selected upon popup. Likewise 'p' for priority.
+
+        The current behavior is that it is opening the edit dialog, perhaps make this an option in the settings, but the default behavior should
+          be to make the change and keep us in viewing the Details and not go into edit mode. Also, the pop-ups requirements lists quick action popups
+          should probably not be active if we are in edit mode since that may be confusing.
+
+
+      new_value: |
+        Requirements List context menus for quick actions
+        when you press 's' in the requirements list, open a popup menu to allow you to update the status showing a menu of statuses you can up/down/enter/esc to change the current status, the current status should be selected upon popup. Likewise 'p' for priority.
+
+        The current behavior is that it is opening the edit dialog, perhaps make this an option in the settings, but the default behavior should
+          be to make the change and keep us in viewing the Details and not go into edit mode. Also, the pop-ups requirements lists quick action popups
+          should probably not be active if we are in edit mode since that may be confusing.
+
+
+        The current behavior is that it is opening the edit dialog, perhaps make this an option in the settings, but the default behavior should
+          be to make the change and keep us in viewing the Details and not go into edit mode. Also, the pop-ups requirements lists quick action popups
+          should probably not be active if we are in edit mode since that may be confusing.
 - id: db05a93d-4ade-49fb-aaba-b6eedf4ec846
   spec_id: FR-0124
   title: Status dropdown should have Other subdropdown f...
@@ -5056,7 +5101,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 59-Uncategorized
   created_at: 2025-11-30T01:34:30.555708742Z
   created_by: Unknown User
   modified_at: 2025-11-30T01:34:30.555708742Z
@@ -5120,7 +5165,7 @@ id_config:
     prefix: CR
     description: Change requests for modifications to existing functionality
 features: []
-next_feature_number: 59
+next_feature_number: 60
 next_spec_number: 127
 prefix_counters: {}
 relationship_definitions:
