@@ -4470,6 +4470,14 @@ requirements:
     target_id: 5fe84b57-05db-415b-90a5-604f1bf3f9eb
     created_at: 2025-11-30T18:58:47.347672969Z
     created_by: Unknown User
+  - rel_type: Child
+    target_id: 83c887a3-dae7-445e-86cb-ed8cf59e91c9
+    created_at: 2025-11-30T19:13:07.115036072Z
+    created_by: Unknown User
+  - rel_type: Child
+    target_id: 652d7124-8cf8-422b-875c-0f9784eeb3df
+    created_at: 2025-11-30T19:21:48.409827457Z
+    created_by: Unknown User
 - id: 3ef749b7-b220-41f8-9a1d-1545d0c43a7f
   spec_id: FR-0103
   title: Dynamically update ID preview when Type changes in Edit form
@@ -5671,13 +5679,13 @@ requirements:
       edit button which will allow us to specify values for Priority and Status. Then the values shown for those fields would be based on the
       requirement type. Thoughts? We can keep the Edit Icons as is and if the status or priority matches (case insnesitive) then that will be used
       otherwise the default.
-  status: Draft
-  priority: Medium
+  status: Approved
+  priority: High
   owner: ''
   feature: 62-Uncategorized
   created_at: 2025-11-30T02:23:48.712180251Z
   created_by: Unknown User
-  modified_at: 2025-11-30T02:23:48.712180251Z
+  modified_at: 2025-11-30T19:34:25.402389533Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -5686,6 +5694,21 @@ requirements:
     target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
     created_at: 2025-11-30T02:23:48.712187739Z
     created_by: Unknown User
+  history:
+  - id: 204adabb-9518-4714-afa4-1f4e8f17f23e
+    author: ''
+    timestamp: 2025-11-30T19:34:14.802793364Z
+    changes:
+    - field_name: status
+      old_value: Draft
+      new_value: Approved
+  - id: e448b179-8436-43f6-8997-01bd1c8b2362
+    author: ''
+    timestamp: 2025-11-30T19:34:25.402396548Z
+    changes:
+    - field_name: priority
+      old_value: Medium
+      new_value: High
 - id: cb6bc91b-4b8b-421f-bc0f-3c86c288f9ff
   spec_id: FR-0130
   title: Utility to renumber requirements
@@ -5771,6 +5794,10 @@ requirements:
   - rel_type: Child
     target_id: 4de3b4f0-b157-4d50-8549-e98153d2324d
     created_at: 2025-11-30T18:33:00.589994057Z
+    created_by: Unknown User
+  - rel_type: Child
+    target_id: d61fa9f5-9f5f-4390-b7fb-32c1759ddd50
+    created_at: 2025-11-30T19:15:20.316632488Z
     created_by: Unknown User
   history:
   - id: 516738ee-2ec8-487f-aa4a-2f4153889c6f
@@ -5946,7 +5973,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 65-Uncategorized
   created_at: 2025-11-30T18:41:47.754459652Z
   created_by: Unknown User
   modified_at: 2025-11-30T18:41:47.754459652Z
@@ -5961,14 +5988,14 @@ requirements:
 - id: ae8231e7-3f3b-4ab4-8b90-d1827de04eaa
   spec_id: FR-0138
   title: Manual evaluation in background
-  description: "Manual evaluation \n\nSince manual triggering via Actions → AI → Evaluate is very slow and the gui appears to the o/s to have stopped working, we should run that in\n  the background. It should then update the AI evaluation in the database on its own and maybe we could have a completion notification?"
+  description: "Manual evaluation \n\nSince manual triggering via Actions → AI → Evaluate is very slow and the gui appears to the o/s to have stopped working, we should run that in\n  the background. It should then update the AI evaluation in the database on its own and maybe we could have a completion notification?\n\nbackground AI evaluation with toast notifications for the AIDA GUI. Here's what was changed:\n\n  Changes Made (aida-gui/src/app.rs)\n\n  1. Added new state fields (lines 2249-2270):\n    - ai_eval_receiver: Option<mpsc::Receiver<BackgroundAiResult>> - Channel to receive background evaluation results\n    - ai_eval_in_progress: Option<(Uuid, String)> - Tracks currently evaluating requirement\n    - toast_message: Option<ToastNotification> - Current toast notification to display\n    - BackgroundAiResult struct - Result from background thread\n    - ToastNotification struct - Toast message with success flag and expiration time\n  2. Modified AI action handler (lines 10697-10743):\n    - Changed AiAction::Evaluate to spawn a background thread instead of blocking\n    - Shows \"Evaluating...\" toast when evaluation starts\n    - Prevents multiple concurrent evaluations\n  3. Added polling logic in update() (lines 15140-15203):\n    - Polls ai_eval_receiver for completed results\n    - On success: Creates StoredAiEvaluation, updates requirement, saves to database, shows success toast with quality score\n    - On error: Shows error toast\n  4. Added toast notification overlay (lines 2977-3037):\n    - show_toast_notification() method displays temporary messages at bottom-center of screen\n    - Green background for success, red for errors\n    - Auto-expires after 3-5 seconds\n    - Called at end of update loop (line 16032)\n\n  Behavior\n\n  When you use Actions → AI → Evaluate:\n  1. GUI immediately shows \"Evaluating [spec_id]...\" toast\n  2. AI evaluation runs in background thread - GUI remains responsive\n  3. When complete, shows \"AI evaluation complete for [spec_id] (Score: X/10)\" toast\n  4. Requirement's ai_evaluation field is automatically updated and saved\n  5. AI Results panel is also updated with detailed results\n\n"
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 65-Uncategorized
   created_at: 2025-11-30T18:56:03.086426200Z
   created_by: Unknown User
-  modified_at: 2025-11-30T18:56:03.086426200Z
+  modified_at: 2025-11-30T19:13:47.414957940Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -5977,6 +6004,14 @@ requirements:
     target_id: 4de3b4f0-b157-4d50-8549-e98153d2324d
     created_at: 2025-11-30T18:56:03.086460517Z
     created_by: Unknown User
+  history:
+  - id: bedc2590-ec86-4991-9c6d-d6bb186548a8
+    author: Unknown User
+    timestamp: 2025-11-30T19:13:47.414954551Z
+    changes:
+    - field_name: description
+      old_value: "Manual evaluation \n\nSince manual triggering via Actions → AI → Evaluate is very slow and the gui appears to the o/s to have stopped working, we should run that in\n  the background. It should then update the AI evaluation in the database on its own and maybe we could have a completion notification?"
+      new_value: "Manual evaluation \n\nSince manual triggering via Actions → AI → Evaluate is very slow and the gui appears to the o/s to have stopped working, we should run that in\n  the background. It should then update the AI evaluation in the database on its own and maybe we could have a completion notification?\n\nbackground AI evaluation with toast notifications for the AIDA GUI. Here's what was changed:\n\n  Changes Made (aida-gui/src/app.rs)\n\n  1. Added new state fields (lines 2249-2270):\n    - ai_eval_receiver: Option<mpsc::Receiver<BackgroundAiResult>> - Channel to receive background evaluation results\n    - ai_eval_in_progress: Option<(Uuid, String)> - Tracks currently evaluating requirement\n    - toast_message: Option<ToastNotification> - Current toast notification to display\n    - BackgroundAiResult struct - Result from background thread\n    - ToastNotification struct - Toast message with success flag and expiration time\n  2. Modified AI action handler (lines 10697-10743):\n    - Changed AiAction::Evaluate to spawn a background thread instead of blocking\n    - Shows \"Evaluating...\" toast when evaluation starts\n    - Prevents multiple concurrent evaluations\n  3. Added polling logic in update() (lines 15140-15203):\n    - Polls ai_eval_receiver for completed results\n    - On success: Creates StoredAiEvaluation, updates requirement, saves to database, shows success toast with quality score\n    - On error: Shows error toast\n  4. Added toast notification overlay (lines 2977-3037):\n    - show_toast_notification() method displays temporary messages at bottom-center of screen\n    - Green background for success, red for errors\n    - Auto-expires after 3-5 seconds\n    - Called at end of update loop (line 16032)\n\n  Behavior\n\n  When you use Actions → AI → Evaluate:\n  1. GUI immediately shows \"Evaluating [spec_id]...\" toast\n  2. AI evaluation runs in background thread - GUI remains responsive\n  3. When complete, shows \"AI evaluation complete for [spec_id] (Score: X/10)\" toast\n  4. Requirement's ai_evaluation field is automatically updated and saved\n  5. AI Results panel is also updated with detailed results\n\n"
 - id: 5fe84b57-05db-415b-90a5-604f1bf3f9eb
   spec_id: FR-0139
   title: Report Generation
@@ -5987,7 +6022,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 65-Uncategorized
   created_at: 2025-11-30T18:58:47.347645927Z
   created_by: Unknown User
   modified_at: 2025-11-30T18:58:47.347645927Z
@@ -5998,6 +6033,149 @@ requirements:
   - rel_type: Parent
     target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
     created_at: 2025-11-30T18:58:47.347672969Z
+    created_by: Unknown User
+- id: 83c887a3-dae7-445e-86cb-ed8cf59e91c9
+  spec_id: FR-0140
+  title: Command Support
+  description: "Command Support\n\nAllow custom command to be associated with a type. The command line could use substitution such that metadata fields like ID would have their value substitute when \"{{id}}\" is in the command string (case insensitive). The command would run in the backgound by default. The results could be place in the history if that makes sense. I am worried about long running commands and if I close the gui I would want to detach the command execution probably and not have the command killed. Maybe we will want to see the history of command execution but we can worry about that later, maybe an Action could be to view a markdown report of the history of command execution so that it is not mixed with the rest of the requirement history. "
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 65-Uncategorized
+  created_at: 2025-11-30T19:13:07.115000174Z
+  created_by: Unknown User
+  modified_at: 2025-11-30T19:13:07.115000174Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
+    created_at: 2025-11-30T19:13:07.115036072Z
+    created_by: Unknown User
+  ai_evaluation:
+    evaluation:
+      quality_score: 4
+      issues:
+      - type: vague_language
+        severity: high
+        text: The phrase 'if that makes sense' indicates uncertainty about the requirement itself
+        suggestion: Make a clear decision about whether command results should be stored in history and document the rationale
+      - type: incomplete
+        severity: high
+        text: No specification of which 'types' can have commands associated with them
+        suggestion: Explicitly list which requirement types (Functional, NonFunctional, System, User, ChangeRequest) or other entity types support custom commands
+      - type: ambiguous
+        severity: medium
+        text: The scope of metadata field substitution is unclear - only '{{id}}' is mentioned as an example
+        suggestion: Define the complete list of supported substitution variables (e.g., {{id}}, {{title}}, {{status}}, {{owner}}, {{spec_id}})
+      - type: incomplete
+        severity: medium
+        text: No acceptance criteria for background execution or process detachment behavior
+        suggestion: 'Specify exact behavior: What happens on GUI close? Should process continue? How is the user notified of completion?'
+      - type: vague_language
+        severity: medium
+        text: Phrases like 'we can worry about that later' and 'maybe' indicate deferred decisions mixed into the requirement
+        suggestion: Split into core requirement (command execution) and separate future requirements (execution history, markdown reports)
+      - type: untestable
+        severity: medium
+        text: No success criteria defined for command execution
+        suggestion: 'Define: What constitutes successful execution? How are errors handled? What timeout limits apply?'
+      - type: incomplete
+        severity: low
+        text: No mention of security considerations for executing arbitrary commands
+        suggestion: 'Add security requirements: command validation, sandboxing, user confirmation prompts, allowed/blocked commands'
+      strengths:
+      - Core concept is clearly articulated - associating commands with types using variable substitution
+      - Identifies real technical concern about long-running processes and GUI lifecycle
+      - Proposes reasonable solution for history separation (markdown report via Action)
+      suggested_improvements:
+        description: |-
+          Custom Command Association
+
+          Allow custom shell commands to be associated with requirement types. Commands support variable substitution using double-brace syntax (case-insensitive):
+
+          **Supported Variables:**
+          - {{id}} - Requirement UUID
+          - {{spec_id}} - Human-readable SPEC-ID
+          - {{title}} - Requirement title
+          - {{status}} - Current status
+          - {{owner}} - Assigned owner
+          - {{feature}} - Feature name
+
+          **Execution Behavior:**
+          - Commands execute in background by default
+          - Process continues if GUI is closed (detached execution)
+          - User receives notification on completion or error
+          - Configurable timeout (default: 5 minutes)
+
+          **Command History:**
+          - Execution history stored separately from requirement history
+          - Accessible via 'View Command History' action
+          - Displays: timestamp, command executed, exit code, stdout/stderr summary
+
+          **Security:**
+          - User confirmation required before first execution of new command
+          - Commands logged for audit purposes
+        rationale: This improvement removes ambiguity, provides complete variable list, defines concrete execution behavior, separates concerns (history storage), and addresses security considerations - making the requirement implementable and testable
+    evaluated_at: 2025-11-30T19:16:28.768396183Z
+    content_hash: b963d04f620843c2
+- id: d61fa9f5-9f5f-4390-b7fb-32c1759ddd50
+  spec_id: FR-0141
+  title: AI Prompts in settings
+  description: |-
+    AI Prompts in settings
+
+    Do you think we should store the prompts we use for AI in the settings so that we can customize. I assume they are hardcoded right now? For example, if this was a requirement, then the AI evaluation prompt should know that the description may take the form of a question intended for the AI Evalation to ponder and translate into a formal requirement or a suggestions that this is a dumb idea and should be rejected (maybe more politely stated).
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 65-Uncategorized
+  created_at: 2025-11-30T19:15:20.316591111Z
+  created_by: Unknown User
+  modified_at: 2025-11-30T19:37:26.773670790Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 9e9ea9a2-0734-44b8-b911-f76f5aabc4ac
+    created_at: 2025-11-30T19:15:20.316632488Z
+    created_by: Unknown User
+  history:
+  - id: 3572b722-a6f4-4d0f-b9ff-a8bdd23f3887
+    author: Unknown User
+    timestamp: 2025-11-30T19:37:26.773667191Z
+    changes:
+    - field_name: description
+      old_value: |-
+        AI Prompts in settings
+
+        Do you think we should store the prompts we use for AI in the settings so that we can customize. I assume they are hardcoded right now?
+      new_value: |-
+        AI Prompts in settings
+
+        Do you think we should store the prompts we use for AI in the settings so that we can customize. I assume they are hardcoded right now? For example, if this was a requirement, then the AI evaluation prompt should know that the description may take the form of a question intended for the AI Evalation to ponder and translate into a formal requirement or a suggestions that this is a dumb idea and should be rejected (maybe more politely stated).
+- id: 652d7124-8cf8-422b-875c-0f9784eeb3df
+  spec_id: FR-0142
+  title: AI Evaluation Apply button to replace with suggested description
+  description: |-
+    In the AI Evaluation tab can we have an Apply button for the Improved desription that will replace the current description with the suggested
+      improvement.
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-30T19:21:48.409793438Z
+  created_by: Unknown User
+  modified_at: 2025-11-30T19:21:48.409793438Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
+    created_at: 2025-11-30T19:21:48.409827457Z
     created_by: Unknown User
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
@@ -6051,8 +6229,8 @@ id_config:
     prefix: CR
     description: Change requests for modifications to existing functionality
 features: []
-next_feature_number: 65
-next_spec_number: 140
+next_feature_number: 66
+next_spec_number: 143
 prefix_counters: {}
 relationship_definitions:
 - name: parent

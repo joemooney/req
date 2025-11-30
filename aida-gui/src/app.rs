@@ -2098,6 +2098,7 @@ pub struct RequirementsApp {
     drag_source: Option<usize>, // Index of requirement being dragged
     drop_target: Option<usize>, // Index of requirement being hovered over
     pending_relationship: Option<(usize, usize)>, // (source_idx, target_idx) to create relationship
+    pending_apply_ai_description: Option<(Uuid, String)>, // (req_id, new_description) to apply from AI suggestion
     drag_scroll_delta: f32,     // Accumulated scroll delta during drag (for auto-scroll)
 
     // Markdown rendering
@@ -2457,6 +2458,7 @@ impl RequirementsApp {
             drag_source: None,
             drop_target: None,
             pending_relationship: None,
+            pending_apply_ai_description: None,
             drag_scroll_delta: 0.0,
             markdown_cache: CommonMarkCache::default(),
             show_description_preview: false,
@@ -8122,6 +8124,49 @@ impl RequirementsApp {
         }
     }
 
+    /// Apply AI-suggested improved description to a requirement
+    fn apply_ai_description(&mut self, req_id: Uuid, new_description: String) {
+        // Find the requirement by ID
+        if let Some(idx) = self.store.requirements.iter().position(|r| r.id == req_id) {
+            let req = &mut self.store.requirements[idx];
+            let spec_id = req.spec_id.clone().unwrap_or_else(|| req_id.to_string());
+            let old_description = req.description.clone();
+
+            // Update the description
+            req.description = new_description.clone();
+            req.modified_at = chrono::Utc::now();
+
+            // Track history
+            req.history.push(aida_core::models::HistoryEntry {
+                id: uuid::Uuid::new_v4(),
+                author: self.user_settings.name.clone(),
+                timestamp: chrono::Utc::now(),
+                changes: vec![aida_core::models::FieldChange {
+                    field_name: "description".to_string(),
+                    old_value: old_description,
+                    new_value: new_description,
+                }],
+            });
+
+            // Save changes
+            self.save();
+
+            // Show toast notification
+            self.toast_message = Some(ToastNotification {
+                message: format!("Applied AI improvement to {}", spec_id),
+                is_success: true,
+                show_until: std::time::Instant::now() + std::time::Duration::from_secs(3),
+            });
+        } else {
+            // Requirement not found - show error
+            self.toast_message = Some(ToastNotification {
+                message: "Failed to apply: requirement not found".to_string(),
+                is_success: false,
+                show_until: std::time::Instant::now() + std::time::Duration::from_secs(3),
+            });
+        }
+    }
+
     fn show_list_panel(&mut self, ctx: &egui::Context, in_form_view: bool, forced_width: Option<f32>) {
         let mut panel = egui::SidePanel::left("list_panel")
             .min_width(200.0)
@@ -10999,7 +11044,7 @@ impl RequirementsApp {
                                 .auto_shrink([false, false])
                                 .show(ui, |ui| match &self.active_tab {
                                     DetailTab::Ai => {
-                                        self.show_ai_tab(ui, &req);
+                                        self.show_ai_tab(ui, &req, req_id);
                                     }
                                     DetailTab::Description => {
                                         self.show_description_tab(ui, &req, idx);
@@ -11113,7 +11158,7 @@ impl RequirementsApp {
                     let req_id = req.id;
                     egui::ScrollArea::vertical().show(ui, |ui| match &self.active_tab {
                         DetailTab::Ai => {
-                            self.show_ai_tab(ui, &req);
+                            self.show_ai_tab(ui, &req, req_id);
                         }
                         DetailTab::Description => {
                             self.show_description_tab(ui, &req, idx);
@@ -11157,7 +11202,7 @@ impl RequirementsApp {
         }
     }
 
-    fn show_ai_tab(&mut self, ui: &mut egui::Ui, req: &Requirement) {
+    fn show_ai_tab(&mut self, ui: &mut egui::Ui, req: &Requirement, req_id: Uuid) {
         ui.heading("AI Evaluation");
         ui.add_space(10.0);
 
@@ -11290,6 +11335,15 @@ impl RequirementsApp {
                                 .show(ui, |ui| {
                                     ui.label(desc);
                                 });
+                            ui.add_space(5.0);
+                            // Apply button to replace description with AI suggestion
+                            if ui
+                                .button("✓ Apply Improved Description")
+                                .on_hover_text("Replace the current description with the AI-suggested improvement")
+                                .clicked()
+                            {
+                                self.pending_apply_ai_description = Some((req_id, desc.clone()));
+                            }
                             ui.add_space(10.0);
                         }
                         ui.label(egui::RichText::new("Rationale:").italics());
@@ -15624,6 +15678,9 @@ impl eframe::App for RequirementsApp {
         }
         if let Some((source_idx, target_idx)) = self.pending_relationship.take() {
             self.create_relationship_from_drop(source_idx, target_idx);
+        }
+        if let Some((req_id, new_description)) = self.pending_apply_ai_description.take() {
+            self.apply_ai_description(req_id, new_description);
         }
 
         // Handle drag release globally - check if primary button was just released
