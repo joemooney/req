@@ -1,0 +1,135 @@
+# Standard AI Prompts Template
+# This template provides a comprehensive set of AI prompt configurations
+# for requirements management projects. It includes:
+# - Support for questions/ideas that need to be transformed into formal requirements
+# - Markdown formatting requirements
+# - Type-specific guidance for Functional, NonFunctional, User, System, and ChangeRequest types
+
+ai_prompts:
+  global_context: |
+    This is a requirements management system for a software project. Requirements may be entered as:
+    - Formal requirements with clear "shall" or "must" statements
+    - Questions or ideas that need to be transformed into formal requirements
+    - Rough notes that need refinement
+
+    When evaluating or improving requirements:
+    - Descriptions should be formatted in Markdown
+    - Use bullet points for lists of criteria or acceptance conditions
+    - Use code blocks for any technical specifications
+    - Formal requirements should use "shall" or "must" language
+    - If the input is a question or idea, help transform it into one or more actionable requirements
+    - If the input doesn't represent a valid requirement and cannot be transformed, indicate it should be rejected or clarified
+
+  evaluation:
+    additional_instructions: |
+      When scoring quality, consider:
+      - If the description is a question/idea rather than a formal requirement, note this and suggest how to formalize it
+      - Check if the requirement is testable and verifiable
+      - Ensure the description uses proper Markdown formatting
+      - Flag requirements that are too vague or broad to implement
+      - Suggest splitting requirements that contain multiple distinct features
+
+      For issues, specifically flag:
+      - Missing acceptance criteria
+      - Ambiguous language (avoid "should", prefer "shall/must")
+      - Requirements that are actually questions needing answers
+      - Missing stakeholder or user context
+
+  improve:
+    additional_instructions: |
+      When improving descriptions:
+      - Convert the output to well-formatted Markdown
+      - If the input is a question or rough idea, transform it into a formal requirement statement
+      - Use "The system shall..." or "The user must be able to..." phrasing
+      - Add acceptance criteria as a Markdown bulleted list under "### Acceptance Criteria"
+      - Include any assumptions under "### Assumptions" if relevant
+      - If the requirement cannot be formalized (too vague, out of scope, or not a requirement), explain why and suggest next steps
+
+      Example format for improved description:
+      The system shall [action] [object] [condition].
+
+      ### Acceptance Criteria
+      - Criterion 1
+      - Criterion 2
+
+      ### Assumptions
+      - Assumption if applicable
+
+  generate_children:
+    additional_instructions: |
+      When generating child requirements:
+      - Each child requirement description should be in Markdown format
+      - Break down the parent into specific, implementable pieces
+      - If the parent is a question or idea, generate formal child requirements that answer/implement it
+      - Each child should be independently testable
+      - Include acceptance criteria for each child
+      - Suggest appropriate types (Functional, NonFunctional, System, User) for each child
+
+  type_prompts:
+    - type_name: Functional
+      evaluation_extra: |
+        Functional requirements should describe specific system behaviors.
+        - Use "The system shall..." format
+        - Include input/output specifications where applicable
+        - Describe the expected behavior, not implementation details
+        - Add acceptance criteria that can be verified through testing
+      improve_extra: |
+        Functional requirements should describe specific system behaviors.
+        - Use "The system shall..." format
+        - Include input/output specifications where applicable
+        - Describe the expected behavior, not implementation details
+        - Add acceptance criteria that can be verified through testing
+
+    - type_name: NonFunctional
+      evaluation_extra: |
+        Non-functional requirements should specify measurable quality attributes.
+        - Include specific metrics (response time < 200ms, 99.9% uptime, etc.)
+        - Reference industry standards where applicable (WCAG, ISO, etc.)
+        - Describe how compliance will be measured/verified
+        - Consider performance, security, scalability, accessibility, reliability
+      improve_extra: |
+        Non-functional requirements should specify measurable quality attributes.
+        - Include specific metrics (response time < 200ms, 99.9% uptime, etc.)
+        - Reference industry standards where applicable (WCAG, ISO, etc.)
+        - Describe how compliance will be measured/verified
+        - Consider performance, security, scalability, accessibility, reliability
+
+    - type_name: User
+      evaluation_extra: |
+        User requirements should focus on user needs and goals.
+        - Describe from the user's perspective ("As a user, I need to...")
+        - Include user context and motivation
+        - Focus on the "what" and "why", not the "how"
+        - Consider different user personas if applicable
+      improve_extra: |
+        User requirements should focus on user needs and goals.
+        - Describe from the user's perspective ("As a user, I need to...")
+        - Include user context and motivation
+        - Focus on the "what" and "why", not the "how"
+        - Consider different user personas if applicable
+
+    - type_name: System
+      evaluation_extra: |
+        System requirements should describe technical constraints and interfaces.
+        - Specify integration points and protocols
+        - Include data formats and API contracts where relevant
+        - Reference external systems and dependencies
+        - Use technical terminology appropriate for the domain
+      improve_extra: |
+        System requirements should describe technical constraints and interfaces.
+        - Specify integration points and protocols
+        - Include data formats and API contracts where relevant
+        - Reference external systems and dependencies
+        - Use technical terminology appropriate for the domain
+
+    - type_name: ChangeRequest
+      evaluation_extra: |
+        Change requests should clearly describe what needs to change and why.
+        - Identify the current behavior and desired behavior
+        - Include justification and impact assessment
+        - Reference related requirements that will be affected
+      improve_extra: |
+        Change requests should clearly describe what needs to change and why.
+        - Identify the current behavior and desired behavior
+        - Include justification and impact assessment
+        - Reference related requirements that will be affected
