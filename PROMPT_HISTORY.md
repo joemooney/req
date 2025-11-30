@@ -968,3 +968,23 @@ A chronological record of development sessions and changes made to the Requireme
     - Added link to Administrator's Guide for detailed information
 - **Result**: Comprehensive documentation for both end users and administrators managing requirements database deployments
 
+
+### Auto-Title from Description (Add Form)
+- **Prompt**: "For Add requirement, if not title is provided use first line of description as title. If we start typing in the description and the title is still empty type in both the title and description until a newline is entered (limit the title to 50 characters and the put elipsis."
+- **Solution**: Implemented auto-sync of description first line to title in Add mode
+- **Implementation** (in `aida-gui/src/app.rs`):
+  - Added two new state fields to `RequirementsApp`:
+    - `form_title_auto_synced: bool` - Tracks if auto-sync is active
+    - `form_last_description: String` - Tracks previous description to detect changes
+  - Updated `clear_form()` to reset auto-sync state when opening Add form
+  - Added title change detection after title TextEdit:
+    - If title is manually edited while in Add mode, auto-sync is disabled
+    - Uses comparison with `form_last_description` to distinguish manual edits from synced changes
+  - Added description-to-title sync logic after description TextEdit:
+    - Only active in Add mode when auto-sync is enabled
+    - Syncs first line of description (before newline) to title
+    - Truncates to 50 characters with "..." ellipsis if longer (47 chars + "...")
+    - Stops syncing once a newline is entered in description
+    - Uses character count (not byte count) for proper Unicode handling
+- **Result**: When adding a new requirement, typing in the description automatically populates the title until the user either edits the title manually or presses Enter in the description
+

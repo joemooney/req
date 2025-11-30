@@ -1910,6 +1910,8 @@ pub struct RequirementsApp {
     form_prefix: String, // Optional prefix override (uppercase letters only)
     form_parent_id: Option<Uuid>, // Parent to link new requirement to
     focus_description: bool, // Request focus on description field when entering Edit view
+    form_title_auto_synced: bool, // True if title is being auto-synced from description (Add mode only)
+    form_last_description: String, // Track previous description to detect changes
 
     // Messages
     message: Option<(String, bool)>, // (message, is_error)
@@ -2255,6 +2257,8 @@ impl RequirementsApp {
             form_prefix: String::new(),
             form_parent_id: None,
             focus_description: false,
+            form_title_auto_synced: true, // Start with auto-sync enabled for new requirements
+            form_last_description: String::new(),
             message: None,
             comment_author: String::new(),
             comment_content: String::new(),
@@ -2920,6 +2924,9 @@ impl RequirementsApp {
         self.form_tags.clear();
         self.form_prefix.clear();
         self.show_description_preview = false;
+        // Reset auto-sync state for Add mode (enabled by default for new requirements)
+        self.form_title_auto_synced = true;
+        self.form_last_description.clear();
 
         // If a requirement is selected, pre-populate parent relationship
         self.form_parent_id = self
@@ -11526,6 +11533,8 @@ fn main() {
 
         // Title field - full width with context menu
         ui.label("Title:");
+        // Track title before TextEdit to detect manual edits (for auto-sync feature)
+        let title_before = self.form_title.clone();
         let title_output = egui::TextEdit::singleline(&mut self.form_title)
             .desired_width(available_width)
             .show(ui);
@@ -11536,6 +11545,14 @@ fn main() {
             title_output.response.id,
             &mut self.last_text_selection,
         );
+        // Detect manual title edits - if user changes title while it has focus, disable auto-sync
+        // (In Add mode, we sync description's first line to title automatically)
+        if !is_edit && self.form_title_auto_synced && title_output.response.has_focus() {
+            // If title changed and it wasn't from our sync (description didn't change)
+            if self.form_title != title_before && self.form_description == self.form_last_description {
+                self.form_title_auto_synced = false;
+            }
+        }
         ui.add_space(8.0);
 
         // Metadata row - Type first (affects available statuses), then Status, Priority
@@ -12005,6 +12022,34 @@ fn main() {
                     );
                 }
             });
+
+        // Auto-sync description first line to title (Add mode only)
+        // Only sync while description has no newline (first line only)
+        if !is_edit && self.form_title_auto_synced {
+            // Check if description changed
+            if self.form_description != self.form_last_description {
+                // Get the first line (before any newline)
+                let first_line = self.form_description.lines().next().unwrap_or("");
+                let has_newline = self.form_description.contains('\n');
+
+                // Only sync if no newline has been entered yet
+                if !has_newline {
+                    // Truncate to 50 characters with ellipsis if needed
+                    self.form_title = if first_line.chars().count() > 50 {
+                        let truncated: String = first_line.chars().take(47).collect();
+                        format!("{}...", truncated)
+                    } else {
+                        first_line.to_string()
+                    };
+                }
+                // Once a newline is entered, stop auto-sync
+                if has_newline {
+                    self.form_title_auto_synced = false;
+                }
+                // Update the tracking variable
+                self.form_last_description = self.form_description.clone();
+            }
+        }
 
         ui.add_space(8.0);
         ui.separator();
