@@ -1761,6 +1761,110 @@ impl Requirement {
     }
 }
 
+// ============================================================================
+// AI Prompt Configuration
+// ============================================================================
+
+/// Configuration for a single AI prompt action (evaluation, duplicates, etc.)
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct AiActionPromptConfig {
+    /// Custom template to replace the default prompt entirely.
+    /// Use placeholders: {project_context}, {req_context}, {related_context}, {all_reqs}
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub custom_template: Option<String>,
+
+    /// Additional instructions appended to the default prompt.
+    /// Used when custom_template is None.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub additional_instructions: String,
+}
+
+/// Per-type AI prompt customization
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct AiTypePromptConfig {
+    /// The requirement type this config applies to (e.g., "Functional", "Epic", "Story")
+    pub type_name: String,
+
+    /// Extra instructions for evaluation prompts for this type
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub evaluation_extra: String,
+
+    /// Extra instructions for improve description prompts for this type
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub improve_extra: String,
+
+    /// Extra instructions for generate children prompts for this type
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub generate_children_extra: String,
+}
+
+/// Complete AI prompt configuration for a project
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct AiPromptConfig {
+    /// Global context prepended to ALL AI prompts.
+    /// Use this to describe your project's methodology, terminology, or special rules.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub global_context: String,
+
+    /// Configuration for the evaluation action
+    #[serde(default, skip_serializing_if = "is_default_action_config")]
+    pub evaluation: AiActionPromptConfig,
+
+    /// Configuration for the find duplicates action
+    #[serde(default, skip_serializing_if = "is_default_action_config")]
+    pub duplicates: AiActionPromptConfig,
+
+    /// Configuration for the suggest relationships action
+    #[serde(default, skip_serializing_if = "is_default_action_config")]
+    pub relationships: AiActionPromptConfig,
+
+    /// Configuration for the improve description action
+    #[serde(default, skip_serializing_if = "is_default_action_config")]
+    pub improve: AiActionPromptConfig,
+
+    /// Configuration for the generate children action
+    #[serde(default, skip_serializing_if = "is_default_action_config")]
+    pub generate_children: AiActionPromptConfig,
+
+    /// Per-type customization
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub type_prompts: Vec<AiTypePromptConfig>,
+}
+
+/// Helper function for skip_serializing_if
+fn is_default_action_config(config: &AiActionPromptConfig) -> bool {
+    config.custom_template.is_none() && config.additional_instructions.is_empty()
+}
+
+impl AiPromptConfig {
+    /// Get type-specific extra instructions for evaluation
+    pub fn get_type_evaluation_extra(&self, type_name: &str) -> Option<&str> {
+        self.type_prompts
+            .iter()
+            .find(|t| t.type_name == type_name)
+            .filter(|t| !t.evaluation_extra.is_empty())
+            .map(|t| t.evaluation_extra.as_str())
+    }
+
+    /// Get type-specific extra instructions for improve
+    pub fn get_type_improve_extra(&self, type_name: &str) -> Option<&str> {
+        self.type_prompts
+            .iter()
+            .find(|t| t.type_name == type_name)
+            .filter(|t| !t.improve_extra.is_empty())
+            .map(|t| t.improve_extra.as_str())
+    }
+
+    /// Get type-specific extra instructions for generate children
+    pub fn get_type_generate_children_extra(&self, type_name: &str) -> Option<&str> {
+        self.type_prompts
+            .iter()
+            .find(|t| t.type_name == type_name)
+            .filter(|t| !t.generate_children_extra.is_empty())
+            .map(|t| t.generate_children_extra.as_str())
+    }
+}
+
 /// Collection of all requirements
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RequirementsStore {
@@ -1830,6 +1934,21 @@ pub struct RequirementsStore {
     /// When true, users must select from the allowed_prefixes list
     #[serde(default)]
     pub restrict_prefixes: bool,
+
+    /// AI prompt configuration for customizing AI behavior
+    #[serde(default, skip_serializing_if = "is_default_ai_prompt_config")]
+    pub ai_prompts: AiPromptConfig,
+}
+
+/// Helper function for skip_serializing_if on AiPromptConfig
+fn is_default_ai_prompt_config(config: &AiPromptConfig) -> bool {
+    config.global_context.is_empty()
+        && is_default_action_config(&config.evaluation)
+        && is_default_action_config(&config.duplicates)
+        && is_default_action_config(&config.relationships)
+        && is_default_action_config(&config.improve)
+        && is_default_action_config(&config.generate_children)
+        && config.type_prompts.is_empty()
 }
 
 /// Default value for next_feature_number
@@ -1867,6 +1986,7 @@ impl RequirementsStore {
             type_definitions: default_type_definitions(),
             allowed_prefixes: Vec::new(),
             restrict_prefixes: false,
+            ai_prompts: AiPromptConfig::default(),
         }
     }
 

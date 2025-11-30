@@ -190,16 +190,49 @@ pub fn build_evaluation_prompt(req: &Requirement, store: &RequirementsStore) -> 
     let project_context = build_project_context(store);
     let req_context = requirement_to_context(req);
     let related_context = build_related_context(req, store);
+    let config = &store.ai_prompts;
+    let req_type = req.req_type.to_string();
+
+    // Check for custom template
+    if let Some(custom_template) = &config.evaluation.custom_template {
+        return custom_template
+            .replace("{project_context}", &project_context)
+            .replace("{req_context}", &req_context)
+            .replace("{related_context}", &related_context)
+            .replace("{global_context}", &config.global_context)
+            .replace("{req_type}", &req_type);
+    }
+
+    // Build with default template + customizations
+    let global_context_section = if !config.global_context.is_empty() {
+        format!("\n## Project-Specific Context\n{}\n", config.global_context)
+    } else {
+        String::new()
+    };
+
+    let additional_instructions = if !config.evaluation.additional_instructions.is_empty() {
+        format!(
+            "\n## Additional Instructions\n{}\n",
+            config.evaluation.additional_instructions
+        )
+    } else {
+        String::new()
+    };
+
+    let type_extra = config
+        .get_type_evaluation_extra(&req_type)
+        .map(|s| format!("\n## Type-Specific Instructions ({})\n{}\n", req_type, s))
+        .unwrap_or_default();
 
     format!(
         r#"You are an expert requirements analyst evaluating a software requirement for quality and completeness.
-
+{global_context_section}
 {project_context}
 
 {req_context}
 
 {related_context}
-
+{additional_instructions}{type_extra}
 ## Task
 Evaluate this requirement and provide a structured assessment. Consider:
 1. Clarity: Is the requirement clearly stated and unambiguous?
@@ -238,16 +271,44 @@ pub fn build_duplicates_prompt(req: &Requirement, store: &RequirementsStore) -> 
     let project_context = build_project_context(store);
     let req_context = requirement_to_context(req);
     let all_reqs = build_requirements_summary(store, req.id);
+    let config = &store.ai_prompts;
+    let req_type = req.req_type.to_string();
+
+    // Check for custom template
+    if let Some(custom_template) = &config.duplicates.custom_template {
+        return custom_template
+            .replace("{project_context}", &project_context)
+            .replace("{req_context}", &req_context)
+            .replace("{all_reqs}", &all_reqs)
+            .replace("{global_context}", &config.global_context)
+            .replace("{req_type}", &req_type);
+    }
+
+    // Build with default template + customizations
+    let global_context_section = if !config.global_context.is_empty() {
+        format!("\n## Project-Specific Context\n{}\n", config.global_context)
+    } else {
+        String::new()
+    };
+
+    let additional_instructions = if !config.duplicates.additional_instructions.is_empty() {
+        format!(
+            "\n## Additional Instructions\n{}\n",
+            config.duplicates.additional_instructions
+        )
+    } else {
+        String::new()
+    };
 
     format!(
         r#"You are an expert requirements analyst identifying potential duplicate or overlapping requirements.
-
+{global_context_section}
 {project_context}
 
 {req_context}
 
 {all_reqs}
-
+{additional_instructions}
 ## Task
 Analyze the current requirement and compare it against all other requirements to find:
 1. Exact duplicates (same functionality described differently)
@@ -282,6 +343,8 @@ pub fn build_relationships_prompt(req: &Requirement, store: &RequirementsStore) 
     let project_context = build_project_context(store);
     let req_context = requirement_to_context(req);
     let all_reqs = build_requirements_summary(store, req.id);
+    let config = &store.ai_prompts;
+    let req_type = req.req_type.to_string();
 
     // Get relationship type definitions
     let rel_types: Vec<String> = store
@@ -296,9 +359,36 @@ pub fn build_relationships_prompt(req: &Requirement, store: &RequirementsStore) 
         rel_types.join("\n- ")
     };
 
+    // Check for custom template
+    if let Some(custom_template) = &config.relationships.custom_template {
+        return custom_template
+            .replace("{project_context}", &project_context)
+            .replace("{req_context}", &req_context)
+            .replace("{all_reqs}", &all_reqs)
+            .replace("{rel_types}", &rel_types_str)
+            .replace("{global_context}", &config.global_context)
+            .replace("{req_type}", &req_type);
+    }
+
+    // Build with default template + customizations
+    let global_context_section = if !config.global_context.is_empty() {
+        format!("\n## Project-Specific Context\n{}\n", config.global_context)
+    } else {
+        String::new()
+    };
+
+    let additional_instructions = if !config.relationships.additional_instructions.is_empty() {
+        format!(
+            "\n## Additional Instructions\n{}\n",
+            config.relationships.additional_instructions
+        )
+    } else {
+        String::new()
+    };
+
     format!(
         r#"You are an expert requirements analyst identifying missing relationships between requirements.
-
+{global_context_section}
 {project_context}
 
 {req_context}
@@ -307,7 +397,7 @@ pub fn build_relationships_prompt(req: &Requirement, store: &RequirementsStore) 
 
 ## Available Relationship Types
 - {rel_types_str}
-
+{additional_instructions}
 ## Task
 Analyze the current requirement and suggest relationships that should exist but don't:
 1. Dependencies (what must be done first)
@@ -343,6 +433,8 @@ pub fn build_improve_prompt(req: &Requirement, store: &RequirementsStore) -> Str
     let project_context = build_project_context(store);
     let req_context = requirement_to_context(req);
     let related_context = build_related_context(req, store);
+    let config = &store.ai_prompts;
+    let req_type = req.req_type.to_string();
 
     // Find examples of well-written requirements (completed ones with descriptions)
     let examples: Vec<String> = store
@@ -374,9 +466,41 @@ pub fn build_improve_prompt(req: &Requirement, store: &RequirementsStore) -> Str
         )
     };
 
+    // Check for custom template
+    if let Some(custom_template) = &config.improve.custom_template {
+        return custom_template
+            .replace("{project_context}", &project_context)
+            .replace("{req_context}", &req_context)
+            .replace("{related_context}", &related_context)
+            .replace("{examples}", &examples_str)
+            .replace("{global_context}", &config.global_context)
+            .replace("{req_type}", &req_type);
+    }
+
+    // Build with default template + customizations
+    let global_context_section = if !config.global_context.is_empty() {
+        format!("\n## Project-Specific Context\n{}\n", config.global_context)
+    } else {
+        String::new()
+    };
+
+    let additional_instructions = if !config.improve.additional_instructions.is_empty() {
+        format!(
+            "\n## Additional Instructions\n{}\n",
+            config.improve.additional_instructions
+        )
+    } else {
+        String::new()
+    };
+
+    let type_extra = config
+        .get_type_improve_extra(&req_type)
+        .map(|s| format!("\n## Type-Specific Instructions ({})\n{}\n", req_type, s))
+        .unwrap_or_default();
+
     format!(
         r#"You are an expert requirements analyst improving a requirement's description for clarity and completeness.
-
+{global_context_section}
 {project_context}
 
 {req_context}
@@ -384,7 +508,7 @@ pub fn build_improve_prompt(req: &Requirement, store: &RequirementsStore) -> Str
 {related_context}
 
 {examples_str}
-
+{additional_instructions}{type_extra}
 ## Task
 Improve the requirement's description to be:
 1. Clear and unambiguous
@@ -406,7 +530,7 @@ Respond ONLY with valid JSON in this exact format:
 ```
 
 Provide your improved version now:"#,
-        req.req_type
+        req_type
     )
 }
 
@@ -414,6 +538,8 @@ Provide your improved version now:"#,
 pub fn build_generate_children_prompt(req: &Requirement, store: &RequirementsStore) -> String {
     let project_context = build_project_context(store);
     let req_context = requirement_to_context(req);
+    let config = &store.ai_prompts;
+    let req_type = req.req_type.to_string();
 
     // Find existing children
     let existing_children: Vec<String> = req
@@ -443,9 +569,41 @@ pub fn build_generate_children_prompt(req: &Requirement, store: &RequirementsSto
         types.join(", ")
     };
 
+    // Check for custom template
+    if let Some(custom_template) = &config.generate_children.custom_template {
+        return custom_template
+            .replace("{project_context}", &project_context)
+            .replace("{req_context}", &req_context)
+            .replace("{existing_children}", &existing_str)
+            .replace("{available_types}", &types_str)
+            .replace("{global_context}", &config.global_context)
+            .replace("{req_type}", &req_type);
+    }
+
+    // Build with default template + customizations
+    let global_context_section = if !config.global_context.is_empty() {
+        format!("\n## Project-Specific Context\n{}\n", config.global_context)
+    } else {
+        String::new()
+    };
+
+    let additional_instructions = if !config.generate_children.additional_instructions.is_empty() {
+        format!(
+            "\n## Additional Instructions\n{}\n",
+            config.generate_children.additional_instructions
+        )
+    } else {
+        String::new()
+    };
+
+    let type_extra = config
+        .get_type_generate_children_extra(&req_type)
+        .map(|s| format!("\n## Type-Specific Instructions ({})\n{}\n", req_type, s))
+        .unwrap_or_default();
+
     format!(
         r#"You are an expert requirements analyst breaking down a high-level requirement into implementable sub-requirements.
-
+{global_context_section}
 {project_context}
 
 {req_context}
@@ -455,7 +613,7 @@ pub fn build_generate_children_prompt(req: &Requirement, store: &RequirementsSto
 
 ## Available Requirement Types
 {types_str}
-
+{additional_instructions}{type_extra}
 ## Task
 Break down this requirement into smaller, implementable sub-requirements. Consider:
 1. Logical decomposition of functionality
@@ -490,25 +648,20 @@ mod tests {
     use crate::models::{RequirementPriority, RequirementStatus, RequirementType};
 
     fn create_test_req() -> Requirement {
-        Requirement {
-            id: uuid::Uuid::new_v4(),
-            spec_id: Some("FR-001".to_string()),
-            title: "User Login".to_string(),
-            description: "Users should be able to log in".to_string(),
-            status: RequirementStatus::Draft,
-            priority: RequirementPriority::High,
-            req_type: RequirementType::Functional,
-            feature: "Authentication".to_string(),
-            ..Default::default()
-        }
+        let mut req = Requirement::new("User Login".to_string(), "Users should be able to log in".to_string());
+        req.spec_id = Some("FR-001".to_string());
+        req.status = RequirementStatus::Draft;
+        req.priority = RequirementPriority::High;
+        req.req_type = RequirementType::Functional;
+        req.feature = "Authentication".to_string();
+        req
     }
 
     fn create_test_store() -> RequirementsStore {
-        RequirementsStore {
-            name: "test-project".to_string(),
-            title: Some("Test Project".to_string()),
-            ..Default::default()
-        }
+        let mut store = RequirementsStore::default();
+        store.name = "test-project".to_string();
+        store.title = "Test Project".to_string();
+        store
     }
 
     #[test]

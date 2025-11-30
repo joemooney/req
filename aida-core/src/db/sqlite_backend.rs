@@ -525,6 +525,7 @@ impl DatabaseBackend for SqliteBackend {
             type_definitions,
             allowed_prefixes,
             restrict_prefixes,
+            ai_prompts: Default::default(),
         })
     }
 

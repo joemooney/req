@@ -5650,16 +5650,14 @@ requirements:
 - id: 9ace4d56-9a8d-47cd-8779-4e6963d303f3
   spec_id: FR-0128
   title: Support "Folder" status.
-  description: |-
-    Support "Folder" status.
-    Rationale: although counterintuitive, status is a highly informative field. But in a hierarchy of requirements, there are some container requirements that do not need to be considered in terms of status and an icon indicating that they are only organizational is useful.
-  status: Draft
+  description: "Support \"Folder\" status.\nRationale: although counterintuitive, status is a highly informative field and I use it as an icon in the Requirements List view. But in a hierarchy of requirements, there are some container requirements that do not need to be considered in terms of status and a folder icon indicating that they are only organizational would useful. Such a status is easily filtered for reports and metrics etc. but makes tool use much easier. "
+  status: Approved
   priority: Medium
   owner: ''
   feature: 61-Uncategorized
   created_at: 2025-11-30T02:10:08.382814924Z
   created_by: Unknown User
-  modified_at: 2025-11-30T02:10:08.382814924Z
+  modified_at: 2025-11-30T19:52:41.704043356Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -5668,6 +5666,23 @@ requirements:
     target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
     created_at: 2025-11-30T02:10:08.382830563Z
     created_by: Unknown User
+  history:
+  - id: f9bb2536-84d6-42a1-8241-f1ce9bc81dfa
+    author: Unknown User
+    timestamp: 2025-11-30T19:48:09.406691794Z
+    changes:
+    - field_name: description
+      old_value: |-
+        Support "Folder" status.
+        Rationale: although counterintuitive, status is a highly informative field. But in a hierarchy of requirements, there are some container requirements that do not need to be considered in terms of status and an icon indicating that they are only organizational is useful.
+      new_value: "Support \"Folder\" status.\nRationale: although counterintuitive, status is a highly informative field and I use it as an icon in the Requirements List view. But in a hierarchy of requirements, there are some container requirements that do not need to be considered in terms of status and a folder icon indicating that they are only organizational would useful. Such a status is easily filtered for reports and metrics etc. but makes tool use much easier. "
+  - id: 7408728f-7ec4-40f4-9adf-2d3fb6e555f1
+    author: ''
+    timestamp: 2025-11-30T19:52:41.704060388Z
+    changes:
+    - field_name: status
+      old_value: Draft
+      new_value: Approved
 - id: 6111bb0c-9309-4fa5-ad73-9106f46b49e9
   spec_id: FR-0129
   title: Status/Priority per type
@@ -5871,6 +5886,10 @@ requirements:
   - rel_type: Child
     target_id: ae8231e7-3f3b-4ab4-8b90-d1827de04eaa
     created_at: 2025-11-30T18:56:03.086460517Z
+    created_by: Unknown User
+  - rel_type: Child
+    target_id: ca771251-b95b-4c6e-bb2f-64f0be7153ff
+    created_at: 2025-11-30T19:39:37.373448419Z
     created_by: Unknown User
 - id: 8fce7d22-6ef3-44da-8284-c7af30ca8ea2
   spec_id: FR-0135
@@ -6123,17 +6142,14 @@ requirements:
 - id: d61fa9f5-9f5f-4390-b7fb-32c1759ddd50
   spec_id: FR-0141
   title: AI Prompts in settings
-  description: |-
-    AI Prompts in settings
-
-    Do you think we should store the prompts we use for AI in the settings so that we can customize. I assume they are hardcoded right now? For example, if this was a requirement, then the AI evaluation prompt should know that the description may take the form of a question intended for the AI Evalation to ponder and translate into a formal requirement or a suggestions that this is a dumb idea and should be rejected (maybe more politely stated).
+  description: "AI Prompts in settings\n\nDo you think we should store the prompts we use for AI in the settings so that we can customize. I assume they are hardcoded right now? For example, if this was a requirement, then the AI evaluation prompt should know that the description may take the form of a question intended for the AI Evalation to ponder and translate into a formal requirement or a suggestions that this is a dumb idea and should be rejected (maybe more politely stated). We may have different prompts for different requirement types and maybe some general text that applies to all types.\n\nCurrent State\n\n  The prompts in prompts.rs are static and hardcoded. They're well-structured but not customizable.\n\n  Proposed Design for Customizable AI Prompts\n\n  Storage Location Options:\n\n  1. Project settings (requirements.yaml) - Per-project customization\n  2. User settings (global ~/.config/aida/settings.yaml) - User defaults\n  3. Both - Project-level overrides user-level defaults\n\n  Prompt Structure:\n\n  ai_prompts:\n\n# General context prepended to ALL prompts\n    global_context: |\n      This project follows agile methodology. Requirements may be written as\n      questions or rough ideas that need refinement. When evaluating:\n      - Questions in descriptions should be interpreted as requests for AI \n        to formalize into proper requirements\n      - Vague ideas should be clarified, not rejected\n      - Suggest \"Reject\" only for truly unfeasible or duplicate requirements\n\n# Per-action prompts (evaluation, duplicates, relationships, improve, generate_children)\n    evaluation:\n      # Override the entire prompt template (use {project_context}, {req_context}, etc. placeholders)\n      template: null  # null = use default\n\n      # Or just add extra instructions to the default prompt\n      additional_instructions: |\n        Consider that descriptions may be informal questions or brainstorming \n        notes rather than formal requirements. Help formalize them.\n\n# Per-type customization\n   type_prompts:\n      Functional:\n        evaluation_extra: |\n          For functional requirements, ensure there are clear acceptance criteria.\n      Story:\n        evaluation_extra: |\n          User stories should follow \"As a [user], I want [feature], so that [benefit]\" format.\n      Epic:\n        evaluation_extra: |\n          Epics are high-level and should be decomposable into Stories/Tasks.\n          Focus on business value rather than implementation details.\n\n# Key Features:\n\n  1. Global context - Applied to all prompts (your project philosophy)\n  2. Per-action customization - Override or extend each prompt type\n  3. Per-type customization - Different instructions for Epics vs Stories vs Tasks\n  4. Inheritance - User settings → Project settings → Type-specific → Default\n\n# Benefits:\n\n  - Descriptions can be informal questions/ideas for AI to formalize\n  - AI can recommend \"Reject\" status for bad ideas politely\n  - Different requirement types get appropriate evaluation criteria\n  - Teams can encode their methodology (Agile, Waterfall, SAFe, etc.)\n\n  Would you like me to implement this? It would involve:\n  1. Adding prompt configuration to RequirementsStore in models\n  2. Modifying prompts.rs to use configurable templates\n  3. Adding a \"Prompts\" tab in Settings UI\n  4. Default prompts remain if no customization is provided\n"
   status: Draft
   priority: Medium
   owner: ''
   feature: 65-Uncategorized
   created_at: 2025-11-30T19:15:20.316591111Z
   created_by: Unknown User
-  modified_at: 2025-11-30T19:37:26.773670790Z
+  modified_at: 2025-11-30T19:42:54.699401560Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -6156,6 +6172,29 @@ requirements:
         AI Prompts in settings
 
         Do you think we should store the prompts we use for AI in the settings so that we can customize. I assume they are hardcoded right now? For example, if this was a requirement, then the AI evaluation prompt should know that the description may take the form of a question intended for the AI Evalation to ponder and translate into a formal requirement or a suggestions that this is a dumb idea and should be rejected (maybe more politely stated).
+  - id: 254cffbf-da68-434e-b2b8-041cbd42de81
+    author: Unknown User
+    timestamp: 2025-11-30T19:38:31.807471237Z
+    changes:
+    - field_name: description
+      old_value: |-
+        AI Prompts in settings
+
+        Do you think we should store the prompts we use for AI in the settings so that we can customize. I assume they are hardcoded right now? For example, if this was a requirement, then the AI evaluation prompt should know that the description may take the form of a question intended for the AI Evalation to ponder and translate into a formal requirement or a suggestions that this is a dumb idea and should be rejected (maybe more politely stated).
+      new_value: |-
+        AI Prompts in settings
+
+        Do you think we should store the prompts we use for AI in the settings so that we can customize. I assume they are hardcoded right now? For example, if this was a requirement, then the AI evaluation prompt should know that the description may take the form of a question intended for the AI Evalation to ponder and translate into a formal requirement or a suggestions that this is a dumb idea and should be rejected (maybe more politely stated). We may have different prompts for different requirement types and maybe some general text that applies to all types.
+  - id: 9811bb98-7d94-4bfe-bb70-ba51b771b8aa
+    author: Unknown User
+    timestamp: 2025-11-30T19:42:54.699399289Z
+    changes:
+    - field_name: description
+      old_value: |-
+        AI Prompts in settings
+
+        Do you think we should store the prompts we use for AI in the settings so that we can customize. I assume they are hardcoded right now? For example, if this was a requirement, then the AI evaluation prompt should know that the description may take the form of a question intended for the AI Evalation to ponder and translate into a formal requirement or a suggestions that this is a dumb idea and should be rejected (maybe more politely stated). We may have different prompts for different requirement types and maybe some general text that applies to all types.
+      new_value: "AI Prompts in settings\n\nDo you think we should store the prompts we use for AI in the settings so that we can customize. I assume they are hardcoded right now? For example, if this was a requirement, then the AI evaluation prompt should know that the description may take the form of a question intended for the AI Evalation to ponder and translate into a formal requirement or a suggestions that this is a dumb idea and should be rejected (maybe more politely stated). We may have different prompts for different requirement types and maybe some general text that applies to all types.\n\nCurrent State\n\n  The prompts in prompts.rs are static and hardcoded. They're well-structured but not customizable.\n\n  Proposed Design for Customizable AI Prompts\n\n  Storage Location Options:\n\n  1. Project settings (requirements.yaml) - Per-project customization\n  2. User settings (global ~/.config/aida/settings.yaml) - User defaults\n  3. Both - Project-level overrides user-level defaults\n\n  Prompt Structure:\n\n  ai_prompts:\n\n# General context prepended to ALL prompts\n    global_context: |\n      This project follows agile methodology. Requirements may be written as\n      questions or rough ideas that need refinement. When evaluating:\n      - Questions in descriptions should be interpreted as requests for AI \n        to formalize into proper requirements\n      - Vague ideas should be clarified, not rejected\n      - Suggest \"Reject\" only for truly unfeasible or duplicate requirements\n\n# Per-action prompts (evaluation, duplicates, relationships, improve, generate_children)\n    evaluation:\n      # Override the entire prompt template (use {project_context}, {req_context}, etc. placeholders)\n      template: null  # null = use default\n\n      # Or just add extra instructions to the default prompt\n      additional_instructions: |\n        Consider that descriptions may be informal questions or brainstorming \n        notes rather than formal requirements. Help formalize them.\n\n# Per-type customization\n   type_prompts:\n      Functional:\n        evaluation_extra: |\n          For functional requirements, ensure there are clear acceptance criteria.\n      Story:\n        evaluation_extra: |\n          User stories should follow \"As a [user], I want [feature], so that [benefit]\" format.\n      Epic:\n        evaluation_extra: |\n          Epics are high-level and should be decomposable into Stories/Tasks.\n          Focus on business value rather than implementation details.\n\n# Key Features:\n\n  1. Global context - Applied to all prompts (your project philosophy)\n  2. Per-action customization - Override or extend each prompt type\n  3. Per-type customization - Different instructions for Epics vs Stories vs Tasks\n  4. Inheritance - User settings → Project settings → Type-specific → Default\n\n# Benefits:\n\n  - Descriptions can be informal questions/ideas for AI to formalize\n  - AI can recommend \"Reject\" status for bad ideas politely\n  - Different requirement types get appropriate evaluation criteria\n  - Teams can encode their methodology (Agile, Waterfall, SAFe, etc.)\n\n  Would you like me to implement this? It would involve:\n  1. Adding prompt configuration to RequirementsStore in models\n  2. Modifying prompts.rs to use configurable templates\n  3. Adding a \"Prompts\" tab in Settings UI\n  4. Default prompts remain if no customization is provided\n"
 - id: 652d7124-8cf8-422b-875c-0f9784eeb3df
   spec_id: FR-0142
   title: AI Evaluation Apply button to replace with suggested description
@@ -6165,7 +6204,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 66-Uncategorized
   created_at: 2025-11-30T19:21:48.409793438Z
   created_by: Unknown User
   modified_at: 2025-11-30T19:21:48.409793438Z
@@ -6176,6 +6215,46 @@ requirements:
   - rel_type: Parent
     target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
     created_at: 2025-11-30T19:21:48.409827457Z
+    created_by: Unknown User
+- id: ca771251-b95b-4c6e-bb2f-64f0be7153ff
+  spec_id: FR-0143
+  title: Apply button for suggested improved description
+  description: |
+    Apply button for suggested improved description
+
+    Apply button for AI suggested description improvements. Here's a summary of the changes:
+
+      Feature implemented:
+      - Added an "✓ Apply Improved Description" button in the AI Evaluation tab's Suggested Improvements section
+      - When clicked, it replaces the current requirement description with the AI-suggested improvement
+      - The change is tracked in the requirement's history (including old and new values, author, and timestamp)
+      - A toast notification confirms the action: "Applied AI improvement to [spec_id]"
+
+      Technical changes in aida-gui/src/app.rs:
+      1. Added pending_apply_ai_description: Option<(Uuid, String)> field to the app struct for deferred mutation
+      2. Modified show_ai_tab() to accept req_id: Uuid parameter and updated both call sites
+      3. Added the Apply button in the suggested improvements section (lines 11303-11311)
+      4. Added handler for pending_apply_ai_description in the update loop (line 15647)
+      5. Added apply_ai_description() method (lines 8128-8168) that:
+        - Updates the description directly
+        - Updates modified_at timestamp
+        - Adds a HistoryEntry with the field change
+        - Saves the store
+        - Shows a toast notification
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 66-Uncategorized
+  created_at: 2025-11-30T19:39:37.373409767Z
+  created_by: Unknown User
+  modified_at: 2025-11-30T19:39:37.373409767Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 4de3b4f0-b157-4d50-8549-e98153d2324d
+    created_at: 2025-11-30T19:39:37.373448419Z
     created_by: Unknown User
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
@@ -6229,8 +6308,8 @@ id_config:
     prefix: CR
     description: Change requests for modifications to existing functionality
 features: []
-next_feature_number: 66
-next_spec_number: 143
+next_feature_number: 67
+next_spec_number: 144
 prefix_counters: {}
 relationship_definitions:
 - name: parent

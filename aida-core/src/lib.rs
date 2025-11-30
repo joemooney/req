@@ -14,6 +14,10 @@ pub use ai::{
 pub use models::{
     default_reaction_definitions,
     default_type_definitions,
+    // AI prompt configuration types
+    AiActionPromptConfig,
+    AiPromptConfig,
+    AiTypePromptConfig,
     Cardinality,
     Comment,
     // Comment reaction types

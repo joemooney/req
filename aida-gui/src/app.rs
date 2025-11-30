@@ -1577,6 +1577,7 @@ enum SettingsTab {
     TypeDefinitions,
     Users,
     Database,
+    AiPrompts,
 }
 
 #[derive(Default, PartialEq, Clone, Copy)]
@@ -4048,6 +4049,7 @@ impl RequirementsApp {
                         "📝 Types",
                     );
                     ui.selectable_value(&mut self.settings_tab, SettingsTab::Users, "👥 Users");
+                    ui.selectable_value(&mut self.settings_tab, SettingsTab::AiPrompts, "🤖 AI");
                     ui.selectable_value(&mut self.settings_tab, SettingsTab::Database, "🗄 Db");
                 });
 
@@ -4082,6 +4084,9 @@ impl RequirementsApp {
                     }
                     SettingsTab::Database => {
                         self.show_settings_database_tab(ui);
+                    }
+                    SettingsTab::AiPrompts => {
+                        self.show_settings_ai_prompts_tab(ui);
                     }
                 }
 
@@ -6743,6 +6748,205 @@ impl RequirementsApp {
 
                     ui.label("Database Path:");
                     ui.label(self.storage.path().display().to_string());
+                    ui.end_row();
+                });
+        });
+    }
+
+    /// Show the AI Prompts settings tab
+    fn show_settings_ai_prompts_tab(&mut self, ui: &mut egui::Ui) {
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            ui.heading("AI Prompt Configuration");
+            ui.add_space(5.0);
+            ui.label("Customize the prompts used by AI features. Changes are auto-saved.");
+            ui.add_space(10.0);
+
+            // Global Context Section
+            ui.heading("Global Context");
+            ui.add_space(5.0);
+            ui.label("This context is included in ALL AI prompts. Use it to describe your project's domain, terminology, or special requirements.");
+            ui.add_space(5.0);
+            let response = ui.add(
+                egui::TextEdit::multiline(&mut self.store.ai_prompts.global_context)
+                    .desired_width(ui.available_width() - 20.0)
+                    .desired_rows(4)
+                    .hint_text("Example: This is a medical device project following FDA regulations. Requirements should be traceable to risk analyses..."),
+            );
+            if response.changed() {
+                self.save();
+            }
+
+            ui.add_space(15.0);
+            ui.separator();
+            ui.add_space(10.0);
+
+            // Evaluation Prompt Section
+            ui.heading("Evaluation Prompt");
+            ui.add_space(5.0);
+            ui.label("Customize how AI evaluates requirements for quality and completeness.");
+            ui.add_space(5.0);
+
+            ui.label("Additional Instructions:");
+            let response = ui.add(
+                egui::TextEdit::multiline(&mut self.store.ai_prompts.evaluation.additional_instructions)
+                    .desired_width(ui.available_width() - 20.0)
+                    .desired_rows(3)
+                    .hint_text("Example: Requirements descriptions may be questions or ideas. Translate these into formal requirements..."),
+            );
+            if response.changed() {
+                self.save();
+            }
+
+            ui.add_space(15.0);
+            ui.separator();
+            ui.add_space(10.0);
+
+            // Improve Description Prompt Section
+            ui.heading("Improve Description Prompt");
+            ui.add_space(5.0);
+            ui.label("Customize how AI improves requirement descriptions.");
+            ui.add_space(5.0);
+
+            ui.label("Additional Instructions:");
+            let response = ui.add(
+                egui::TextEdit::multiline(&mut self.store.ai_prompts.improve.additional_instructions)
+                    .desired_width(ui.available_width() - 20.0)
+                    .desired_rows(3)
+                    .hint_text("Example: Preserve technical terminology. Format acceptance criteria as bullet points..."),
+            );
+            if response.changed() {
+                self.save();
+            }
+
+            ui.add_space(15.0);
+            ui.separator();
+            ui.add_space(10.0);
+
+            // Generate Children Prompt Section
+            ui.heading("Generate Children Prompt");
+            ui.add_space(5.0);
+            ui.label("Customize how AI breaks down requirements into sub-requirements.");
+            ui.add_space(5.0);
+
+            ui.label("Additional Instructions:");
+            let response = ui.add(
+                egui::TextEdit::multiline(&mut self.store.ai_prompts.generate_children.additional_instructions)
+                    .desired_width(ui.available_width() - 20.0)
+                    .desired_rows(3)
+                    .hint_text("Example: Consider regulatory compliance requirements. Separate UI, backend, and testing tasks..."),
+            );
+            if response.changed() {
+                self.save();
+            }
+
+            ui.add_space(15.0);
+            ui.separator();
+            ui.add_space(10.0);
+
+            // Per-Type Customization Section
+            ui.heading("Type-Specific Instructions");
+            ui.add_space(5.0);
+            ui.label("Add extra instructions for specific requirement types.");
+            ui.add_space(10.0);
+
+            // Show existing type prompts
+            let type_names: Vec<String> = self.store.type_definitions.iter().map(|t| t.name.clone()).collect();
+            let existing_types: Vec<String> = self.store.ai_prompts.type_prompts.iter().map(|t| t.type_name.clone()).collect();
+
+            // Add button for new type prompt
+            ui.horizontal(|ui| {
+                ui.label("Add type-specific prompt for:");
+                for type_name in &type_names {
+                    if !existing_types.contains(type_name) {
+                        if ui.button(type_name).clicked() {
+                            self.store.ai_prompts.type_prompts.push(aida_core::AiTypePromptConfig {
+                                type_name: type_name.clone(),
+                                evaluation_extra: String::new(),
+                                improve_extra: String::new(),
+                                generate_children_extra: String::new(),
+                            });
+                            self.save();
+                        }
+                    }
+                }
+            });
+
+            ui.add_space(10.0);
+
+            // Show existing type-specific prompts
+            let mut to_remove: Option<usize> = None;
+            for (idx, type_prompt) in self.store.ai_prompts.type_prompts.iter_mut().enumerate() {
+                ui.group(|ui| {
+                    ui.horizontal(|ui| {
+                        ui.strong(&type_prompt.type_name);
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            if ui.small_button("🗑 Remove").clicked() {
+                                to_remove = Some(idx);
+                            }
+                        });
+                    });
+
+                    ui.add_space(5.0);
+                    ui.label("Evaluation extra:");
+                    if ui.add(
+                        egui::TextEdit::multiline(&mut type_prompt.evaluation_extra)
+                            .desired_width(ui.available_width() - 20.0)
+                            .desired_rows(2)
+                            .hint_text("Extra instructions for evaluating this type..."),
+                    ).changed() {
+                        // Mark for save - handled below
+                    }
+
+                    ui.add_space(5.0);
+                    ui.label("Improve extra:");
+                    if ui.add(
+                        egui::TextEdit::multiline(&mut type_prompt.improve_extra)
+                            .desired_width(ui.available_width() - 20.0)
+                            .desired_rows(2)
+                            .hint_text("Extra instructions for improving this type..."),
+                    ).changed() {
+                        // Mark for save - handled below
+                    }
+                });
+                ui.add_space(5.0);
+            }
+
+            // Handle removal
+            if let Some(idx) = to_remove {
+                self.store.ai_prompts.type_prompts.remove(idx);
+                self.save();
+            }
+
+            ui.add_space(15.0);
+            ui.separator();
+            ui.add_space(10.0);
+
+            // Template placeholders reference
+            ui.heading("Template Placeholders");
+            ui.add_space(5.0);
+            ui.label("If using custom templates, these placeholders are available:");
+            egui::Grid::new("ai_placeholders_grid")
+                .num_columns(2)
+                .spacing([20.0, 5.0])
+                .show(ui, |ui| {
+                    ui.code("{global_context}");
+                    ui.label("Your global context text");
+                    ui.end_row();
+
+                    ui.code("{project_context}");
+                    ui.label("Auto-generated project info");
+                    ui.end_row();
+
+                    ui.code("{req_context}");
+                    ui.label("Current requirement details");
+                    ui.end_row();
+
+                    ui.code("{related_context}");
+                    ui.label("Related requirements info");
+                    ui.end_row();
+
+                    ui.code("{req_type}");
+                    ui.label("Current requirement type");
                     ui.end_row();
                 });
         });
