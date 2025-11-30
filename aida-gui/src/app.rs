@@ -1595,6 +1595,57 @@ enum QuickChangeField {
     Priority,
 }
 
+/// AI action types - what kind of AI analysis to perform
+#[derive(Debug, Clone)]
+enum AiAction {
+    /// Evaluate quality of a requirement
+    Evaluate(Uuid),
+    /// Find potential duplicate requirements
+    FindDuplicates(Uuid),
+    /// Suggest missing relationships
+    SuggestRelationships(Uuid),
+    /// Improve requirement description
+    ImproveDescription(Uuid),
+    /// Generate child requirements
+    GenerateChildren(Uuid),
+}
+
+impl AiAction {
+    fn name(&self) -> &'static str {
+        match self {
+            AiAction::Evaluate(_) => "Evaluate",
+            AiAction::FindDuplicates(_) => "Find Duplicates",
+            AiAction::SuggestRelationships(_) => "Suggest Relationships",
+            AiAction::ImproveDescription(_) => "Improve Description",
+            AiAction::GenerateChildren(_) => "Generate Children",
+        }
+    }
+}
+
+/// AI result - stores the outcome of an AI action
+#[derive(Debug, Clone)]
+struct AiResult {
+    action_name: String,
+    success: bool,
+    message: String,
+    #[allow(dead_code)]
+    details: Option<String>,
+}
+
+impl AiResult {
+    fn placeholder(action: &AiAction) -> Self {
+        Self {
+            action_name: action.name().to_string(),
+            success: true,
+            message: format!(
+                "AI {} is not yet implemented. See docs/AI_INTEGRATION_DESIGN.md for the roadmap.",
+                action.name()
+            ),
+            details: None,
+        }
+    }
+}
+
 /// What fields to include in text search
 #[derive(Default, PartialEq, Clone, Copy)]
 struct SearchScope {
@@ -2172,6 +2223,12 @@ pub struct RequirementsApp {
     original_form_tags: String,
     original_form_prefix: String,
     original_form_custom_fields: HashMap<String, String>,
+
+    // AI integration state
+    ai_pending_action: Option<AiAction>,          // Currently running AI action
+    ai_last_result: Option<AiResult>,             // Result from last AI action
+    show_ai_results_panel: bool,                  // Whether to show AI results panel
+    ai_loading: bool,                             // True while AI request is in progress
 }
 
 /// Stores text selection state for context menu operations.
@@ -2474,6 +2531,12 @@ impl RequirementsApp {
             original_form_tags: String::new(),
             original_form_prefix: String::new(),
             original_form_custom_fields: HashMap::new(),
+
+            // AI integration state
+            ai_pending_action: None,
+            ai_last_result: None,
+            show_ai_results_panel: false,
+            ai_loading: false,
         }
     }
 
@@ -10300,6 +10363,7 @@ impl RequirementsApp {
                 // Track actions from Quick Actions menu
                 let mut new_priority: Option<RequirementPriority> = None;
                 let mut new_status: Option<RequirementStatus> = None;
+                let mut trigger_ai_action: Option<AiAction> = None;
                 let current_priority = req.priority.clone();
                 let current_status = req.status.clone();
 
@@ -10399,6 +10463,41 @@ impl RequirementsApp {
 
                                     ui.separator();
 
+                                    // AI Actions submenu
+                                    let req_uuid = req.id;
+                                    ui.menu_button("🤖 AI", |ui| {
+                                        ui.set_min_width(200.0);
+
+                                        if ui.button("📊 Evaluate Requirement  (ae)").clicked() {
+                                            trigger_ai_action = Some(AiAction::Evaluate(req_uuid));
+                                            ui.close_menu();
+                                        }
+
+                                        if ui.button("🔍 Find Duplicates       (ad)").clicked() {
+                                            trigger_ai_action = Some(AiAction::FindDuplicates(req_uuid));
+                                            ui.close_menu();
+                                        }
+
+                                        if ui.button("🔗 Suggest Relationships (ar)").clicked() {
+                                            trigger_ai_action = Some(AiAction::SuggestRelationships(req_uuid));
+                                            ui.close_menu();
+                                        }
+
+                                        ui.separator();
+
+                                        if ui.button("✨ Improve Description   (ai)").clicked() {
+                                            trigger_ai_action = Some(AiAction::ImproveDescription(req_uuid));
+                                            ui.close_menu();
+                                        }
+
+                                        if ui.button("📝 Generate Children     (ag)").clicked() {
+                                            trigger_ai_action = Some(AiAction::GenerateChildren(req_uuid));
+                                            ui.close_menu();
+                                        }
+                                    });
+
+                                    ui.separator();
+
                                     // Archive/Unarchive action
                                     let archive_label = if is_archived {
                                         "↩ Unarchive"
@@ -10460,6 +10559,15 @@ impl RequirementsApp {
                         req.record_change(self.user_settings.display_name(), vec![change]);
                         self.save();
                     }
+                }
+
+                // Handle AI action trigger
+                if let Some(action) = trigger_ai_action {
+                    // For now, show a placeholder result since AI backend is not yet implemented
+                    let result = AiResult::placeholder(&action);
+                    eprintln!("AI action triggered: {:?}", action);
+                    self.ai_last_result = Some(result);
+                    self.show_ai_results_panel = true;
                 }
 
                 ui.separator();
@@ -11816,6 +11924,95 @@ fn main() {
                         ui.horizontal(|ui| {
                             if ui.button("Close").clicked() {
                                 self.show_markdown_help = false;
+                            }
+                        });
+                    });
+            });
+    }
+
+    fn show_ai_results_modal(&mut self, ctx: &egui::Context) {
+        let max_size = modal_max_size(ctx);
+        let modal_width = 500.0_f32.min(max_size.x);
+        let modal_height = 300.0_f32.min(max_size.y);
+
+        // Draw a dark overlay behind the modal
+        let screen_rect = ctx.screen_rect();
+        ctx.layer_painter(egui::LayerId::new(egui::Order::PanelResizeLine, egui::Id::new("ai_modal_overlay")))
+            .rect_filled(screen_rect, 0.0, egui::Color32::from_black_alpha(128));
+
+        egui::Area::new(egui::Id::new("ai_results_area"))
+            .order(egui::Order::Foreground)
+            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+            .show(ctx, |ui| {
+                egui::Frame::window(ui.style())
+                    .show(ui, |ui| {
+                        ui.set_min_size(egui::vec2(modal_width, modal_height));
+                        ui.set_max_size(egui::vec2(modal_width, modal_height));
+
+                        // Title bar
+                        ui.horizontal(|ui| {
+                            ui.heading("🤖 AI Analysis");
+                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                if ui.button("✕").clicked() {
+                                    self.show_ai_results_panel = false;
+                                    self.ai_last_result = None;
+                                }
+                            });
+                        });
+                        ui.separator();
+
+                        // Content
+                        if let Some(result) = &self.ai_last_result {
+                            ui.add_space(10.0);
+
+                            // Status indicator
+                            let status_text = if result.success {
+                                egui::RichText::new("✅ Action: ").color(egui::Color32::from_rgb(100, 200, 100))
+                            } else {
+                                egui::RichText::new("❌ Action: ").color(egui::Color32::from_rgb(200, 100, 100))
+                            };
+                            ui.horizontal(|ui| {
+                                ui.label(status_text);
+                                ui.label(&result.action_name);
+                            });
+
+                            ui.add_space(10.0);
+                            ui.separator();
+                            ui.add_space(10.0);
+
+                            // Message
+                            egui::ScrollArea::vertical()
+                                .max_height(modal_height - 150.0)
+                                .show(ui, |ui| {
+                                    ui.label(&result.message);
+
+                                    if let Some(details) = &result.details {
+                                        ui.add_space(10.0);
+                                        ui.separator();
+                                        ui.add_space(5.0);
+                                        ui.label(egui::RichText::new("Details:").strong());
+                                        ui.label(details);
+                                    }
+                                });
+                        } else if self.ai_loading {
+                            ui.add_space(20.0);
+                            ui.centered_and_justified(|ui| {
+                                ui.spinner();
+                            });
+                            ui.add_space(10.0);
+                            ui.centered_and_justified(|ui| {
+                                ui.label("Processing...");
+                            });
+                        } else {
+                            ui.label("No AI results available.");
+                        }
+
+                        ui.add_space(8.0);
+                        ui.separator();
+                        ui.horizontal(|ui| {
+                            if ui.button("Close").clicked() {
+                                self.show_ai_results_panel = false;
+                                self.ai_last_result = None;
                             }
                         });
                     });
@@ -15263,6 +15460,11 @@ impl eframe::App for RequirementsApp {
         // Show markdown help modal
         if self.show_markdown_help {
             self.show_markdown_help_modal(ctx);
+        }
+
+        // Show AI results modal
+        if self.show_ai_results_panel {
+            self.show_ai_results_modal(ctx);
         }
     }
 }

@@ -723,12 +723,12 @@ requirements:
   spec_id: FR-0022
   title: search textbox should expand as panel is widened
   description: ''
-  status: Approved
+  status: Draft
   priority: Medium
   owner: ''
   feature: 13-STYLE
   created_at: 2025-11-26T01:18:30.246370231Z
-  modified_at: 2025-11-28T21:47:10.480962354Z
+  modified_at: 2025-11-30T01:57:39.198513640Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -743,6 +743,13 @@ requirements:
     - field_name: status
       old_value: Draft
       new_value: Approved
+  - id: 20d70f91-b5b7-425b-bb5c-24bd42633e8d
+    author: ''
+    timestamp: 2025-11-30T01:57:39.198525062Z
+    changes:
+    - field_name: status
+      old_value: Approved
+      new_value: Draft
 - id: d8fbfd6f-47a7-4f93-94d2-1dc3009e79b0
   spec_id: FR-0023
   title: describe default requirement types
@@ -752,7 +759,7 @@ requirements:
   owner: ''
   feature: 15-DOC
   created_at: 2025-11-26T04:28:47.348005694Z
-  modified_at: 2025-11-28T21:11:52.014319045Z
+  modified_at: 2025-11-30T01:55:19.255377384Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -767,6 +774,20 @@ requirements:
     - field_name: description
       old_value: The user guid should explain what each of the default requireent types are intended for and best practices.
       new_value: The user guide should explain what each of the  requirement types are intended for and best practices when how to write such requirements.
+  - id: 8d1700de-5ad2-4c96-8a2c-5fe8f6f0ba0d
+    author: ''
+    timestamp: 2025-11-30T01:54:36.658536357Z
+    changes:
+    - field_name: status
+      old_value: Draft
+      new_value: Approved
+  - id: 0d895d36-378b-40f1-9671-fe1e2e31e871
+    author: ''
+    timestamp: 2025-11-30T01:55:19.255385305Z
+    changes:
+    - field_name: status
+      old_value: Approved
+      new_value: Draft
 - id: 61b19487-4000-4b67-87f0-5fd554bfebfa
   spec_id: FR-0024
   title: In Add or Edit, ESC should cancel
@@ -1533,7 +1554,7 @@ requirements:
   owner: ''
   feature: 23-Uncategorized
   created_at: 2025-11-27T05:38:12.026793995Z
-  modified_at: 2025-11-29T19:07:00.534501748Z
+  modified_at: 2025-11-30T01:51:01.389495396Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -1596,6 +1617,20 @@ requirements:
     - field_name: spec_id
       old_value: REQ-0090
       new_value: FR-0101
+  - id: 1ae58eb4-bb87-4ef1-af1c-dbbcd68c8094
+    author: ''
+    timestamp: 2025-11-30T01:50:58.590425827Z
+    changes:
+    - field_name: status
+      old_value: Draft
+      new_value: Approved
+  - id: 75980f70-d055-4b5a-a5fe-96415cd6039a
+    author: Unknown User
+    timestamp: 2025-11-30T01:51:01.389489668Z
+    changes:
+    - field_name: status
+      old_value: Approved
+      new_value: Draft
 - id: 0aefc969-49e7-4825-9118-ba20f778636c
   spec_id: FR-0046
   title: Width of Requirements View Panel
@@ -1716,12 +1751,12 @@ requirements:
     Task Lists
     - [ ] Unchecked task
     - [x] Completed task
-  status: Draft
+  status: Completed
   priority: Medium
   owner: ''
   feature: 25-Uncategorized
   created_at: 2025-11-27T06:16:17.007809398Z
-  modified_at: 2025-11-28T00:24:09.780201333Z
+  modified_at: 2025-11-30T02:11:12.487402381Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -2360,6 +2395,13 @@ requirements:
         Task Lists
         - [ ] Unchecked task
         - [x] Completed task
+  - id: acc22882-5427-4db6-adf1-b011c807c15a
+    author: ''
+    timestamp: 2025-11-30T02:11:12.487411564Z
+    changes:
+    - field_name: status
+      old_value: Draft
+      new_value: Completed
 - id: 2c0c3c1a-aa65-4cce-8d03-3898775b3ac2
   spec_id: FR-0048
   title: textboxes should show a right click menu with Copy, Paste , Cut (optional)
@@ -2804,12 +2846,12 @@ requirements:
         - Delete action
 
       All changes to priority and status are tracked in the requirement's change history, so they appear in the History tab.
-  status: Draft
-  priority: Medium
+  status: Completed
+  priority: Low
   owner: ''
   feature: 27-Uncategorized
   created_at: 2025-11-27T17:02:58.915305926Z
-  modified_at: 2025-11-27T17:19:02.101175892Z
+  modified_at: 2025-11-30T02:11:36.752109913Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -2843,6 +2885,20 @@ requirements:
             - Delete action
 
           All changes to priority and status are tracked in the requirement's change history, so they appear in the History tab.
+  - id: 4fec6fda-2863-4741-9b6f-32e56dd17053
+    author: ''
+    timestamp: 2025-11-30T02:11:31.618020106Z
+    changes:
+    - field_name: priority
+      old_value: Medium
+      new_value: Low
+  - id: cc903aa4-8e52-40b4-ad05-5c53b0dce390
+    author: ''
+    timestamp: 2025-11-30T02:11:36.752118547Z
+    changes:
+    - field_name: status
+      old_value: Draft
+      new_value: Completed
 - id: ae4d77e5-55a4-4a56-97d1-a030d922a04d
   spec_id: DETAILVIEW-0055
   prefix_override: DETAILVIEW
@@ -4360,17 +4416,33 @@ requirements:
     target_id: c2ac61cd-36a3-4dce-acaa-7b057b1be97d
     created_at: 2025-11-30T01:34:30.555715874Z
     created_by: Unknown User
+  - rel_type: Child
+    target_id: 9ace4d56-9a8d-47cd-8779-4e6963d303f3
+    created_at: 2025-11-30T02:10:08.382830563Z
+    created_by: Unknown User
+  - rel_type: Child
+    target_id: 6111bb0c-9309-4fa5-ad73-9106f46b49e9
+    created_at: 2025-11-30T02:23:48.712187739Z
+    created_by: Unknown User
+  - rel_type: Child
+    target_id: c48b3743-1660-4ba3-bda7-16f98a3c5ab8
+    created_at: 2025-11-30T05:21:30.635854951Z
+    created_by: Unknown User
+  - rel_type: Child
+    target_id: 9e9ea9a2-0734-44b8-b911-f76f5aabc4ac
+    created_at: 2025-11-30T05:30:18.498914165Z
+    created_by: Unknown User
 - id: 3ef749b7-b220-41f8-9a1d-1545d0c43a7f
   spec_id: FR-0103
   title: Dynamically update ID preview when Type changes in Edit form
   description: 'feat: dynamically update ID preview when Type changes in Edit form'
-  status: Draft
+  status: Completed
   priority: Medium
   owner: ''
   feature: 47-Uncategorized
   created_at: 2025-11-29T19:12:20.828353112Z
   created_by: Unknown User
-  modified_at: 2025-11-29T19:12:20.828353112Z
+  modified_at: 2025-11-30T02:25:02.949321235Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -4379,6 +4451,14 @@ requirements:
     target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
     created_at: 2025-11-29T19:12:20.828360522Z
     created_by: Unknown User
+  history:
+  - id: 3459fc03-d537-463b-970c-ac5fb3291a32
+    author: ''
+    timestamp: 2025-11-30T02:25:02.949328880Z
+    changes:
+    - field_name: status
+      old_value: Draft
+      new_value: Completed
 - id: 7fab205a-9f74-48fc-9a20-18581388a22f
   spec_id: FR-0104
   title: Sorting capabilities
@@ -4434,14 +4514,14 @@ requirements:
 - id: bae7da90-3781-4a92-927f-69e31a008422
   spec_id: FR-0106
   title: Add - select parent heuristically
-  description: When you click '+ Add' the parent should be the parent of the currently selected requirement, unless the selected requirement has children, in which case make it a child or if the selected requirement has no children and has no parent then make it a root (no parent) requirement.
-  status: Draft
+  description: "When you click '+ Add' heuristic: create a new requirement and the parent should be the parent of the currently selected requirement (i.e. a sibling), unless the selected requirement has children, in which case make it a child, or if the selected requirement has no children and has no parent then make it a root (no parent) requirement. \n\nUpdate the default key bindings such that Ctrl+n is new sibling requirement. Ctrl+Shift+N is a new child requirement,"
+  status: Approved
   priority: Medium
   owner: ''
   feature: 48-Uncategorized
   created_at: 2025-11-29T19:34:27.501813315Z
   created_by: Unknown User
-  modified_at: 2025-11-29T19:34:27.501813315Z
+  modified_at: 2025-11-30T02:33:22.610336211Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -4450,6 +4530,35 @@ requirements:
     target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
     created_at: 2025-11-29T19:34:32.266350849Z
     created_by: Unknown User
+  history:
+  - id: cda74470-6981-479e-8c81-01de2aa99367
+    author: ''
+    timestamp: 2025-11-30T01:50:13.923440532Z
+    changes:
+    - field_name: status
+      old_value: Draft
+      new_value: Approved
+  - id: c3490815-3b7a-4cc7-b9f5-911b81d1be1e
+    author: Unknown User
+    timestamp: 2025-11-30T01:50:29.189515393Z
+    changes:
+    - field_name: status
+      old_value: Approved
+      new_value: Draft
+  - id: debf5262-f79f-4b57-9472-844520326374
+    author: ''
+    timestamp: 2025-11-30T01:58:31.221774037Z
+    changes:
+    - field_name: status
+      old_value: Draft
+      new_value: Approved
+  - id: 813ce9fe-3c42-4527-93fc-93bf03659b8d
+    author: Unknown User
+    timestamp: 2025-11-30T02:33:22.610335906Z
+    changes:
+    - field_name: description
+      old_value: When you click '+ Add' the parent should be the parent of the currently selected requirement, unless the selected requirement has children, in which case make it a child or if the selected requirement has no children and has no parent then make it a root (no parent) requirement.
+      new_value: "When you click '+ Add' heuristic: create a new requirement and the parent should be the parent of the currently selected requirement (i.e. a sibling), unless the selected requirement has children, in which case make it a child, or if the selected requirement has no children and has no parent then make it a root (no parent) requirement. \n\nUpdate the default key bindings such that Ctrl+n is new sibling requirement. Ctrl+Shift+N is a new child requirement,"
 - id: 32de4384-bede-49a0-8aad-0fd0c78d4e54
   spec_id: FR-0107
   title: Actions should include assigning owner
@@ -4546,13 +4655,13 @@ requirements:
         - Only syncs while no newline has been entered
         - Truncates to 47 characters + "..." (= 50 total) if needed
         - Once a newline is entered, auto-sync is disabled
-  status: Approved
+  status: Completed
   priority: Medium
   owner: ''
   feature: 49-Uncategorized
   created_at: 2025-11-29T19:50:26.797473616Z
   created_by: Unknown User
-  modified_at: 2025-11-30T01:01:31.473969121Z
+  modified_at: 2025-11-30T02:24:47.150874757Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -4681,6 +4790,13 @@ requirements:
             - Only syncs while no newline has been entered
             - Truncates to 47 characters + "..." (= 50 total) if needed
             - Once a newline is entered, auto-sync is disabled
+  - id: 523de53d-ab2d-4bc4-b501-45f649514518
+    author: ''
+    timestamp: 2025-11-30T02:24:47.150882995Z
+    changes:
+    - field_name: status
+      old_value: Approved
+      new_value: Completed
 - id: cc937e52-dd05-4dd9-a75b-ae5cc8ca95b9
   spec_id: FR-0111
   title: Modal dialogs 'x' icon to close in top right
@@ -4796,12 +4912,12 @@ requirements:
   title: When I edit a theme the changes to be reflected globally and reverted if I click cancel
   description: When I edit a theme the changes to be reflected globally and reverted if I click cancel
   status: Draft
-  priority: Medium
+  priority: High
   owner: ''
   feature: 53-Uncategorized
   created_at: 2025-11-30T00:13:28.940830659Z
   created_by: Unknown User
-  modified_at: 2025-11-30T00:13:36.506816819Z
+  modified_at: 2025-11-30T02:14:08.718888840Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -4818,6 +4934,13 @@ requirements:
     - field_name: title
       old_value: ''
       new_value: When I edit a theme the changes to be reflected globally and reverted if I click cancel
+  - id: 4ce2e92d-157b-4927-9932-d49e08f26da9
+    author: ''
+    timestamp: 2025-11-30T02:14:08.718897374Z
+    changes:
+    - field_name: priority
+      old_value: Medium
+      new_value: High
 - id: ee208aa7-e2c7-4847-a165-3da91acf4456
   spec_id: NOTES-0117
   prefix_override: NOTES
@@ -4896,7 +5019,7 @@ requirements:
 - id: 85b741f2-043d-4504-b4c7-670ebe664b47
   spec_id: MISC-0121
   prefix_override: MISC
-  title: Long Term/Hairbrained
+  title: Long Term
   description: ''
   status: Draft
   priority: Medium
@@ -4904,7 +5027,7 @@ requirements:
   feature: 55-Uncategorized
   created_at: 2025-11-30T00:52:32.764418229Z
   created_by: Unknown User
-  modified_at: 2025-11-30T00:52:47.564024497Z
+  modified_at: 2025-11-30T02:40:10.775981331Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -4912,6 +5035,14 @@ requirements:
   - rel_type: Parent
     target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
     created_at: 2025-11-30T00:52:32.764433664Z
+    created_by: Unknown User
+  - rel_type: Child
+    target_id: 18eace65-bcd0-49d8-89b6-a38824833155
+    created_at: 2025-11-30T01:47:43.888125936Z
+    created_by: Unknown User
+  - rel_type: Child
+    target_id: cb6bc91b-4b8b-421f-bc0f-3c86c288f9ff
+    created_at: 2025-11-30T02:37:05.343120218Z
     created_by: Unknown User
   history:
   - id: 080142b6-8f58-41c1-b0dd-ae010a146f40
@@ -4924,29 +5055,17 @@ requirements:
     - field_name: spec_id
       old_value: FR-0120
       new_value: MISC-0121
-- id: 30f5ffc6-4153-4e30-ae08-9df3bb2e1baa
-  spec_id: FR-0122
-  title: ''
-  description: this is me type
-  status: Draft
-  priority: Medium
-  owner: ''
-  feature: 56-Uncategorized
-  created_at: 2025-11-30T00:55:04.438627263Z
-  created_by: Unknown User
-  modified_at: 2025-11-30T00:55:04.438627263Z
-  req_type: Functional
-  dependencies: []
-  tags: []
-  relationships:
-  - rel_type: Parent
-    target_id: 9b4e4f03-9c0a-44ef-8a9c-2e395b4072b2
-    created_at: 2025-11-30T00:55:04.438662343Z
-    created_by: Unknown User
+  - id: 2b23e61a-b30a-4cca-b6dc-65636b90ac41
+    author: Unknown User
+    timestamp: 2025-11-30T02:40:10.775981085Z
+    changes:
+    - field_name: title
+      old_value: Long Term/Hairbrained
+      new_value: Long Term
 - id: 631c854b-cc3c-4bac-bb37-087f2ed5ce72
   spec_id: FR-0123
   title: Requirements List context menus for quick actions
-  description: |
+  description: |+
     Requirements List context menus for quick actions
     when you press 's' in the requirements list, open a popup menu to allow you to update the status showing a menu of statuses you can up/down/enter/esc to change the current status, the current status should be selected upon popup. Likewise 'p' for priority.
 
@@ -4955,16 +5074,50 @@ requirements:
       should probably not be active if we are in edit mode since that may be confusing.
 
 
+    Requirements List hotkeys
+
+    | key|action |
+    |---|---------|
+    | p | Priority pop-up |
+    | s | Status pop-up |
+    | j |  navigate down |
+    | k | navigate up |
+    | n | new sibling requirement |
+    | N | new child requirement |
+    | <Backspace>,<Delete> |archive requirement |
+    | <Enter> |edit requirement |
+
+
+
+
     The current behavior is that it is opening the edit dialog, perhaps make this an option in the settings, but the default behavior should
       be to make the change and keep us in viewing the Details and not go into edit mode. Also, the pop-ups requirements lists quick action popups
       should probably not be active if we are in edit mode since that may be confusing.
+
+    preventing Edit mode from triggering after a quick status change via the 's' key popup has been completed and pushed.
+
+      Summary of the fix:
+      - Added a status_popup_consumed_action flag that tracks when the status popup processes an action (Enter, Escape, click)
+      - This flag is reset to false at the start of each frame
+      - When the status popup handles any action, it sets this flag to true
+      - The Edit keybinding handler now checks !self.status_popup_consumed_action before triggering Edit mode
+      - This prevents the Enter key from being processed by both the popup (to apply the status) and the Edit handler (which would open Edit mode)
+
+      The change has been committed with: fix: prevent Edit mode trigger after status popup selection
+
+      You can now test by:
+      1. Select a requirement in the list
+      2. Press 's' to open the status popup
+      3. Use arrow keys to select a status and press Enter
+      4. The status should change and you should remain in the Details view (not enter Edit mode)
+
   status: Approved
   priority: Medium
   owner: ''
   feature: 57-Uncategorized
   created_at: 2025-11-30T01:05:46.342405088Z
   created_by: Unknown User
-  modified_at: 2025-11-30T01:36:12.660431327Z
+  modified_at: 2025-11-30T02:52:10.912200202Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -5035,6 +5188,322 @@ requirements:
         The current behavior is that it is opening the edit dialog, perhaps make this an option in the settings, but the default behavior should
           be to make the change and keep us in viewing the Details and not go into edit mode. Also, the pop-ups requirements lists quick action popups
           should probably not be active if we are in edit mode since that may be confusing.
+  - id: e3c306c4-a42c-4210-9139-45de08c633eb
+    author: Unknown User
+    timestamp: 2025-11-30T01:48:14.490550115Z
+    changes:
+    - field_name: description
+      old_value: |
+        Requirements List context menus for quick actions
+        when you press 's' in the requirements list, open a popup menu to allow you to update the status showing a menu of statuses you can up/down/enter/esc to change the current status, the current status should be selected upon popup. Likewise 'p' for priority.
+
+        The current behavior is that it is opening the edit dialog, perhaps make this an option in the settings, but the default behavior should
+          be to make the change and keep us in viewing the Details and not go into edit mode. Also, the pop-ups requirements lists quick action popups
+          should probably not be active if we are in edit mode since that may be confusing.
+
+
+        The current behavior is that it is opening the edit dialog, perhaps make this an option in the settings, but the default behavior should
+          be to make the change and keep us in viewing the Details and not go into edit mode. Also, the pop-ups requirements lists quick action popups
+          should probably not be active if we are in edit mode since that may be confusing.
+      new_value: |+
+        Requirements List context menus for quick actions
+        when you press 's' in the requirements list, open a popup menu to allow you to update the status showing a menu of statuses you can up/down/enter/esc to change the current status, the current status should be selected upon popup. Likewise 'p' for priority.
+
+        The current behavior is that it is opening the edit dialog, perhaps make this an option in the settings, but the default behavior should
+          be to make the change and keep us in viewing the Details and not go into edit mode. Also, the pop-ups requirements lists quick action popups
+          should probably not be active if we are in edit mode since that may be confusing.
+
+
+        The current behavior is that it is opening the edit dialog, perhaps make this an option in the settings, but the default behavior should
+          be to make the change and keep us in viewing the Details and not go into edit mode. Also, the pop-ups requirements lists quick action popups
+          should probably not be active if we are in edit mode since that may be confusing.
+
+        preventing Edit mode from triggering after a quick status change via the 's' key popup has been completed and pushed.
+
+          Summary of the fix:
+          - Added a status_popup_consumed_action flag that tracks when the status popup processes an action (Enter, Escape, click)
+          - This flag is reset to false at the start of each frame
+          - When the status popup handles any action, it sets this flag to true
+          - The Edit keybinding handler now checks !self.status_popup_consumed_action before triggering Edit mode
+          - This prevents the Enter key from being processed by both the popup (to apply the status) and the Edit handler (which would open Edit mode)
+
+          The change has been committed with: fix: prevent Edit mode trigger after status popup selection
+
+          You can now test by:
+          1. Select a requirement in the list
+          2. Press 's' to open the status popup
+          3. Use arrow keys to select a status and press Enter
+          4. The status should change and you should remain in the Details view (not enter Edit mode)
+
+  - id: 6586807d-4d65-4cf0-8878-44187112c524
+    author: Unknown User
+    timestamp: 2025-11-30T02:49:08.908766790Z
+    changes:
+    - field_name: description
+      old_value: |+
+        Requirements List context menus for quick actions
+        when you press 's' in the requirements list, open a popup menu to allow you to update the status showing a menu of statuses you can up/down/enter/esc to change the current status, the current status should be selected upon popup. Likewise 'p' for priority.
+
+        The current behavior is that it is opening the edit dialog, perhaps make this an option in the settings, but the default behavior should
+          be to make the change and keep us in viewing the Details and not go into edit mode. Also, the pop-ups requirements lists quick action popups
+          should probably not be active if we are in edit mode since that may be confusing.
+
+
+        The current behavior is that it is opening the edit dialog, perhaps make this an option in the settings, but the default behavior should
+          be to make the change and keep us in viewing the Details and not go into edit mode. Also, the pop-ups requirements lists quick action popups
+          should probably not be active if we are in edit mode since that may be confusing.
+
+        preventing Edit mode from triggering after a quick status change via the 's' key popup has been completed and pushed.
+
+          Summary of the fix:
+          - Added a status_popup_consumed_action flag that tracks when the status popup processes an action (Enter, Escape, click)
+          - This flag is reset to false at the start of each frame
+          - When the status popup handles any action, it sets this flag to true
+          - The Edit keybinding handler now checks !self.status_popup_consumed_action before triggering Edit mode
+          - This prevents the Enter key from being processed by both the popup (to apply the status) and the Edit handler (which would open Edit mode)
+
+          The change has been committed with: fix: prevent Edit mode trigger after status popup selection
+
+          You can now test by:
+          1. Select a requirement in the list
+          2. Press 's' to open the status popup
+          3. Use arrow keys to select a status and press Enter
+          4. The status should change and you should remain in the Details view (not enter Edit mode)
+
+      new_value: |+
+        Requirements List context menus for quick actions
+        when you press 's' in the requirements list, open a popup menu to allow you to update the status showing a menu of statuses you can up/down/enter/esc to change the current status, the current status should be selected upon popup. Likewise 'p' for priority.
+
+        The current behavior is that it is opening the edit dialog, perhaps make this an option in the settings, but the default behavior should
+          be to make the change and keep us in viewing the Details and not go into edit mode. Also, the pop-ups requirements lists quick action popups
+          should probably not be active if we are in edit mode since that may be confusing.
+
+
+        Requirements List hotkeys
+
+        p - Priority pop-up
+        s - Status pop-up
+        j -  navigate down
+        k - navigate up
+        n - new sibling requirement
+        N - new child requirement
+        <Backspace>|<Delete> archive requirement
+        <Enter> - edit requirement
+
+
+
+
+        The current behavior is that it is opening the edit dialog, perhaps make this an option in the settings, but the default behavior should
+          be to make the change and keep us in viewing the Details and not go into edit mode. Also, the pop-ups requirements lists quick action popups
+          should probably not be active if we are in edit mode since that may be confusing.
+
+        preventing Edit mode from triggering after a quick status change via the 's' key popup has been completed and pushed.
+
+          Summary of the fix:
+          - Added a status_popup_consumed_action flag that tracks when the status popup processes an action (Enter, Escape, click)
+          - This flag is reset to false at the start of each frame
+          - When the status popup handles any action, it sets this flag to true
+          - The Edit keybinding handler now checks !self.status_popup_consumed_action before triggering Edit mode
+          - This prevents the Enter key from being processed by both the popup (to apply the status) and the Edit handler (which would open Edit mode)
+
+          The change has been committed with: fix: prevent Edit mode trigger after status popup selection
+
+          You can now test by:
+          1. Select a requirement in the list
+          2. Press 's' to open the status popup
+          3. Use arrow keys to select a status and press Enter
+          4. The status should change and you should remain in the Details view (not enter Edit mode)
+
+  - id: 247fd795-a6d9-4495-a404-7be06a59e90c
+    author: Unknown User
+    timestamp: 2025-11-30T02:50:44.079390048Z
+    changes:
+    - field_name: description
+      old_value: |+
+        Requirements List context menus for quick actions
+        when you press 's' in the requirements list, open a popup menu to allow you to update the status showing a menu of statuses you can up/down/enter/esc to change the current status, the current status should be selected upon popup. Likewise 'p' for priority.
+
+        The current behavior is that it is opening the edit dialog, perhaps make this an option in the settings, but the default behavior should
+          be to make the change and keep us in viewing the Details and not go into edit mode. Also, the pop-ups requirements lists quick action popups
+          should probably not be active if we are in edit mode since that may be confusing.
+
+
+        Requirements List hotkeys
+
+        p - Priority pop-up
+        s - Status pop-up
+        j -  navigate down
+        k - navigate up
+        n - new sibling requirement
+        N - new child requirement
+        <Backspace>|<Delete> archive requirement
+        <Enter> - edit requirement
+
+
+
+
+        The current behavior is that it is opening the edit dialog, perhaps make this an option in the settings, but the default behavior should
+          be to make the change and keep us in viewing the Details and not go into edit mode. Also, the pop-ups requirements lists quick action popups
+          should probably not be active if we are in edit mode since that may be confusing.
+
+        preventing Edit mode from triggering after a quick status change via the 's' key popup has been completed and pushed.
+
+          Summary of the fix:
+          - Added a status_popup_consumed_action flag that tracks when the status popup processes an action (Enter, Escape, click)
+          - This flag is reset to false at the start of each frame
+          - When the status popup handles any action, it sets this flag to true
+          - The Edit keybinding handler now checks !self.status_popup_consumed_action before triggering Edit mode
+          - This prevents the Enter key from being processed by both the popup (to apply the status) and the Edit handler (which would open Edit mode)
+
+          The change has been committed with: fix: prevent Edit mode trigger after status popup selection
+
+          You can now test by:
+          1. Select a requirement in the list
+          2. Press 's' to open the status popup
+          3. Use arrow keys to select a status and press Enter
+          4. The status should change and you should remain in the Details view (not enter Edit mode)
+
+      new_value: |+
+        Requirements List context menus for quick actions
+        when you press 's' in the requirements list, open a popup menu to allow you to update the status showing a menu of statuses you can up/down/enter/esc to change the current status, the current status should be selected upon popup. Likewise 'p' for priority.
+
+        The current behavior is that it is opening the edit dialog, perhaps make this an option in the settings, but the default behavior should
+          be to make the change and keep us in viewing the Details and not go into edit mode. Also, the pop-ups requirements lists quick action popups
+          should probably not be active if we are in edit mode since that may be confusing.
+
+
+        Requirements List hotkeys
+
+        |key|action|
+        |p | Priority pop-up|
+        |s | Status pop-up|
+        |j |  navigate down|
+        |k | navigate up|
+        |n | new sibling requirement|
+        |N | new child requirement|
+        |<Backspace>,<Delete> |archive requirement|
+        |<Enter> |edit requirement|
+
+
+
+
+        The current behavior is that it is opening the edit dialog, perhaps make this an option in the settings, but the default behavior should
+          be to make the change and keep us in viewing the Details and not go into edit mode. Also, the pop-ups requirements lists quick action popups
+          should probably not be active if we are in edit mode since that may be confusing.
+
+        preventing Edit mode from triggering after a quick status change via the 's' key popup has been completed and pushed.
+
+          Summary of the fix:
+          - Added a status_popup_consumed_action flag that tracks when the status popup processes an action (Enter, Escape, click)
+          - This flag is reset to false at the start of each frame
+          - When the status popup handles any action, it sets this flag to true
+          - The Edit keybinding handler now checks !self.status_popup_consumed_action before triggering Edit mode
+          - This prevents the Enter key from being processed by both the popup (to apply the status) and the Edit handler (which would open Edit mode)
+
+          The change has been committed with: fix: prevent Edit mode trigger after status popup selection
+
+          You can now test by:
+          1. Select a requirement in the list
+          2. Press 's' to open the status popup
+          3. Use arrow keys to select a status and press Enter
+          4. The status should change and you should remain in the Details view (not enter Edit mode)
+
+  - id: a5c42e26-d12d-4bf4-82bb-573fa7ef1390
+    author: Unknown User
+    timestamp: 2025-11-30T02:52:10.912199138Z
+    changes:
+    - field_name: description
+      old_value: |+
+        Requirements List context menus for quick actions
+        when you press 's' in the requirements list, open a popup menu to allow you to update the status showing a menu of statuses you can up/down/enter/esc to change the current status, the current status should be selected upon popup. Likewise 'p' for priority.
+
+        The current behavior is that it is opening the edit dialog, perhaps make this an option in the settings, but the default behavior should
+          be to make the change and keep us in viewing the Details and not go into edit mode. Also, the pop-ups requirements lists quick action popups
+          should probably not be active if we are in edit mode since that may be confusing.
+
+
+        Requirements List hotkeys
+
+        |key|action|
+        |p | Priority pop-up|
+        |s | Status pop-up|
+        |j |  navigate down|
+        |k | navigate up|
+        |n | new sibling requirement|
+        |N | new child requirement|
+        |<Backspace>,<Delete> |archive requirement|
+        |<Enter> |edit requirement|
+
+
+
+
+        The current behavior is that it is opening the edit dialog, perhaps make this an option in the settings, but the default behavior should
+          be to make the change and keep us in viewing the Details and not go into edit mode. Also, the pop-ups requirements lists quick action popups
+          should probably not be active if we are in edit mode since that may be confusing.
+
+        preventing Edit mode from triggering after a quick status change via the 's' key popup has been completed and pushed.
+
+          Summary of the fix:
+          - Added a status_popup_consumed_action flag that tracks when the status popup processes an action (Enter, Escape, click)
+          - This flag is reset to false at the start of each frame
+          - When the status popup handles any action, it sets this flag to true
+          - The Edit keybinding handler now checks !self.status_popup_consumed_action before triggering Edit mode
+          - This prevents the Enter key from being processed by both the popup (to apply the status) and the Edit handler (which would open Edit mode)
+
+          The change has been committed with: fix: prevent Edit mode trigger after status popup selection
+
+          You can now test by:
+          1. Select a requirement in the list
+          2. Press 's' to open the status popup
+          3. Use arrow keys to select a status and press Enter
+          4. The status should change and you should remain in the Details view (not enter Edit mode)
+
+      new_value: |+
+        Requirements List context menus for quick actions
+        when you press 's' in the requirements list, open a popup menu to allow you to update the status showing a menu of statuses you can up/down/enter/esc to change the current status, the current status should be selected upon popup. Likewise 'p' for priority.
+
+        The current behavior is that it is opening the edit dialog, perhaps make this an option in the settings, but the default behavior should
+          be to make the change and keep us in viewing the Details and not go into edit mode. Also, the pop-ups requirements lists quick action popups
+          should probably not be active if we are in edit mode since that may be confusing.
+
+
+        Requirements List hotkeys
+
+        | key|action |
+        |---|---------|
+        | p | Priority pop-up |
+        | s | Status pop-up |
+        | j |  navigate down |
+        | k | navigate up |
+        | n | new sibling requirement |
+        | N | new child requirement |
+        | <Backspace>,<Delete> |archive requirement |
+        | <Enter> |edit requirement |
+
+
+
+
+        The current behavior is that it is opening the edit dialog, perhaps make this an option in the settings, but the default behavior should
+          be to make the change and keep us in viewing the Details and not go into edit mode. Also, the pop-ups requirements lists quick action popups
+          should probably not be active if we are in edit mode since that may be confusing.
+
+        preventing Edit mode from triggering after a quick status change via the 's' key popup has been completed and pushed.
+
+          Summary of the fix:
+          - Added a status_popup_consumed_action flag that tracks when the status popup processes an action (Enter, Escape, click)
+          - This flag is reset to false at the start of each frame
+          - When the status popup handles any action, it sets this flag to true
+          - The Edit keybinding handler now checks !self.status_popup_consumed_action before triggering Edit mode
+          - This prevents the Enter key from being processed by both the popup (to apply the status) and the Edit handler (which would open Edit mode)
+
+          The change has been committed with: fix: prevent Edit mode trigger after status popup selection
+
+          You can now test by:
+          1. Select a requirement in the list
+          2. Press 's' to open the status popup
+          3. Use arrow keys to select a status and press Enter
+          4. The status should change and you should remain in the Details view (not enter Edit mode)
+
 - id: db05a93d-4ade-49fb-aaba-b6eedf4ec846
   spec_id: FR-0124
   title: Status dropdown should have Other subdropdown f...
@@ -5113,6 +5582,157 @@ requirements:
     target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
     created_at: 2025-11-30T01:34:30.555715874Z
     created_by: Unknown User
+- id: 18eace65-bcd0-49d8-89b6-a38824833155
+  spec_id: FR-0127
+  title: 'Title textbox height is a tad short '
+  description: "Title textbox height is a tad short \nand truncates bottoms of letters, it is fine in edit mode"
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 60-Uncategorized
+  created_at: 2025-11-30T01:47:43.888109098Z
+  created_by: Unknown User
+  modified_at: 2025-11-30T01:47:43.888109098Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 85b741f2-043d-4504-b4c7-670ebe664b47
+    created_at: 2025-11-30T01:47:43.888125936Z
+    created_by: Unknown User
+- id: 9ace4d56-9a8d-47cd-8779-4e6963d303f3
+  spec_id: FR-0128
+  title: Support "Folder" status.
+  description: |-
+    Support "Folder" status.
+    Rationale: although counterintuitive, status is a highly informative field. But in a hierarchy of requirements, there are some container requirements that do not need to be considered in terms of status and an icon indicating that they are only organizational is useful.
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 61-Uncategorized
+  created_at: 2025-11-30T02:10:08.382814924Z
+  created_by: Unknown User
+  modified_at: 2025-11-30T02:10:08.382814924Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
+    created_at: 2025-11-30T02:10:08.382830563Z
+    created_by: Unknown User
+- id: 6111bb0c-9309-4fa5-ad73-9106f46b49e9
+  spec_id: FR-0129
+  title: Status/Priority per type
+  description: |-
+    Status/Priority per type
+    When I look at Settings/Appearance/Status Icons/Edit Icons, I see many keywords that do not correspond to our four statuses. Likewise the
+      Priority Icons have more than our three. Also the ones listed are lowercase whereas the ones in the system are Captilaized first letter. I
+      like this rich set of options but we may want to enable/disable the values based on requirement type. Perhaps under the Types we can have an
+      edit button which will allow us to specify values for Priority and Status. Then the values shown for those fields would be based on the
+      requirement type. Thoughts? We can keep the Edit Icons as is and if the status or priority matches (case insnesitive) then that will be used
+      otherwise the default.
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 62-Uncategorized
+  created_at: 2025-11-30T02:23:48.712180251Z
+  created_by: Unknown User
+  modified_at: 2025-11-30T02:23:48.712180251Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
+    created_at: 2025-11-30T02:23:48.712187739Z
+    created_by: Unknown User
+- id: cb6bc91b-4b8b-421f-bc0f-3c86c288f9ff
+  spec_id: FR-0130
+  title: Utility to renumber requirements
+  description: |-
+    Utility to renumber requirements
+
+    As part of a clean up, where the requirement numbers are not set in stone, it may be useful to renumber the requirements for neatness (e.g. before a first release).
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 62-Uncategorized
+  created_at: 2025-11-30T02:37:05.343112799Z
+  created_by: Unknown User
+  modified_at: 2025-11-30T02:37:05.343112799Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 85b741f2-043d-4504-b4c7-670ebe664b47
+    created_at: 2025-11-30T02:37:05.343120218Z
+    created_by: Unknown User
+- id: c48b3743-1660-4ba3-bda7-16f98a3c5ab8
+  spec_id: FR-0131
+  title: Settings/Types configurating custom priorities per type
+  description: |2
+     Committed and pushed: 5eeb56c - feat: implement type-specific priorities in Add/Edit form
+
+      Changes included:
+      1. aida-core/src/models.rs - Added get_priorities_for_type() method to RequirementsStore (mirrors the existing get_statuses_for_type()
+      pattern)
+      2. aida-gui/src/app.rs - Updated the Add/Edit form:
+        - Priority dropdown now uses type-specific priorities instead of hardcoded enum values
+        - Priority auto-resets when changing type if current priority isn't valid for new type
+        - Form uses string-based priority tracking (form_priority_string)
+        - Change history properly tracks priority changes using effective_priority()
+        - Save logic uses set_priority_from_str() for both new and edited requirements
+      3. aida-core/src/db/sqlite_backend.rs - Added custom_priority: None placeholder (for when database column is added)
+
+      The type-specific priorities feature is now fully integrated:
+      - Quick-change popup ('p' key) shows type-specific priorities
+      - Add/Edit form dropdown shows type-specific priorities
+      - Settings > Types allows configuring custom priorities per type
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 62-Uncategorized
+  created_at: 2025-11-30T05:21:30.635827807Z
+  created_by: Unknown User
+  modified_at: 2025-11-30T05:21:30.635827807Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
+    created_at: 2025-11-30T05:21:30.635854951Z
+    created_by: Unknown User
+- id: 9e9ea9a2-0734-44b8-b911-f76f5aabc4ac
+  spec_id: FR-0132
+  title: AI integration
+  description: |-
+    AI integration
+    I want to integrate AI and probably claude code into this application. The first baby step would be to have in the
+      Actions dropdown an AI subdropdown menu with actions we can take. Consider if we should evaluate the current requirement, perhaps we provide
+      the entire database as context (for the moment) and it can discern whether the requirement is well written, suggest updates, consider
+      duplicates, whether references or other relationships should be created etc. Our goal is to make this application like an editor which is
+      fast, and nimble without a lot os fluff and primarily driven by the keyboard in preference to the mouse. we want to move fast, iterating
+      frequently with the goal of this becoming self-referential whereby we are able to start feeding back into claude code requirements that
+      improve the application itself. Perhaps you should review requirements.yaml itself for inspiration.
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-30T05:30:18.498861915Z
+  created_by: Unknown User
+  modified_at: 2025-11-30T05:30:18.498861915Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
+    created_at: 2025-11-30T05:30:18.498914165Z
+    created_by: Unknown User
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
   spec_id: $USER-001
@@ -5165,8 +5785,8 @@ id_config:
     prefix: CR
     description: Change requests for modifications to existing functionality
 features: []
-next_feature_number: 60
-next_spec_number: 127
+next_feature_number: 63
+next_spec_number: 133
 prefix_counters: {}
 relationship_definitions:
 - name: parent
