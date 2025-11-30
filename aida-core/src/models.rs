@@ -1,3 +1,4 @@
+use crate::ai::StoredAiEvaluation;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -1510,6 +1511,11 @@ pub struct Requirement {
     /// External URL links attached to this requirement
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub urls: Vec<UrlLink>,
+
+    /// Cached AI evaluation results
+    /// Automatically populated by background evaluator when requirement changes
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ai_evaluation: Option<StoredAiEvaluation>,
 }
 
 impl Requirement {
@@ -1545,6 +1551,7 @@ impl Requirement {
             custom_priority: None,
             custom_fields: std::collections::HashMap::new(),
             urls: Vec::new(),
+            ai_evaluation: None,
         }
     }
 
@@ -1730,6 +1737,27 @@ impl Requirement {
         }
 
         anyhow::bail!("Comment not found")
+    }
+
+    /// Compute a hash of the requirement content used for AI evaluation staleness detection
+    /// The hash includes title, description, and type - fields that affect evaluation
+    pub fn content_hash(&self) -> String {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+
+        let mut hasher = DefaultHasher::new();
+        self.title.hash(&mut hasher);
+        self.description.hash(&mut hasher);
+        self.req_type.to_string().hash(&mut hasher);
+        format!("{:016x}", hasher.finish())
+    }
+
+    /// Check if AI evaluation is needed (never evaluated or stale)
+    pub fn needs_ai_evaluation(&self) -> bool {
+        match &self.ai_evaluation {
+            None => true,
+            Some(eval) => eval.is_stale(&self.content_hash()),
+        }
     }
 }
 

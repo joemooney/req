@@ -3,6 +3,7 @@
 //! Parses JSON responses from AI into structured data types.
 
 use crate::ai::client::AiError;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 /// Issue found in a requirement
@@ -29,6 +30,36 @@ pub struct EvaluationResponse {
     pub issues: Vec<IssueReport>,
     pub strengths: Vec<String>,
     pub suggested_improvements: Option<SuggestedImprovement>,
+}
+
+/// Stored AI evaluation with metadata
+/// This struct wraps evaluation results with timestamps to track when
+/// evaluations need to be refreshed (when requirement changes).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StoredAiEvaluation {
+    /// The evaluation results from AI
+    pub evaluation: EvaluationResponse,
+    /// When the evaluation was performed
+    pub evaluated_at: DateTime<Utc>,
+    /// Hash of the requirement content at time of evaluation
+    /// Used to detect if requirement has changed since evaluation
+    pub content_hash: String,
+}
+
+impl StoredAiEvaluation {
+    /// Create a new stored evaluation from a response
+    pub fn new(evaluation: EvaluationResponse, content_hash: String) -> Self {
+        Self {
+            evaluation,
+            evaluated_at: Utc::now(),
+            content_hash,
+        }
+    }
+
+    /// Check if the evaluation is stale (content has changed)
+    pub fn is_stale(&self, current_hash: &str) -> bool {
+        self.content_hash != current_hash
+    }
 }
 
 /// A potential duplicate requirement

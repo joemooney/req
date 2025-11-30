@@ -1554,6 +1554,7 @@ impl UserSettings {
 
 #[derive(Default, PartialEq, Clone)]
 enum DetailTab {
+    Ai,
     #[default]
     Description,
     Comments,
@@ -10842,6 +10843,21 @@ impl RequirementsApp {
                         .show_inside(ui, |ui| {
                             // Tabs
                             ui.horizontal(|ui| {
+                                // AI tab with indicator showing evaluation status
+                                let ai_label = if req.ai_evaluation.is_some() {
+                                    if req.needs_ai_evaluation() {
+                                        "🤖 AI ⚠"  // Stale evaluation
+                                    } else {
+                                        "🤖 AI ✓"  // Fresh evaluation
+                                    }
+                                } else {
+                                    "🤖 AI"  // No evaluation yet
+                                };
+                                ui.selectable_value(
+                                    &mut self.active_tab,
+                                    DetailTab::Ai,
+                                    ai_label,
+                                );
                                 ui.selectable_value(
                                     &mut self.active_tab,
                                     DetailTab::Description,
@@ -10871,6 +10887,9 @@ impl RequirementsApp {
                                 .id_salt("detail_tab_content_scroll")
                                 .auto_shrink([false, false])
                                 .show(ui, |ui| match &self.active_tab {
+                                    DetailTab::Ai => {
+                                        self.show_ai_tab(ui, &req);
+                                    }
                                     DetailTab::Description => {
                                         self.show_description_tab(ui, &req, idx);
                                     }
@@ -10944,6 +10963,17 @@ impl RequirementsApp {
 
                     // Tabbed content
                     ui.horizontal(|ui| {
+                        // AI tab with indicator for evaluation status
+                        let ai_label = if req.ai_evaluation.is_some() {
+                            if req.needs_ai_evaluation() {
+                                "🤖 AI ⚠️" // Has evaluation but stale
+                            } else {
+                                "🤖 AI ✓" // Has current evaluation
+                            }
+                        } else {
+                            "🤖 AI" // No evaluation yet
+                        };
+                        ui.selectable_value(&mut self.active_tab, DetailTab::Ai, ai_label);
                         ui.selectable_value(
                             &mut self.active_tab,
                             DetailTab::Description,
@@ -10971,6 +11001,9 @@ impl RequirementsApp {
                     // Tab content
                     let req_id = req.id;
                     egui::ScrollArea::vertical().show(ui, |ui| match &self.active_tab {
+                        DetailTab::Ai => {
+                            self.show_ai_tab(ui, &req);
+                        }
                         DetailTab::Description => {
                             self.show_description_tab(ui, &req, idx);
                         }
@@ -11010,6 +11043,163 @@ impl RequirementsApp {
         // Handle close button click (must be done outside the nested closures)
         if close_details {
             self.layout_mode = self.layout_mode.without_details();
+        }
+    }
+
+    fn show_ai_tab(&mut self, ui: &mut egui::Ui, req: &Requirement) {
+        ui.heading("AI Evaluation");
+        ui.add_space(10.0);
+
+        if let Some(ref stored_eval) = req.ai_evaluation {
+            let eval = &stored_eval.evaluation;
+            let is_stale = req.needs_ai_evaluation();
+
+            // Show staleness warning
+            if is_stale {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        egui::RichText::new("⚠️ Evaluation may be outdated")
+                            .color(egui::Color32::from_rgb(255, 165, 0)),
+                    );
+                    ui.label("- requirement has been modified since last evaluation");
+                });
+                ui.add_space(5.0);
+            }
+
+            // Evaluation timestamp
+            ui.horizontal(|ui| {
+                ui.label("Evaluated:");
+                ui.label(
+                    stored_eval
+                        .evaluated_at
+                        .format("%Y-%m-%d %H:%M")
+                        .to_string(),
+                );
+            });
+            ui.add_space(10.0);
+
+            // Quality Score with visual indicator
+            ui.horizontal(|ui| {
+                ui.label(egui::RichText::new("Quality Score:").strong());
+                let score = eval.quality_score;
+                let score_color = if score >= 8 {
+                    egui::Color32::from_rgb(76, 175, 80) // Green
+                } else if score >= 5 {
+                    egui::Color32::from_rgb(255, 193, 7) // Amber
+                } else {
+                    egui::Color32::from_rgb(244, 67, 54) // Red
+                };
+                ui.label(
+                    egui::RichText::new(format!("{}/10", score))
+                        .color(score_color)
+                        .strong()
+                        .size(18.0),
+                );
+
+                // Visual bar
+                let bar_width = 100.0;
+                let filled_width = bar_width * (score as f32 / 10.0);
+                let (rect, _) =
+                    ui.allocate_exact_size(egui::vec2(bar_width, 12.0), egui::Sense::hover());
+                let painter = ui.painter();
+                painter.rect_filled(rect, 3.0, egui::Color32::from_gray(60));
+                let filled_rect =
+                    egui::Rect::from_min_size(rect.min, egui::vec2(filled_width, 12.0));
+                painter.rect_filled(filled_rect, 3.0, score_color);
+            });
+
+            ui.add_space(15.0);
+
+            // Strengths section
+            if !eval.strengths.is_empty() {
+                ui.collapsing(
+                    egui::RichText::new(format!("✅ Strengths ({})", eval.strengths.len()))
+                        .strong(),
+                    |ui| {
+                        for strength in &eval.strengths {
+                            ui.horizontal(|ui| {
+                                ui.label("•");
+                                ui.label(strength);
+                            });
+                        }
+                    },
+                );
+                ui.add_space(10.0);
+            }
+
+            // Issues section
+            if !eval.issues.is_empty() {
+                ui.collapsing(
+                    egui::RichText::new(format!("⚠️ Issues ({})", eval.issues.len())).strong(),
+                    |ui| {
+                        for issue in &eval.issues {
+                            ui.group(|ui| {
+                                ui.horizontal(|ui| {
+                                    // Severity indicator
+                                    let severity_color = match issue.severity.to_lowercase().as_str()
+                                    {
+                                        "high" | "critical" => egui::Color32::from_rgb(244, 67, 54),
+                                        "medium" => egui::Color32::from_rgb(255, 152, 0),
+                                        _ => egui::Color32::from_rgb(255, 235, 59),
+                                    };
+                                    ui.label(
+                                        egui::RichText::new(&issue.severity)
+                                            .color(severity_color)
+                                            .strong(),
+                                    );
+                                    ui.label(format!("[{}]", issue.issue_type));
+                                });
+                                ui.label(&issue.text);
+                                if !issue.suggestion.is_empty() {
+                                    ui.horizontal(|ui| {
+                                        ui.label(egui::RichText::new("Suggestion:").italics());
+                                        ui.label(&issue.suggestion);
+                                    });
+                                }
+                            });
+                            ui.add_space(5.0);
+                        }
+                    },
+                );
+                ui.add_space(10.0);
+            }
+
+            // Suggested improvements section
+            if let Some(ref improvement) = eval.suggested_improvements {
+                ui.collapsing(
+                    egui::RichText::new("💡 Suggested Improvements").strong(),
+                    |ui| {
+                        if let Some(ref desc) = improvement.description {
+                            ui.label(egui::RichText::new("Improved description:").strong());
+                            ui.add_space(5.0);
+                            egui::Frame::default()
+                                .fill(ui.visuals().extreme_bg_color)
+                                .inner_margin(8.0)
+                                .rounding(4.0)
+                                .show(ui, |ui| {
+                                    ui.label(desc);
+                                });
+                            ui.add_space(10.0);
+                        }
+                        ui.label(egui::RichText::new("Rationale:").italics());
+                        ui.label(&improvement.rationale);
+                    },
+                );
+            }
+        } else {
+            // No evaluation yet
+            ui.vertical_centered(|ui| {
+                ui.add_space(40.0);
+                ui.label(
+                    egui::RichText::new("🤖 No AI evaluation yet")
+                        .size(16.0)
+                        .color(egui::Color32::GRAY),
+                );
+                ui.add_space(10.0);
+                ui.label("This requirement has not been evaluated by AI.");
+                ui.label("Evaluations run automatically in the background,");
+                ui.label("or you can trigger one manually from Actions → AI → Evaluate.");
+            });
         }
     }
 

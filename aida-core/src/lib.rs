@@ -7,6 +7,10 @@ pub mod registry;
 pub mod storage;
 
 // Re-export commonly used types
+pub use ai::{
+    AiClient, AiMode, BackgroundEvaluator, EvaluationResponse, EvaluationResult, EvaluatorConfig,
+    EvaluatorStatus, IssueReport, StoredAiEvaluation, SuggestedImprovement,
+};
 pub use models::{
     default_reaction_definitions,
     default_type_definitions,

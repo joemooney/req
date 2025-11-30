@@ -257,6 +257,7 @@ impl SqliteBackend {
                 custom_priority: None, // TODO: Load from database when column is added
                 custom_fields,
                 urls,
+                ai_evaluation: None, // TODO: Load from database when column is added
             });
         }
 
@@ -687,6 +688,7 @@ impl DatabaseBackend for SqliteBackend {
                     custom_priority: None, // TODO: Load from database when column is added
                     custom_fields,
                     urls,
+                    ai_evaluation: None, // TODO: Load from database when column is added
                 }))
             }
             None => Ok(None),

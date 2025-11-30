@@ -4,11 +4,13 @@
 //! management using Claude Code CLI integration.
 
 pub mod client;
+pub mod evaluator;
 pub mod prompts;
 pub mod responses;
 
 pub use client::{AiClient, AiError, AiMode};
+pub use evaluator::{BackgroundEvaluator, EvaluationResult, EvaluatorConfig, EvaluatorStatus};
 pub use responses::{
     DuplicateResult, EvaluationResponse, GeneratedChild, IssueReport, RelationshipSuggestion,
-    SuggestedImprovement,
+    StoredAiEvaluation, SuggestedImprovement,
 };
