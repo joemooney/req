@@ -14430,17 +14430,22 @@ impl eframe::App for RequirementsApp {
             );
 
             // Check navigation keybindings (context-aware)
-            if self.user_settings.keybindings.is_pressed(
-                KeyAction::NavigateDown,
-                ctx,
-                self.current_key_context,
-            ) {
+            // Block list navigation when status popup is open
+            if !self.show_status_popup
+                && self.user_settings.keybindings.is_pressed(
+                    KeyAction::NavigateDown,
+                    ctx,
+                    self.current_key_context,
+                )
+            {
                 nav_delta = 1;
-            } else if self.user_settings.keybindings.is_pressed(
-                KeyAction::NavigateUp,
-                ctx,
-                self.current_key_context,
-            ) {
+            } else if !self.show_status_popup
+                && self.user_settings.keybindings.is_pressed(
+                    KeyAction::NavigateUp,
+                    ctx,
+                    self.current_key_context,
+                )
+            {
                 nav_delta = -1;
             }
 
