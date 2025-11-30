@@ -259,6 +259,47 @@ fn get_clipboard_text() -> Option<String> {
         .and_then(|mut c| c.get_text().ok())
 }
 
+/// Format a requirement as a prompt for Claude Code implementation
+fn format_requirement_for_claude_code(req: &Requirement) -> String {
+    let mut prompt = String::new();
+
+    // Header with requirement ID
+    let req_id = req.spec_id.as_deref().unwrap_or("(no ID)");
+    prompt.push_str(&format!("# Implement Requirement: {} - {}\n\n", req_id, req.title));
+
+    // Requirement type and priority
+    prompt.push_str(&format!("**Type:** {}  \n", req.req_type));
+    prompt.push_str(&format!("**Priority:** {}  \n", req.priority));
+    if !req.feature.is_empty() {
+        prompt.push_str(&format!("**Feature:** {}  \n", req.feature));
+    }
+    prompt.push_str("\n");
+
+    // Description
+    prompt.push_str("## Description\n\n");
+    prompt.push_str(&req.description);
+    prompt.push_str("\n\n");
+
+    // Tags if present
+    if !req.tags.is_empty() {
+        prompt.push_str("## Tags\n\n");
+        for tag in &req.tags {
+            prompt.push_str(&format!("- {}\n", tag));
+        }
+        prompt.push_str("\n");
+    }
+
+    // Implementation instructions
+    prompt.push_str("## Implementation Task\n\n");
+    prompt.push_str("Please implement this requirement in the codebase. ");
+    prompt.push_str("After implementation:\n");
+    prompt.push_str("1. Ensure the code follows the project's existing patterns and style\n");
+    prompt.push_str("2. Add appropriate tests if applicable\n");
+    prompt.push_str("3. Update the requirement status to 'Completed' when done\n");
+
+    prompt
+}
+
 /// Default base font size in points
 const DEFAULT_FONT_SIZE: f32 = 14.0;
 /// Minimum font size
@@ -10721,6 +10762,7 @@ impl RequirementsApp {
                 let mut new_priority: Option<RequirementPriority> = None;
                 let mut new_status: Option<RequirementStatus> = None;
                 let mut trigger_ai_action: Option<AiAction> = None;
+                let mut copy_for_claude_code_idx: Option<usize> = None;
                 let current_priority = req.priority.clone();
                 let current_status = req.status.clone();
 
@@ -10851,6 +10893,22 @@ impl RequirementsApp {
                                             trigger_ai_action = Some(AiAction::GenerateChildren(req_uuid));
                                             ui.close_menu();
                                         }
+
+                                        ui.separator();
+
+                                        // Copy for Claude Code - only enable if status is Approved
+                                        let is_approved = req.status == RequirementStatus::Approved;
+                                        let copy_button = egui::Button::new("📋 Copy for Claude Code");
+                                        let response = ui.add_enabled(is_approved, copy_button);
+                                        let response = if !is_approved {
+                                            response.on_disabled_hover_text("Requirement must be Approved to implement")
+                                        } else {
+                                            response
+                                        };
+                                        if response.clicked() {
+                                            copy_for_claude_code_idx = Some(idx);
+                                            ui.close_menu();
+                                        }
                                     });
 
                                     ui.separator();
@@ -10915,6 +10973,22 @@ impl RequirementsApp {
                         );
                         req.record_change(self.user_settings.display_name(), vec![change]);
                         self.save();
+                    }
+                }
+
+                // Handle copy for Claude Code
+                if let Some(copy_idx) = copy_for_claude_code_idx {
+                    if let Some(req) = self.store.requirements.get(copy_idx) {
+                        let prompt_text = format_requirement_for_claude_code(req);
+                        ui.ctx().copy_text(prompt_text.clone());
+                        // Also copy to primary selection on Linux
+                        copy_to_primary_selection(&prompt_text);
+                        let req_id = req.spec_id.as_deref().unwrap_or("requirement");
+                        self.toast_message = Some(ToastNotification {
+                            message: format!("Copied {} to clipboard - paste into Claude Code", req_id),
+                            is_success: true,
+                            show_until: Instant::now() + std::time::Duration::from_secs(4),
+                        });
                     }
                 }
 
