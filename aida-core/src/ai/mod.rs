@@ -1,0 +1,14 @@
+//! AI Integration Module for AIDA
+//!
+//! This module provides AI-powered analysis and suggestions for requirements
+//! management using Claude Code CLI integration.
+
+pub mod client;
+pub mod prompts;
+pub mod responses;
+
+pub use client::{AiClient, AiError, AiMode};
+pub use responses::{
+    DuplicateResult, EvaluationResponse, GeneratedChild, IssueReport, RelationshipSuggestion,
+    SuggestedImprovement,
+};

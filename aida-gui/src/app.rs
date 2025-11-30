@@ -1,4 +1,5 @@
 use aida_core::{
+    ai::AiClient,
     determine_requirements_path, Cardinality, Comment, CustomFieldDefinition, CustomFieldType,
     FieldChange, IdFormat, NumberingStrategy, RelationshipDefinition, RelationshipType,
     Requirement, RequirementPriority, RequirementStatus, RequirementType, RequirementsStore,
@@ -1620,6 +1621,16 @@ impl AiAction {
             AiAction::GenerateChildren(_) => "Generate Children",
         }
     }
+
+    fn requirement_id(&self) -> Uuid {
+        match self {
+            AiAction::Evaluate(id) => *id,
+            AiAction::FindDuplicates(id) => *id,
+            AiAction::SuggestRelationships(id) => *id,
+            AiAction::ImproveDescription(id) => *id,
+            AiAction::GenerateChildren(id) => *id,
+        }
+    }
 }
 
 /// AI result - stores the outcome of an AI action
@@ -2225,6 +2236,7 @@ pub struct RequirementsApp {
     original_form_custom_fields: HashMap<String, String>,
 
     // AI integration state
+    ai_client: AiClient,                          // AI client for Claude CLI integration
     ai_pending_action: Option<AiAction>,          // Currently running AI action
     ai_last_result: Option<AiResult>,             // Result from last AI action
     show_ai_results_panel: bool,                  // Whether to show AI results panel
@@ -2533,6 +2545,7 @@ impl RequirementsApp {
             original_form_custom_fields: HashMap::new(),
 
             // AI integration state
+            ai_client: AiClient::new(),
             ai_pending_action: None,
             ai_last_result: None,
             show_ai_results_panel: false,
@@ -10563,11 +10576,192 @@ impl RequirementsApp {
 
                 // Handle AI action trigger
                 if let Some(action) = trigger_ai_action {
-                    // For now, show a placeholder result since AI backend is not yet implemented
-                    let result = AiResult::placeholder(&action);
                     eprintln!("AI action triggered: {:?}", action);
-                    self.ai_last_result = Some(result);
-                    self.show_ai_results_panel = true;
+
+                    // Check if AI is available
+                    if !self.ai_client.is_available() {
+                        self.ai_last_result = Some(AiResult {
+                            action_name: action.name().to_string(),
+                            success: false,
+                            message: format!(
+                                "AI not available. Mode: {}. Install Claude CLI or set ANTHROPIC_API_KEY.",
+                                self.ai_client.mode_description()
+                            ),
+                            details: None,
+                        });
+                        self.show_ai_results_panel = true;
+                    } else {
+                        // Get the requirement UUID from the action
+                        let req_uuid = action.requirement_id();
+
+                        // Look up the requirement
+                        if let Some(req) = self.store.requirements.iter().find(|r| r.id == req_uuid) {
+                            let req = req.clone(); // Clone to avoid borrow issues
+                            let result = match &action {
+                                AiAction::Evaluate(_) => {
+                                    match self.ai_client.evaluate_requirement(&req, &self.store) {
+                                        Ok(response) => AiResult {
+                                            action_name: "Evaluate".to_string(),
+                                            success: true,
+                                            message: format!(
+                                                "Quality Score: {}/10\n\nStrengths:\n{}\n\nIssues:\n{}",
+                                                response.quality_score,
+                                                response.strengths.iter()
+                                                    .map(|s| format!("• {}", s))
+                                                    .collect::<Vec<_>>()
+                                                    .join("\n"),
+                                                response.issues.iter()
+                                                    .map(|i| format!("• [{}] {}: {}", i.severity, i.issue_type, i.text))
+                                                    .collect::<Vec<_>>()
+                                                    .join("\n")
+                                            ),
+                                            details: response.suggested_improvements.as_ref().map(|imp| {
+                                                format!("Suggested improvement:\n{}\n\nRationale: {}",
+                                                    imp.description.as_deref().unwrap_or("(none)"),
+                                                    imp.rationale)
+                                            }),
+                                        },
+                                        Err(e) => AiResult {
+                                            action_name: "Evaluate".to_string(),
+                                            success: false,
+                                            message: format!("AI error: {}", e),
+                                            details: None,
+                                        },
+                                    }
+                                },
+                                AiAction::FindDuplicates(_) => {
+                                    match self.ai_client.find_duplicates(&req, &self.store) {
+                                        Ok(response) => {
+                                            let msg = if response.potential_duplicates.is_empty() {
+                                                "No potential duplicates found.".to_string()
+                                            } else {
+                                                response.potential_duplicates.iter()
+                                                    .map(|d| format!(
+                                                        "• {} ({}% similar): {}\n  Recommendation: {}",
+                                                        d.spec_id,
+                                                        (d.similarity * 100.0) as i32,
+                                                        d.reason,
+                                                        d.recommendation
+                                                    ))
+                                                    .collect::<Vec<_>>()
+                                                    .join("\n\n")
+                                            };
+                                            AiResult {
+                                                action_name: "Find Duplicates".to_string(),
+                                                success: true,
+                                                message: msg,
+                                                details: None,
+                                            }
+                                        },
+                                        Err(e) => AiResult {
+                                            action_name: "Find Duplicates".to_string(),
+                                            success: false,
+                                            message: format!("AI error: {}", e),
+                                            details: None,
+                                        },
+                                    }
+                                },
+                                AiAction::SuggestRelationships(_) => {
+                                    match self.ai_client.suggest_relationships(&req, &self.store) {
+                                        Ok(response) => {
+                                            let msg = if response.suggested_relationships.is_empty() {
+                                                "No relationship suggestions found.".to_string()
+                                            } else {
+                                                response.suggested_relationships.iter()
+                                                    .map(|r| format!(
+                                                        "• {} → {} ({}% confidence)\n  {}",
+                                                        r.rel_type,
+                                                        r.target_spec_id,
+                                                        (r.confidence * 100.0) as i32,
+                                                        r.rationale
+                                                    ))
+                                                    .collect::<Vec<_>>()
+                                                    .join("\n\n")
+                                            };
+                                            AiResult {
+                                                action_name: "Suggest Relationships".to_string(),
+                                                success: true,
+                                                message: msg,
+                                                details: None,
+                                            }
+                                        },
+                                        Err(e) => AiResult {
+                                            action_name: "Suggest Relationships".to_string(),
+                                            success: false,
+                                            message: format!("AI error: {}", e),
+                                            details: None,
+                                        },
+                                    }
+                                },
+                                AiAction::ImproveDescription(_) => {
+                                    match self.ai_client.improve_description(&req, &self.store) {
+                                        Ok(response) => AiResult {
+                                            action_name: "Improve Description".to_string(),
+                                            success: true,
+                                            message: format!(
+                                                "Improved Description:\n\n{}\n\nChanges Made:\n{}\n\nRationale: {}",
+                                                response.improved_description,
+                                                response.changes_made.iter()
+                                                    .map(|c| format!("• {}", c))
+                                                    .collect::<Vec<_>>()
+                                                    .join("\n"),
+                                                response.rationale
+                                            ),
+                                            details: Some(response.improved_description.clone()),
+                                        },
+                                        Err(e) => AiResult {
+                                            action_name: "Improve Description".to_string(),
+                                            success: false,
+                                            message: format!("AI error: {}", e),
+                                            details: None,
+                                        },
+                                    }
+                                },
+                                AiAction::GenerateChildren(_) => {
+                                    match self.ai_client.generate_children(&req, &self.store) {
+                                        Ok(response) => {
+                                            let msg = if response.suggested_children.is_empty() {
+                                                "No child requirements suggested.".to_string()
+                                            } else {
+                                                response.suggested_children.iter()
+                                                    .map(|c| format!(
+                                                        "• {} [{}]\n  {}\n  Rationale: {}",
+                                                        c.title,
+                                                        c.req_type,
+                                                        c.description,
+                                                        c.rationale
+                                                    ))
+                                                    .collect::<Vec<_>>()
+                                                    .join("\n\n")
+                                            };
+                                            AiResult {
+                                                action_name: "Generate Children".to_string(),
+                                                success: true,
+                                                message: msg,
+                                                details: None,
+                                            }
+                                        },
+                                        Err(e) => AiResult {
+                                            action_name: "Generate Children".to_string(),
+                                            success: false,
+                                            message: format!("AI error: {}", e),
+                                            details: None,
+                                        },
+                                    }
+                                },
+                            };
+                            self.ai_last_result = Some(result);
+                            self.show_ai_results_panel = true;
+                        } else {
+                            self.ai_last_result = Some(AiResult {
+                                action_name: action.name().to_string(),
+                                success: false,
+                                message: format!("Requirement not found: {}", req_uuid),
+                                details: None,
+                            });
+                            self.show_ai_results_panel = true;
+                        }
+                    }
                 }
 
                 ui.separator();
