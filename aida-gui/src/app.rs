@@ -12023,33 +12023,8 @@ fn main() {
                 }
             });
 
-        // Auto-sync description first line to title (Add mode only)
-        // Only sync while description has no newline (first line only)
-        if !is_edit && self.form_title_auto_synced {
-            // Check if description changed
-            if self.form_description != self.form_last_description {
-                // Get the first line (before any newline)
-                let first_line = self.form_description.lines().next().unwrap_or("");
-                let has_newline = self.form_description.contains('\n');
-
-                // Only sync if no newline has been entered yet
-                if !has_newline {
-                    // Truncate to 50 characters with ellipsis if needed
-                    self.form_title = if first_line.chars().count() > 50 {
-                        let truncated: String = first_line.chars().take(47).collect();
-                        format!("{}...", truncated)
-                    } else {
-                        first_line.to_string()
-                    };
-                }
-                // Once a newline is entered, stop auto-sync
-                if has_newline {
-                    self.form_title_auto_synced = false;
-                }
-                // Update the tracking variable
-                self.form_last_description = self.form_description.clone();
-            }
-        }
+        // Auto-sync description's first line to title in Add mode
+        self.sync_title_from_description(is_edit);
 
         ui.add_space(8.0);
         ui.separator();
@@ -12421,6 +12396,9 @@ fn main() {
                     });
             });
 
+        // Auto-sync description's first line to title in Add mode
+        self.sync_title_from_description(is_edit);
+
         // Handle type change - validate status
         if old_type != self.form_type {
             let statuses = self.store.get_statuses_for_type(&self.form_type);
@@ -12760,6 +12738,9 @@ fn main() {
                 }
             });
 
+        // Auto-sync description's first line to title in Add mode
+        self.sync_title_from_description(is_edit);
+
         // Show cancel confirmation dialog if there are unsaved changes
         if self.show_cancel_confirm_dialog {
             let dialog_esc = ui.input(|i| i.key_pressed(egui::Key::Escape));
@@ -12780,6 +12761,40 @@ fn main() {
                         }
                     });
                 });
+        }
+    }
+
+    /// Helper to sync title from description (Add mode only)
+    /// Called after description changes to auto-fill title from first line
+    fn sync_title_from_description(&mut self, is_edit: bool) {
+        // Only sync in Add mode (not edit), when auto-sync is enabled
+        if is_edit || !self.form_title_auto_synced {
+            return;
+        }
+
+        // Check if description changed
+        if self.form_description != self.form_last_description {
+            // Get the first line (before any newline)
+            let first_line = self.form_description.lines().next().unwrap_or("");
+            let has_newline = self.form_description.contains('\n');
+
+            // Only sync if no newline has been entered yet
+            if !has_newline {
+                // Truncate to 50 characters with ellipsis if needed
+                let new_title = if first_line.chars().count() > 50 {
+                    let truncated: String = first_line.chars().take(47).collect();
+                    format!("{}...", truncated)
+                } else {
+                    first_line.to_string()
+                };
+                self.form_title = new_title;
+            }
+            // Once a newline is entered, stop auto-sync
+            if has_newline {
+                self.form_title_auto_synced = false;
+            }
+            // Update the tracking variable
+            self.form_last_description = self.form_description.clone();
         }
     }
 
