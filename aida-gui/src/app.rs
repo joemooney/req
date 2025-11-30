@@ -2293,6 +2293,10 @@ pub struct RequirementsApp {
     ai_eval_receiver: Option<mpsc::Receiver<BackgroundAiResult>>, // Channel to receive results
     ai_eval_in_progress: Option<(Uuid, String)>,  // (req_id, spec_id) of req being evaluated
 
+    // Background Find Duplicates state (for non-blocking duplicate detection)
+    find_duplicates_receiver: Option<mpsc::Receiver<BackgroundFindDuplicatesResult>>,
+    find_duplicates_in_progress: Option<(Uuid, String)>,  // (req_id, spec_id) of req being checked
+
     // Toast notification state
     toast_message: Option<ToastNotification>,     // Current toast message to display
 }
@@ -2303,6 +2307,22 @@ struct BackgroundAiResult {
     spec_id: String,
     content_hash: String,
     result: Result<EvaluationResponse, String>,
+}
+
+/// Result from background Find Duplicates thread
+struct BackgroundFindDuplicatesResult {
+    req_id: Uuid,
+    spec_id: String,
+    result: Result<Vec<DuplicateInfo>, String>,
+}
+
+/// Info about a potential duplicate (simplified for display)
+#[derive(Clone)]
+struct DuplicateInfo {
+    spec_id: String,
+    similarity: f64,
+    reason: String,
+    recommendation: String,
 }
 
 /// Toast notification for displaying temporary messages
@@ -2624,6 +2644,10 @@ impl RequirementsApp {
             // Background AI evaluation state
             ai_eval_receiver: None,
             ai_eval_in_progress: None,
+
+            // Background Find Duplicates state
+            find_duplicates_receiver: None,
+            find_duplicates_in_progress: None,
 
             // Toast notification state
             toast_message: None,
@@ -11062,36 +11086,58 @@ impl RequirementsApp {
                                     }
                                 },
                                 AiAction::FindDuplicates(_) => {
-                                    Some(match self.ai_client.find_duplicates(&req, &self.store) {
-                                        Ok(response) => {
-                                            let msg = if response.potential_duplicates.is_empty() {
-                                                "No potential duplicates found.".to_string()
-                                            } else {
-                                                response.potential_duplicates.iter()
-                                                    .map(|d| format!(
-                                                        "• {} ({}% similar): {}\n  Recommendation: {}",
-                                                        d.spec_id,
-                                                        (d.similarity * 100.0) as i32,
-                                                        d.reason,
-                                                        d.recommendation
-                                                    ))
-                                                    .collect::<Vec<_>>()
-                                                    .join("\n\n")
+                                    // Check if already finding duplicates
+                                    if self.find_duplicates_in_progress.is_some() {
+                                        self.toast_message = Some(ToastNotification {
+                                            message: "Find duplicates already in progress...".to_string(),
+                                            is_success: false,
+                                            show_until: Instant::now() + std::time::Duration::from_secs(3),
+                                        });
+                                        None // Skip, return no result
+                                    } else {
+                                        // Spawn background thread for find duplicates
+                                        let (tx, rx) = mpsc::channel();
+                                        let ai_client = self.ai_client.clone();
+                                        let store_clone = self.store.clone();
+                                        let req_clone = req.clone();
+                                        let req_id = req.id;
+                                        let spec_id = req.spec_id.clone().unwrap_or_else(|| req.id.to_string());
+
+                                        self.find_duplicates_receiver = Some(rx);
+                                        self.find_duplicates_in_progress = Some((req_id, spec_id.clone()));
+
+                                        // Show toast that find duplicates started
+                                        self.toast_message = Some(ToastNotification {
+                                            message: format!("Finding duplicates for {}...", spec_id),
+                                            is_success: true,
+                                            show_until: Instant::now() + std::time::Duration::from_secs(3),
+                                        });
+
+                                        thread::spawn(move || {
+                                            let result = match ai_client.find_duplicates(&req_clone, &store_clone) {
+                                                Ok(response) => {
+                                                    let duplicates: Vec<DuplicateInfo> = response.potential_duplicates
+                                                        .into_iter()
+                                                        .map(|d| DuplicateInfo {
+                                                            spec_id: d.spec_id,
+                                                            similarity: d.similarity,
+                                                            reason: d.reason,
+                                                            recommendation: d.recommendation,
+                                                        })
+                                                        .collect();
+                                                    Ok(duplicates)
+                                                },
+                                                Err(e) => Err(e.to_string()),
                                             };
-                                            AiResult {
-                                                action_name: "Find Duplicates".to_string(),
-                                                success: true,
-                                                message: msg,
-                                                details: None,
-                                            }
-                                        },
-                                        Err(e) => AiResult {
-                                            action_name: "Find Duplicates".to_string(),
-                                            success: false,
-                                            message: format!("AI error: {}", e),
-                                            details: None,
-                                        },
-                                    })
+                                            let _ = tx.send(BackgroundFindDuplicatesResult {
+                                                req_id,
+                                                spec_id,
+                                                result,
+                                            });
+                                        });
+
+                                        None // No immediate result, will be polled later
+                                    }
                                 },
                                 AiAction::SuggestRelationships(_) => {
                                     Some(match self.ai_client.suggest_relationships(&req, &self.store) {
@@ -15530,6 +15576,74 @@ impl eframe::App for RequirementsApp {
                             is_success: false,
                             show_until: Instant::now() + std::time::Duration::from_secs(5),
                         });
+                    }
+                }
+            }
+        }
+
+        // Poll for background Find Duplicates results
+        if let Some(receiver) = &self.find_duplicates_receiver {
+            if let Ok(result) = receiver.try_recv() {
+                eprintln!("DEBUG: Background Find Duplicates completed for {}", result.spec_id);
+
+                // Clear the in-progress state
+                self.find_duplicates_in_progress = None;
+                self.find_duplicates_receiver = None;
+
+                match result.result {
+                    Ok(duplicates) => {
+                        let msg = if duplicates.is_empty() {
+                            "No potential duplicates found.".to_string()
+                        } else {
+                            duplicates.iter()
+                                .map(|d| format!(
+                                    "• {} ({}% similar): {}\n  Recommendation: {}",
+                                    d.spec_id,
+                                    (d.similarity * 100.0) as i32,
+                                    d.reason,
+                                    d.recommendation
+                                ))
+                                .collect::<Vec<_>>()
+                                .join("\n\n")
+                        };
+
+                        // Show success toast
+                        let count = duplicates.len();
+                        self.toast_message = Some(ToastNotification {
+                            message: if count == 0 {
+                                format!("No duplicates found for {}", result.spec_id)
+                            } else {
+                                format!("Found {} potential duplicate(s) for {}", count, result.spec_id)
+                            },
+                            is_success: true,
+                            show_until: Instant::now() + std::time::Duration::from_secs(5),
+                        });
+
+                        // Update AI result panel
+                        self.ai_last_result = Some(AiResult {
+                            action_name: "Find Duplicates".to_string(),
+                            success: true,
+                            message: msg,
+                            details: None,
+                        });
+                        self.show_ai_results_panel = true;
+                    }
+                    Err(e) => {
+                        // Show error toast
+                        self.toast_message = Some(ToastNotification {
+                            message: format!("Find duplicates failed for {}: {}", result.spec_id, e),
+                            is_success: false,
+                            show_until: Instant::now() + std::time::Duration::from_secs(5),
+                        });
+
+                        // Update AI result panel with error
+                        self.ai_last_result = Some(AiResult {
+                            action_name: "Find Duplicates".to_string(),
+                            success: false,
+                            message: format!("AI error: {}", e),
+                            details: None,
+                        });
+                        self.show_ai_results_panel = true;
                     }
                 }
             }

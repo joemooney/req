@@ -1019,3 +1019,40 @@ A chronological record of development sessions and changes made to the Requireme
   - Should have "Execute Suggestion" button for actionable duplicate findings
 - **Result**: Feature request captured as FR-0148 for future implementation
 
+
+### Implement Background AI Find Duplicates (FR-0148)
+- **Prompt**: Implement FR-0148 - Background AI Find Duplicates
+- **Solution**: Converted Find Duplicates AI action to run in a background thread like Evaluate Requirement
+- **Implementation** (in `aida-gui/src/app.rs`):
+  - Added `BackgroundFindDuplicatesResult` struct at ~line 2313 to hold async results:
+    - `req_id: Uuid` - ID of requirement being checked
+    - `spec_id: String` - SPEC-ID for display
+    - `result: Result<Vec<DuplicateInfo>, String>` - Duplicates or error
+  - Added `DuplicateInfo` struct at ~line 2320 to hold simplified duplicate data:
+    - `spec_id`, `similarity`, `reason`, `recommendation`
+  - Added state fields to `RequirementsApp`:
+    - `find_duplicates_receiver: Option<mpsc::Receiver<BackgroundFindDuplicatesResult>>`
+    - `find_duplicates_in_progress: Option<(Uuid, String)>`
+  - Initialized new fields in `new()` function
+  - Converted `AiAction::FindDuplicates` handler at ~line 11088:
+    - Checks if already finding duplicates (shows toast if busy)
+    - Creates `mpsc::channel()` for async communication
+    - Spawns background thread that calls `ai_client.find_duplicates()`
+    - Stores receiver and in-progress state
+    - Shows "Finding duplicates for..." toast
+    - Returns `None` for immediate result (polled later)
+  - Added polling logic in `update()` at ~line 15584:
+    - Uses `try_recv()` for non-blocking check
+    - On success: formats message, shows toast with count, updates AI result panel
+    - On error: shows error toast and updates AI result panel with error
+    - Clears in-progress state and receiver
+- **Pattern**: Follows exact same pattern as background AI Evaluate:
+  1. Create channel
+  2. Clone necessary data
+  3. Store receiver in state
+  4. Spawn thread to do async work
+  5. Send result via channel
+  6. Poll in `update()` loop
+- **Result**: Find Duplicates now runs in background, UI remains responsive during AI API calls
+- **Status**: FR-0148 marked as Completed
+

@@ -5988,6 +5988,10 @@ requirements:
     target_id: 9a4e932f-0922-4d2f-8c0c-131525b09801
     created_at: 2025-11-30T22:17:36.822862901Z
     created_by: Unknown User
+  - rel_type: Child
+    target_id: 382d0b18-bef9-4303-a93d-b2e54d4817d7
+    created_at: 2025-11-30T22:35:06.475336895Z
+    created_by: Unknown User
 - id: 8fce7d22-6ef3-44da-8284-c7af30ca8ea2
   spec_id: FR-0135
   title: Settings/Relations the relations list should ex...
@@ -6670,19 +6674,60 @@ requirements:
     target_id: 4de3b4f0-b157-4d50-8549-e98153d2324d
     created_at: 2025-11-30T22:17:36.822862901Z
     created_by: Unknown User
-- id: a36d92fa-f60d-4107-8ed2-f496f556965e
+- id: 382d0b18-bef9-4303-a93d-b2e54d4817d7
   spec_id: FR-0148
-  title: Background AI Find Duplicates
-  description: The AI 'Find Duplicates' action shall run in a background thread (similar to 'Evaluate Requirement') to avoid blocking the UI. Results shall be stored in the AI Evaluation panel. When duplicates are found, an 'Execute Suggestion' button shall be provided to take action on the results.
-  status: Draft
+  title: AI Find Duplicates
+  description: |
+    AI Find Duplicates
+
+     "Find Duplicates" run in the background is valid and well-justified:
+
+      1. Current behavior: The AiAction::FindDuplicates handler in aida-gui/src/app.rs:11064-11094 runs synchronously, calling
+      self.ai_client.find_duplicates() on the main thread. This blocks the UI while waiting for the AI API response.
+      2. Existing pattern: The "Evaluate Requirement" action already implements background processing using:
+        - A BackgroundAiResult struct to hold async results
+        - An ai_eval_receiver channel to receive results from the background thread
+        - Spawning a std::thread with an mpsc::channel for communication
+      3. User impact: AI API calls can take several seconds, making the UI freeze unacceptable for good UX.
+
+      What Was Done
+
+      1. Added requirement FR-0148 "Background AI Find Duplicates":
+        - Title: "Background AI Find Duplicates"
+        - Description: The AI 'Find Duplicates' action shall run in a background thread (similar to 'Evaluate Requirement') to avoid blocking the
+      UI. Results shall be stored in the AI Evaluation panel. When duplicates are found, an 'Execute Suggestion' button shall be provided to take
+      action on the results.
+        - Type: Functional, Priority: Medium, Feature: 6-AI-Integration, Status: Draft
+      2. Updated REQUIREMENTS.md with new Section 12 "AI Integration" covering:
+        - AI Actions (REQ-AI-001 through REQ-AI-006)
+        - Background Processing (REQ-AI-007 through REQ-AI-010)
+        - Claude Code Integration (REQ-AI-011, REQ-AI-012)
+      3. Updated PROMPT_HISTORY.md with:
+        - Copy for Claude Code feature entry
+        - Background AI Find Duplicates requirement entry
+  status: Completed
   priority: Medium
   owner: ''
-  feature: 6-AI-Integration
-  created_at: 2025-11-30T22:23:50.301414820Z
-  modified_at: 2025-11-30T22:23:50.301414820Z
+  feature: 70-Uncategorized
+  created_at: 2025-11-30T22:35:06.475306835Z
+  created_by: Unknown User
+  modified_at: 2025-11-30T23:45:00.000000000Z
   req_type: Functional
   dependencies: []
   tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 4de3b4f0-b157-4d50-8549-e98153d2324d
+    created_at: 2025-11-30T22:35:06.475336895Z
+    created_by: Unknown User
+  history:
+  - id: 0fe9b15f-ece5-4004-8ea4-654c395483bd
+    author: ''
+    timestamp: 2025-11-30T22:41:03.339733160Z
+    changes:
+    - field_name: status
+      old_value: Draft
+      new_value: Approved
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
   spec_id: $USER-001
@@ -6735,7 +6780,7 @@ id_config:
     prefix: CR
     description: Change requests for modifications to existing functionality
 features: []
-next_feature_number: 70
+next_feature_number: 71
 next_spec_number: 149
 prefix_counters: {}
 relationship_definitions:
