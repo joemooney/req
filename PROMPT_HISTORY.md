@@ -947,3 +947,24 @@ A chronological record of development sessions and changes made to the Requireme
   - Updated `lib.rs` to export the new `db` module
 - **Result**: System now supports multiple storage backends with a unified interface. Migration between formats and JSON import/export for interoperability.
 
+
+### Documentation: Administrator's and User's Guides
+- **Prompt**: "Please update the users guide with pertinent information. I think we also need an administrators guide that goes over the project settings... but we want to cover the schema, and how to migrate, storage issues, multi user control etc."
+- **Solution**: Created comprehensive administrator's guide and updated user's guide with storage backend information
+- **Implementation**:
+  - Created `docs/admin-guide.md` with:
+    - Project configuration (ID settings, features, type definitions, relationship definitions, prefix management)
+    - Storage backends comparison (YAML vs SQLite, when to use each)
+    - Complete database schema documentation (YAML format, SQLite tables with all fields and indexes)
+    - Migration procedures (YAML to SQLite, SQLite to YAML, JSON import/export)
+    - Multi-user control (file locking for YAML, WAL mode for SQLite, user management)
+    - Backup and recovery procedures
+    - Performance tuning tips
+    - Troubleshooting guide with diagnostic commands
+    - Environment variables and registry file format appendices
+  - Updated `docs/user-guide.md`:
+    - Added "Storage Backends" section covering YAML and SQLite options
+    - Updated table of contents
+    - Added link to Administrator's Guide for detailed information
+- **Result**: Comprehensive documentation for both end users and administrators managing requirements database deployments
+

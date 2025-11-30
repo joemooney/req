@@ -10,6 +10,7 @@ A professional requirements management system with both CLI and GUI interfaces.
 - [Working with Requirements](#working-with-requirements)
 - [Features and Organization](#features-and-organization)
 - [Multi-Project Support](#multi-project-support)
+- [Storage Backends](#storage-backends)
 - [Keyboard Shortcuts](#keyboard-shortcuts)
 - [Settings](#settings)
 
@@ -583,6 +584,65 @@ req db default frontend
 # Work with specific project
 req list --project backend
 ```
+
+---
+
+## Storage Backends
+
+The system supports two storage formats for your requirements data.
+
+### YAML Storage (Default)
+
+Requirements are stored in human-readable YAML files (`.yaml` or `.yml`).
+
+**Advantages:**
+- Human-readable and editable with any text editor
+- Version control friendly - meaningful Git diffs
+- Easy to backup (just copy the file)
+
+**Best for:**
+- Small to medium projects
+- Teams using Git for collaboration
+- When you need to manually inspect or edit data
+
+### SQLite Storage
+
+For larger projects, SQLite database storage (`.db`, `.sqlite`) offers better performance.
+
+**Advantages:**
+- Faster for large datasets (1000+ requirements)
+- Better concurrent access handling
+- Efficient single-record operations
+
+**Best for:**
+- Large projects with many requirements
+- Scenarios with frequent concurrent access
+- When performance is critical
+
+### Choosing Your Storage Format
+
+The system automatically detects the storage format based on file extension:
+- `.yaml`, `.yml` → YAML storage
+- `.db`, `.sqlite`, `.sqlite3` → SQLite storage
+
+When registering a project, simply use the appropriate file extension:
+
+```bash
+# YAML storage (default)
+req db add --name "my-project" --path ~/project/requirements.yaml
+
+# SQLite storage
+req db add --name "my-project" --path ~/project/requirements.db
+```
+
+### Exporting and Importing
+
+You can export your requirements to JSON format for backup or interoperability:
+
+- **JSON export** - Portable format for sharing between systems
+- **Migration** - Convert between YAML and SQLite formats
+
+For detailed information on migration procedures and storage administration, see the [Administrator's Guide](admin-guide.md).
 
 ---
 
