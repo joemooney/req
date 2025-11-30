@@ -1588,6 +1588,13 @@ enum FilterTab {
     Children,
 }
 
+/// Field types for quick-change popup (triggered by keyboard shortcuts in list view)
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum QuickChangeField {
+    Status,
+    Priority,
+}
+
 /// What fields to include in text search
 #[derive(Default, PartialEq, Clone, Copy)]
 struct SearchScope {
@@ -2037,11 +2044,11 @@ pub struct RequirementsApp {
     show_layout_menu: bool,      // Whether to show the layout selection menu
     layout_button_rect: Option<egui::Rect>,  // Position of layout button for popup menu
 
-    // Quick status change popup (triggered by 's' key in list view)
-    show_status_popup: bool,              // Whether to show the status change popup
-    status_popup_selected: usize,         // Currently highlighted status index in popup
-    status_popup_target_id: Option<Uuid>, // Requirement being modified
-    status_popup_consumed_action: bool,   // True if popup consumed a key this frame (prevents pass-through)
+    // Quick change popup (triggered by keyboard shortcuts in list view: 's' for status, 'p' for priority)
+    quick_change_field: Option<QuickChangeField>, // Which field is being changed (None = popup closed)
+    quick_change_selected: usize,                 // Currently highlighted option index in popup
+    quick_change_target_id: Option<Uuid>,         // Requirement being modified
+    quick_change_consumed_action: bool,           // True if popup consumed a key this frame (prevents pass-through)
 
     // Split panel (second requirements list) - used in split layouts
     split_perspective: Perspective,
@@ -2358,10 +2365,10 @@ impl RequirementsApp {
             layout_button_press_start: None,
             show_layout_menu: false,
             layout_button_rect: None,
-            show_status_popup: false,
-            status_popup_selected: 0,
-            status_popup_target_id: None,
-            status_popup_consumed_action: false,
+            quick_change_field: None,
+            quick_change_selected: 0,
+            quick_change_target_id: None,
+            quick_change_consumed_action: false,
             split_perspective: Perspective::default(),
             split_perspective_direction: PerspectiveDirection::default(),
             split_filter_text: String::new(),
@@ -8342,7 +8349,7 @@ impl RequirementsApp {
                     ui.painter().galley(text_pos, galley, text_color);
 
                     // Block interactions when status popup is open
-                    if !self.show_status_popup {
+                    if !self.quick_change_field.is_some() {
                         if response.clicked() {
                             self.split_selected_idx = Some(idx);
                             self.focused_list = FocusedList::List2;
@@ -8423,7 +8430,7 @@ impl RequirementsApp {
                     ui.painter().galley(text_pos, galley, text_color);
 
                     // Block interactions when status popup is open
-                    if !self.show_status_popup {
+                    if !self.quick_change_field.is_some() {
                         if response.clicked() {
                             self.split_selected_idx = Some(idx);
                             self.focused_list = FocusedList::List2;
@@ -9434,9 +9441,10 @@ impl RequirementsApp {
         ui.painter().galley(text_pos, galley, text_color);
 
         // Handle interactions (block when status popup is open to prevent click pass-through)
-        if !self.show_status_popup {
+        if !self.quick_change_field.is_some() {
             if response.double_clicked() {
                 // Double-click opens for editing
+                eprintln!("DEBUG: Double-click on list item (line 9443)");
                 self.selected_idx = Some(idx);
                 self.focused_list = FocusedList::List1;
                 self.load_form_from_requirement(idx);
@@ -9954,23 +9962,36 @@ impl RequirementsApp {
         }
     }
 
-    /// Show status quick change popup (triggered by 's' key in list view)
-    fn show_status_popup(&mut self, ctx: &egui::Context) {
-        if !self.show_status_popup {
-            return;
-        }
+    /// Show quick change popup for status or priority (triggered by 's'/'p' key in list view)
+    fn show_quick_change_popup(&mut self, ctx: &egui::Context) {
+        let field = match self.quick_change_field {
+            Some(f) => f,
+            None => return,
+        };
 
-        let statuses = [
-            RequirementStatus::Draft,
-            RequirementStatus::Approved,
-            RequirementStatus::Completed,
-            RequirementStatus::Rejected,
-        ];
-        let num_statuses = statuses.len();
+        // Get the options based on field type
+        let (title, options): (&str, Vec<String>) = match field {
+            QuickChangeField::Status => {
+                ("Change Status", vec![
+                    RequirementStatus::Draft.to_string(),
+                    RequirementStatus::Approved.to_string(),
+                    RequirementStatus::Completed.to_string(),
+                    RequirementStatus::Rejected.to_string(),
+                ])
+            }
+            QuickChangeField::Priority => {
+                ("Change Priority", vec![
+                    RequirementPriority::High.to_string(),
+                    RequirementPriority::Medium.to_string(),
+                    RequirementPriority::Low.to_string(),
+                ])
+            }
+        };
+        let num_options = options.len();
 
         // Handle keyboard input for the popup
         let mut close_popup = false;
-        let mut apply_status = false;
+        let mut apply_change = false;
 
         ctx.input(|i| {
             // Escape to close
@@ -9979,63 +10000,38 @@ impl RequirementsApp {
             }
             // Enter to apply
             if i.key_pressed(egui::Key::Enter) {
-                apply_status = true;
+                apply_change = true;
             }
             // Up/Down to navigate
             if i.key_pressed(egui::Key::ArrowUp) {
-                if self.status_popup_selected > 0 {
-                    self.status_popup_selected -= 1;
+                if self.quick_change_selected > 0 {
+                    self.quick_change_selected -= 1;
                 } else {
-                    self.status_popup_selected = num_statuses - 1; // Wrap to bottom
+                    self.quick_change_selected = num_options - 1; // Wrap to bottom
                 }
             }
             if i.key_pressed(egui::Key::ArrowDown) {
-                if self.status_popup_selected < num_statuses - 1 {
-                    self.status_popup_selected += 1;
+                if self.quick_change_selected < num_options - 1 {
+                    self.quick_change_selected += 1;
                 } else {
-                    self.status_popup_selected = 0; // Wrap to top
+                    self.quick_change_selected = 0; // Wrap to top
                 }
             }
         });
 
         if close_popup {
-            self.show_status_popup = false;
-            self.status_popup_target_id = None;
-            self.status_popup_consumed_action = true;
+            self.quick_change_field = None;
+            self.quick_change_target_id = None;
+            self.quick_change_consumed_action = true;
             return;
         }
 
-        // Apply the status change
-        if apply_status {
-            if let Some(target_id) = self.status_popup_target_id {
-                let new_status = statuses[self.status_popup_selected].clone();
-                // Find and update the requirement
-                if let Some(req) = self.store.requirements.iter_mut().find(|r| r.id == target_id) {
-                    let old_status = req.status.clone();
-                    if old_status != new_status {
-                        req.status = new_status.clone();
-                        req.modified_at = chrono::Utc::now();
-                        // Add history entry
-                        req.history.push(aida_core::models::HistoryEntry {
-                            id: uuid::Uuid::new_v4(),
-                            author: self.user_settings.name.clone(),
-                            timestamp: chrono::Utc::now(),
-                            changes: vec![aida_core::models::FieldChange {
-                                field_name: "status".to_string(),
-                                old_value: old_status.to_string(),
-                                new_value: new_status.to_string(),
-                            }],
-                        });
-                        // Save the store
-                        if let Err(e) = self.storage.save(&self.store) {
-                            eprintln!("Failed to save after status change: {}", e);
-                        }
-                    }
-                }
-            }
-            self.show_status_popup = false;
-            self.status_popup_target_id = None;
-            self.status_popup_consumed_action = true;
+        // Apply the change
+        if apply_change {
+            self.apply_quick_change(field, self.quick_change_selected);
+            self.quick_change_field = None;
+            self.quick_change_target_id = None;
+            self.quick_change_consumed_action = true;
             return;
         }
 
@@ -10047,7 +10043,12 @@ impl RequirementsApp {
             (screen_rect.height() - popup_size.y) / 2.0,
         );
 
-        egui::Area::new(egui::Id::new("status_popup"))
+        let popup_id = match field {
+            QuickChangeField::Status => "quick_change_status_popup",
+            QuickChangeField::Priority => "quick_change_priority_popup",
+        };
+
+        egui::Area::new(egui::Id::new(popup_id))
             .order(egui::Order::Foreground)
             .fixed_pos(popup_pos)
             .show(ctx, |ui| {
@@ -10055,43 +10056,20 @@ impl RequirementsApp {
                     .inner_margin(8.0)
                     .show(ui, |ui| {
                         ui.set_min_width(popup_size.x - 16.0);
-                        ui.label(egui::RichText::new("Change Status").strong());
+                        ui.label(egui::RichText::new(title).strong());
                         ui.separator();
 
-                        for (idx, status) in statuses.iter().enumerate() {
-                            let is_selected = idx == self.status_popup_selected;
-                            let label = format!("{}", status);
+                        for (idx, option) in options.iter().enumerate() {
+                            let is_selected = idx == self.quick_change_selected;
 
-                            let response = ui.selectable_label(is_selected, &label);
+                            let response = ui.selectable_label(is_selected, option);
                             if response.clicked() {
-                                self.status_popup_selected = idx;
+                                self.quick_change_selected = idx;
                                 // Apply immediately on click
-                                if let Some(target_id) = self.status_popup_target_id {
-                                    let new_status = status.clone();
-                                    if let Some(req) = self.store.requirements.iter_mut().find(|r| r.id == target_id) {
-                                        let old_status = req.status.clone();
-                                        if old_status != new_status {
-                                            req.status = new_status.clone();
-                                            req.modified_at = chrono::Utc::now();
-                                            req.history.push(aida_core::models::HistoryEntry {
-                                                id: uuid::Uuid::new_v4(),
-                                                author: self.user_settings.name.clone(),
-                                                timestamp: chrono::Utc::now(),
-                                                changes: vec![aida_core::models::FieldChange {
-                                                    field_name: "status".to_string(),
-                                                    old_value: old_status.to_string(),
-                                                    new_value: new_status.to_string(),
-                                                }],
-                                            });
-                                            if let Err(e) = self.storage.save(&self.store) {
-                                                eprintln!("Failed to save after status change: {}", e);
-                                            }
-                                        }
-                                    }
-                                }
-                                self.show_status_popup = false;
-                                self.status_popup_target_id = None;
-                                self.status_popup_consumed_action = true;
+                                self.apply_quick_change(field, idx);
+                                self.quick_change_field = None;
+                                self.quick_change_target_id = None;
+                                self.quick_change_consumed_action = true;
                             }
                         }
 
@@ -10107,9 +10085,71 @@ impl RequirementsApp {
             let popup_rect = egui::Rect::from_min_size(popup_pos, popup_size);
             if let Some(pos) = ctx.input(|i| i.pointer.interact_pos()) {
                 if !popup_rect.contains(pos) {
-                    self.show_status_popup = false;
-                    self.status_popup_target_id = None;
-                    self.status_popup_consumed_action = true;
+                    self.quick_change_field = None;
+                    self.quick_change_target_id = None;
+                    self.quick_change_consumed_action = true;
+                }
+            }
+        }
+    }
+
+    /// Apply a quick change to the selected requirement
+    fn apply_quick_change(&mut self, field: QuickChangeField, selected_idx: usize) {
+        let Some(target_id) = self.quick_change_target_id else { return };
+        let Some(req) = self.store.requirements.iter_mut().find(|r| r.id == target_id) else { return };
+
+        match field {
+            QuickChangeField::Status => {
+                let statuses = [
+                    RequirementStatus::Draft,
+                    RequirementStatus::Approved,
+                    RequirementStatus::Completed,
+                    RequirementStatus::Rejected,
+                ];
+                let new_status = statuses.get(selected_idx).cloned().unwrap_or(RequirementStatus::Draft);
+                let old_status = req.status.clone();
+                if old_status != new_status {
+                    req.status = new_status.clone();
+                    req.modified_at = chrono::Utc::now();
+                    req.history.push(aida_core::models::HistoryEntry {
+                        id: uuid::Uuid::new_v4(),
+                        author: self.user_settings.name.clone(),
+                        timestamp: chrono::Utc::now(),
+                        changes: vec![aida_core::models::FieldChange {
+                            field_name: "status".to_string(),
+                            old_value: old_status.to_string(),
+                            new_value: new_status.to_string(),
+                        }],
+                    });
+                    if let Err(e) = self.storage.save(&self.store) {
+                        eprintln!("Failed to save after status change: {}", e);
+                    }
+                }
+            }
+            QuickChangeField::Priority => {
+                let priorities = [
+                    RequirementPriority::High,
+                    RequirementPriority::Medium,
+                    RequirementPriority::Low,
+                ];
+                let new_priority = priorities.get(selected_idx).cloned().unwrap_or(RequirementPriority::Medium);
+                let old_priority = req.priority.clone();
+                if old_priority != new_priority {
+                    req.priority = new_priority.clone();
+                    req.modified_at = chrono::Utc::now();
+                    req.history.push(aida_core::models::HistoryEntry {
+                        id: uuid::Uuid::new_v4(),
+                        author: self.user_settings.name.clone(),
+                        timestamp: chrono::Utc::now(),
+                        changes: vec![aida_core::models::FieldChange {
+                            field_name: "priority".to_string(),
+                            old_value: old_priority.to_string(),
+                            new_value: new_priority.to_string(),
+                        }],
+                    });
+                    if let Err(e) = self.storage.save(&self.store) {
+                        eprintln!("Failed to save after priority change: {}", e);
+                    }
                 }
             }
         }
@@ -10255,6 +10295,7 @@ impl RequirementsApp {
                     });
 
                 if load_edit {
+                    eprintln!("DEBUG: Context menu Edit (line 10259)");
                     self.load_form_from_requirement(idx);
                     self.pending_view_change = Some(View::Edit);
                 }
@@ -10525,6 +10566,7 @@ impl RequirementsApp {
                     #[allow(deprecated)]
                     let bg_response = ui.interact_bg(egui::Sense::click());
                     if bg_response.double_clicked() {
+                        eprintln!("DEBUG: Background double-click (line 10529)");
                         self.load_form_from_requirement(idx);
                         self.pending_view_change = Some(View::Edit);
                     }
@@ -10569,6 +10611,7 @@ impl RequirementsApp {
 
         // Check for double-click on the description area
         if frame_response.inner.double_clicked() {
+            eprintln!("DEBUG: Description double-click (line 10574)");
             self.load_form_from_requirement(idx);
             self.focus_description = true;
             self.pending_view_change = Some(View::Edit);
@@ -14263,7 +14306,7 @@ fn main() {
 impl eframe::App for RequirementsApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // Reset per-frame flags at the start of each frame
-        self.status_popup_consumed_action = false;
+        self.quick_change_consumed_action = false;
 
         // Update window title based on database name and title
         // Format: "Name - Title" or just "Title" or just "Name" or "Requirements Manager"
@@ -14448,7 +14491,7 @@ impl eframe::App for RequirementsApp {
 
             // Check navigation keybindings (context-aware)
             // Block list navigation when status popup is open
-            if !self.show_status_popup
+            if !self.quick_change_field.is_some()
                 && self.user_settings.keybindings.is_pressed(
                     KeyAction::NavigateDown,
                     ctx,
@@ -14456,7 +14499,7 @@ impl eframe::App for RequirementsApp {
                 )
             {
                 nav_delta = 1;
-            } else if !self.show_status_popup
+            } else if !self.quick_change_field.is_some()
                 && self.user_settings.keybindings.is_pressed(
                     KeyAction::NavigateUp,
                     ctx,
@@ -14489,8 +14532,9 @@ impl eframe::App for RequirementsApp {
             }
 
             // Edit keybinding (context-aware)
-            // Skip if status popup just consumed an action (prevents Enter key pass-through)
-            if !self.status_popup_consumed_action
+            // Skip if quick change popup is open or just consumed an action (prevents Enter key pass-through)
+            if self.quick_change_field.is_none()
+                && !self.quick_change_consumed_action
                 && self.user_settings.keybindings.is_pressed(
                     KeyAction::Edit,
                     ctx,
@@ -14531,8 +14575,11 @@ impl eframe::App for RequirementsApp {
             }
 
             // 's' key to open status popup (only in list/detail view, not in edit/add mode, without modifiers)
+            // 'p' key to open priority popup (same conditions)
             let not_in_form = !matches!(self.current_view, View::Add | View::Edit);
-            if nav_context_active && !self.show_status_popup && not_in_form {
+            let no_popup_open = self.quick_change_field.is_none();
+            if nav_context_active && no_popup_open && not_in_form {
+                // Check for 's' key (status)
                 let s_pressed = ctx.input(|i| {
                     i.key_pressed(egui::Key::S) && !i.modifiers.ctrl && !i.modifiers.alt && !i.modifiers.shift
                 });
@@ -14547,9 +14594,29 @@ impl eframe::App for RequirementsApp {
                                 RequirementStatus::Rejected,
                             ];
                             let current_status_idx = statuses.iter().position(|s| *s == req.status).unwrap_or(0);
-                            self.status_popup_selected = current_status_idx;
-                            self.status_popup_target_id = Some(req.id);
-                            self.show_status_popup = true;
+                            self.quick_change_selected = current_status_idx;
+                            self.quick_change_target_id = Some(req.id);
+                            self.quick_change_field = Some(QuickChangeField::Status);
+                        }
+                    }
+                }
+                // Check for 'p' key (priority)
+                let p_pressed = ctx.input(|i| {
+                    i.key_pressed(egui::Key::P) && !i.modifiers.ctrl && !i.modifiers.alt && !i.modifiers.shift
+                });
+                if p_pressed {
+                    if let Some(idx) = self.selected_idx {
+                        if let Some(req) = self.store.requirements.get(idx) {
+                            // Find the current priority index
+                            let priorities = [
+                                RequirementPriority::High,
+                                RequirementPriority::Medium,
+                                RequirementPriority::Low,
+                            ];
+                            let current_priority_idx = priorities.iter().position(|p| *p == req.priority).unwrap_or(1);
+                            self.quick_change_selected = current_priority_idx;
+                            self.quick_change_target_id = Some(req.id);
+                            self.quick_change_field = Some(QuickChangeField::Priority);
                         }
                     }
                 }
@@ -15032,8 +15099,8 @@ impl eframe::App for RequirementsApp {
         // Show layout menu popup (triggered by long-press on layout button)
         self.show_layout_menu_popup(ctx);
 
-        // Show status quick change popup (triggered by 's' key)
-        self.show_status_popup(ctx);
+        // Show quick change popup (triggered by 's' for status, 'p' for priority)
+        self.show_quick_change_popup(ctx);
 
         // Show project dialogs
         self.show_switch_project_dialog(ctx);
