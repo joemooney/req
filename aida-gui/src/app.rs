@@ -2037,6 +2037,11 @@ pub struct RequirementsApp {
     show_layout_menu: bool,      // Whether to show the layout selection menu
     layout_button_rect: Option<egui::Rect>,  // Position of layout button for popup menu
 
+    // Quick status change popup (triggered by 's' key in list view)
+    show_status_popup: bool,              // Whether to show the status change popup
+    status_popup_selected: usize,         // Currently highlighted status index in popup
+    status_popup_target_id: Option<Uuid>, // Requirement being modified
+
     // Split panel (second requirements list) - used in split layouts
     split_perspective: Perspective,
     split_perspective_direction: PerspectiveDirection,
@@ -2352,6 +2357,9 @@ impl RequirementsApp {
             layout_button_press_start: None,
             show_layout_menu: false,
             layout_button_rect: None,
+            show_status_popup: false,
+            status_popup_selected: 0,
+            status_popup_target_id: None,
             split_perspective: Perspective::default(),
             split_perspective_direction: PerspectiveDirection::default(),
             split_filter_text: String::new(),
@@ -9936,6 +9944,163 @@ impl RequirementsApp {
         }
     }
 
+    /// Show status quick change popup (triggered by 's' key in list view)
+    fn show_status_popup(&mut self, ctx: &egui::Context) {
+        if !self.show_status_popup {
+            return;
+        }
+
+        let statuses = [
+            RequirementStatus::Draft,
+            RequirementStatus::Approved,
+            RequirementStatus::Completed,
+            RequirementStatus::Rejected,
+        ];
+        let num_statuses = statuses.len();
+
+        // Handle keyboard input for the popup
+        let mut close_popup = false;
+        let mut apply_status = false;
+
+        ctx.input(|i| {
+            // Escape to close
+            if i.key_pressed(egui::Key::Escape) {
+                close_popup = true;
+            }
+            // Enter to apply
+            if i.key_pressed(egui::Key::Enter) {
+                apply_status = true;
+            }
+            // Up/Down to navigate
+            if i.key_pressed(egui::Key::ArrowUp) {
+                if self.status_popup_selected > 0 {
+                    self.status_popup_selected -= 1;
+                } else {
+                    self.status_popup_selected = num_statuses - 1; // Wrap to bottom
+                }
+            }
+            if i.key_pressed(egui::Key::ArrowDown) {
+                if self.status_popup_selected < num_statuses - 1 {
+                    self.status_popup_selected += 1;
+                } else {
+                    self.status_popup_selected = 0; // Wrap to top
+                }
+            }
+        });
+
+        if close_popup {
+            self.show_status_popup = false;
+            self.status_popup_target_id = None;
+            return;
+        }
+
+        // Apply the status change
+        if apply_status {
+            if let Some(target_id) = self.status_popup_target_id {
+                let new_status = statuses[self.status_popup_selected].clone();
+                // Find and update the requirement
+                if let Some(req) = self.store.requirements.iter_mut().find(|r| r.id == target_id) {
+                    let old_status = req.status.clone();
+                    if old_status != new_status {
+                        req.status = new_status.clone();
+                        req.modified_at = chrono::Utc::now();
+                        // Add history entry
+                        req.history.push(aida_core::models::HistoryEntry {
+                            id: uuid::Uuid::new_v4(),
+                            author: self.user_settings.name.clone(),
+                            timestamp: chrono::Utc::now(),
+                            changes: vec![aida_core::models::FieldChange {
+                                field_name: "status".to_string(),
+                                old_value: old_status.to_string(),
+                                new_value: new_status.to_string(),
+                            }],
+                        });
+                        // Save the store
+                        if let Err(e) = self.storage.save(&self.store) {
+                            eprintln!("Failed to save after status change: {}", e);
+                        }
+                    }
+                }
+            }
+            self.show_status_popup = false;
+            self.status_popup_target_id = None;
+            return;
+        }
+
+        // Center the popup on screen
+        let screen_rect = ctx.screen_rect();
+        let popup_size = egui::vec2(180.0, 130.0);
+        let popup_pos = egui::pos2(
+            (screen_rect.width() - popup_size.x) / 2.0,
+            (screen_rect.height() - popup_size.y) / 2.0,
+        );
+
+        egui::Area::new(egui::Id::new("status_popup"))
+            .order(egui::Order::Foreground)
+            .fixed_pos(popup_pos)
+            .show(ctx, |ui| {
+                egui::Frame::popup(ui.style())
+                    .inner_margin(8.0)
+                    .show(ui, |ui| {
+                        ui.set_min_width(popup_size.x - 16.0);
+                        ui.label(egui::RichText::new("Change Status").strong());
+                        ui.separator();
+
+                        for (idx, status) in statuses.iter().enumerate() {
+                            let is_selected = idx == self.status_popup_selected;
+                            let label = format!("{}", status);
+
+                            let response = ui.selectable_label(is_selected, &label);
+                            if response.clicked() {
+                                self.status_popup_selected = idx;
+                                // Apply immediately on click
+                                if let Some(target_id) = self.status_popup_target_id {
+                                    let new_status = status.clone();
+                                    if let Some(req) = self.store.requirements.iter_mut().find(|r| r.id == target_id) {
+                                        let old_status = req.status.clone();
+                                        if old_status != new_status {
+                                            req.status = new_status.clone();
+                                            req.modified_at = chrono::Utc::now();
+                                            req.history.push(aida_core::models::HistoryEntry {
+                                                id: uuid::Uuid::new_v4(),
+                                                author: self.user_settings.name.clone(),
+                                                timestamp: chrono::Utc::now(),
+                                                changes: vec![aida_core::models::FieldChange {
+                                                    field_name: "status".to_string(),
+                                                    old_value: old_status.to_string(),
+                                                    new_value: new_status.to_string(),
+                                                }],
+                                            });
+                                            if let Err(e) = self.storage.save(&self.store) {
+                                                eprintln!("Failed to save after status change: {}", e);
+                                            }
+                                        }
+                                    }
+                                }
+                                self.show_status_popup = false;
+                                self.status_popup_target_id = None;
+                            }
+                        }
+
+                        ui.separator();
+                        ui.horizontal(|ui| {
+                            ui.small("↑↓ Navigate  Enter Select  Esc Cancel");
+                        });
+                    });
+            });
+
+        // Close on click outside
+        if ctx.input(|i| i.pointer.any_click()) {
+            let popup_rect = egui::Rect::from_min_size(popup_pos, popup_size);
+            if let Some(pos) = ctx.input(|i| i.pointer.interact_pos()) {
+                if !popup_rect.contains(pos) {
+                    self.show_status_popup = false;
+                    self.status_popup_target_id = None;
+                }
+            }
+        }
+    }
+
     fn show_detail_view(&mut self, ui: &mut egui::Ui) {
         self.show_detail_view_internal(ui, false, false);
     }
@@ -14340,6 +14505,30 @@ impl eframe::App for RequirementsApp {
                 self.pending_save = true;
             }
 
+            // 's' key to open status popup (only in list/detail view, without modifiers)
+            if nav_context_active && !self.show_status_popup {
+                let s_pressed = ctx.input(|i| {
+                    i.key_pressed(egui::Key::S) && !i.modifiers.ctrl && !i.modifiers.alt && !i.modifiers.shift
+                });
+                if s_pressed {
+                    if let Some(idx) = self.selected_idx {
+                        if let Some(req) = self.store.requirements.get(idx) {
+                            // Find the current status index
+                            let statuses = [
+                                RequirementStatus::Draft,
+                                RequirementStatus::Approved,
+                                RequirementStatus::Completed,
+                                RequirementStatus::Rejected,
+                            ];
+                            let current_status_idx = statuses.iter().position(|s| *s == req.status).unwrap_or(0);
+                            self.status_popup_selected = current_status_idx;
+                            self.status_popup_target_id = Some(req.id);
+                            self.show_status_popup = true;
+                        }
+                    }
+                }
+            }
+
             // Handle navigation (delta-based or jump-based) based on focused list
             // Get the appropriate filtered indices and current selection based on focus
             let (filtered_indices, current_selection) = match self.focused_list {
@@ -14816,6 +15005,9 @@ impl eframe::App for RequirementsApp {
 
         // Show layout menu popup (triggered by long-press on layout button)
         self.show_layout_menu_popup(ctx);
+
+        // Show status quick change popup (triggered by 's' key)
+        self.show_status_popup(ctx);
 
         // Show project dialogs
         self.show_switch_project_dialog(ctx);
