@@ -42,6 +42,10 @@ requirements:
   relationships:
   - rel_type: Parent
     target_id: 043639ed-7c12-4d99-acc2-587a38b0d25d
+  - rel_type: References
+    target_id: 3fe85c39-0da4-477a-9ac5-04ecb9696ec9
+    created_at: 2025-11-30T06:51:18.604174972Z
+    created_by: Unknown User
 - id: 043639ed-7c12-4d99-acc2-587a38b0d25d
   spec_id: FR-0003
   title: Drag a requirement to make child
@@ -3108,12 +3112,12 @@ requirements:
   spec_id: FR-0058
   title: Requirements List view Navigation keys
   description: "Support up/down/Page-Up/Page-Down and Home and End in Requirements List view. Also Mouse Wheel would also be nice \n\n - Page Up/Page Down: Move by 10 items at a time\n  - Home: Jump to the first requirement in the list\n  - End: Jump to the last requirement in the list\n  - Mouse Wheel: Scroll through requirements one at a time (without Ctrl - Ctrl+wheel is still zoom)\n"
-  status: Draft
+  status: Completed
   priority: Medium
   owner: ''
   feature: 28-Uncategorized
   created_at: 2025-11-27T17:39:30.783500080Z
-  modified_at: 2025-11-27T17:40:32.774552223Z
+  modified_at: 2025-11-30T06:52:11.400712216Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -3128,6 +3132,13 @@ requirements:
     - field_name: description
       old_value: "Support up/down/Page-Up/Page-Down and Home and End in Requirements List view. Also Mouse Wheel would also be nice \n"
       new_value: "Support up/down/Page-Up/Page-Down and Home and End in Requirements List view. Also Mouse Wheel would also be nice \n\n - Page Up/Page Down: Move by 10 items at a time\n  - Home: Jump to the first requirement in the list\n  - End: Jump to the last requirement in the list\n  - Mouse Wheel: Scroll through requirements one at a time (without Ctrl - Ctrl+wheel is still zoom)\n"
+  - id: 9980db20-2559-4dc1-ba75-8077cbbcee39
+    author: ''
+    timestamp: 2025-11-30T06:52:11.400714846Z
+    changes:
+    - field_name: status
+      old_value: Draft
+      new_value: Completed
 - id: 090ade6e-ac01-48cb-84a6-db9b3dd214b0
   spec_id: DOC-0059
   prefix_override: DOC
@@ -3947,11 +3958,11 @@ requirements:
   title: Open Additional Requirements List view (split panel)
   description: Abilty to have more than one Requirements List views open and drag requirements between, creating a relationship determined by the view to which you drag the relationship to.
   status: Draft
-  priority: Medium
+  priority: High
   owner: ''
   feature: 41-Uncategorized
   created_at: 2025-11-29T00:32:45.333241402Z
-  modified_at: 2025-11-29T01:51:54.049982063Z
+  modified_at: 2025-11-30T06:46:39.167748172Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -3972,6 +3983,13 @@ requirements:
     - field_name: title
       old_value: Open Additions Requirements List view
       new_value: Open Additional Requirements List view (split panel)
+  - id: 9da6d8d1-3a44-4ed5-9061-fee08a610c52
+    author: ''
+    timestamp: 2025-11-30T06:46:39.167750741Z
+    changes:
+    - field_name: priority
+      old_value: Medium
+      new_value: High
 - id: 924b8768-f882-4bb3-ad8f-bbe9c9fd56b8
   spec_id: FR-0094
   title: Pseudo Relations
@@ -4007,12 +4025,12 @@ requirements:
         - Switch to a different project in the new window
         - Work with the same project in parallel (e.g., different requirements selected)
         - Compare requirements side-by-side
-  status: Draft
+  status: Completed
   priority: Medium
   owner: ''
   feature: 42-Uncategorized
   created_at: 2025-11-29T00:54:09.458183354Z
-  modified_at: 2025-11-29T00:54:09.458183354Z
+  modified_at: 2025-11-30T06:47:14.668449351Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -4023,6 +4041,14 @@ requirements:
     target_id: 9aec2046-225d-40e4-aadf-609045e8ab45
     created_at: 2025-11-29T01:23:19.372658881Z
     created_by: '@joe'
+  history:
+  - id: 0c8158f3-8aa4-427a-92cc-204f68ac7153
+    author: ''
+    timestamp: 2025-11-30T06:47:14.668452674Z
+    changes:
+    - field_name: status
+      old_value: Draft
+      new_value: Completed
 - id: 01cb13e7-36e9-4dc1-900c-46d22087db4e
   spec_id: FR-0096
   title: Collapse/hide Detail View
@@ -4429,8 +4455,20 @@ requirements:
     created_at: 2025-11-30T05:21:30.635854951Z
     created_by: Unknown User
   - rel_type: Child
-    target_id: 9e9ea9a2-0734-44b8-b911-f76f5aabc4ac
-    created_at: 2025-11-30T05:30:18.498914165Z
+    target_id: 8fce7d22-6ef3-44da-8284-c7af30ca8ea2
+    created_at: 2025-11-30T18:36:27.790694848Z
+    created_by: Unknown User
+  - rel_type: Child
+    target_id: e3a175d0-bc4f-4d13-9bc9-d0bd8c43a230
+    created_at: 2025-11-30T18:38:19.957296143Z
+    created_by: Unknown User
+  - rel_type: Child
+    target_id: 764789da-765b-426d-97ae-28cb5fe10850
+    created_at: 2025-11-30T18:41:47.754487172Z
+    created_by: Unknown User
+  - rel_type: Child
+    target_id: 5fe84b57-05db-415b-90a5-604f1bf3f9eb
+    created_at: 2025-11-30T18:58:47.347672969Z
     created_by: Unknown User
 - id: 3ef749b7-b220-41f8-9a1d-1545d0c43a7f
   spec_id: FR-0103
@@ -5707,7 +5745,8 @@ requirements:
     created_at: 2025-11-30T05:21:30.635854951Z
     created_by: Unknown User
 - id: 9e9ea9a2-0734-44b8-b911-f76f5aabc4ac
-  spec_id: FR-0132
+  spec_id: AI-0133
+  prefix_override: AI
   title: AI integration
   description: |-
     AI integration
@@ -5721,17 +5760,244 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 63-Uncategorized
   created_at: 2025-11-30T05:30:18.498861915Z
   created_by: Unknown User
-  modified_at: 2025-11-30T05:30:18.498861915Z
+  modified_at: 2025-11-30T18:32:26.692488667Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Child
+    target_id: 4de3b4f0-b157-4d50-8549-e98153d2324d
+    created_at: 2025-11-30T18:33:00.589994057Z
+    created_by: Unknown User
+  history:
+  - id: 516738ee-2ec8-487f-aa4a-2f4153889c6f
+    author: Unknown User
+    timestamp: 2025-11-30T18:32:26.692485392Z
+    changes:
+    - field_name: prefix_override
+      old_value: ''
+      new_value: AI
+    - field_name: spec_id
+      old_value: FR-0132
+      new_value: AI-0133
+- id: 4de3b4f0-b157-4d50-8549-e98153d2324d
+  spec_id: FR-0134
+  title: AI Requirement Evaluation
+  description: |2+
+     I've implemented a complete background AI evaluation system for AIDA with the following components:
+
+      1. StoredAiEvaluation (aida-core/src/ai/responses.rs)
+
+      - Wraps evaluation results with metadata (timestamp, content hash)
+      - Provides new() and is_stale() methods for staleness detection
+
+      2. Requirement Model Updates (aida-core/src/models.rs)
+
+      - Added ai_evaluation: Option<StoredAiEvaluation> field
+      - Added content_hash() method using DefaultHasher on title, description, and type
+      - Added needs_ai_evaluation() method to check if evaluation is needed
+
+      3. AI Tab in GUI (aida-gui/src/app.rs)
+
+      - Added Ai variant to DetailTab enum
+      - Added AI tab to the left of Description in both layout modes
+      - Tab shows status indicators: "🤖 AI" (no eval), "🤖 AI ✓" (current), "🤖 AI ⚠️" (stale)
+      - Created show_ai_tab() method displaying:
+        - Quality score with color-coded progress bar (green/amber/red)
+        - Evaluation timestamp and staleness warning
+        - Collapsible sections for strengths, issues, and suggested improvements
+        - Placeholder message when no evaluation exists
+
+      4. BackgroundEvaluator Service (aida-core/src/ai/evaluator.rs)
+
+      - Runs in a separate thread scanning for requirements needing evaluation
+      - Supports commands: Pause, Resume, Stop, PrioritizeRequirement, ScanForWork
+      - Configurable delays between evaluations and idle scans
+      - Priority queue for manually triggered evaluations
+      - Rate limiting protection with backoff on errors
+      - Results communicated back via channel for GUI to apply
+
+      The system is designed to:
+      - Evaluate requirements one-by-one in the background
+      - Track evaluation staleness via content hashing
+      - Allow manual triggering via Actions → AI → Evaluate
+      - Display cached results immediately in the AI tab
+
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 64-Uncategorized
+  created_at: 2025-11-30T18:33:00.589966154Z
+  created_by: Unknown User
+  modified_at: 2025-11-30T18:33:00.589966154Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 9e9ea9a2-0734-44b8-b911-f76f5aabc4ac
+    created_at: 2025-11-30T18:33:00.589994057Z
+    created_by: Unknown User
+  - rel_type: Child
+    target_id: ae8231e7-3f3b-4ab4-8b90-d1827de04eaa
+    created_at: 2025-11-30T18:56:03.086460517Z
+    created_by: Unknown User
+- id: 8fce7d22-6ef3-44da-8284-c7af30ca8ea2
+  spec_id: FR-0135
+  title: Settings/Relations the relations list should ex...
+  description: |-
+    Settings/Relations the relations list should expand to occupy unused space
+
+    When I resize the dialog the relations list box should grow.
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 64-Uncategorized
+  created_at: 2025-11-30T18:36:27.790663022Z
+  created_by: Unknown User
+  modified_at: 2025-11-30T18:36:27.790663022Z
   req_type: Functional
   dependencies: []
   tags: []
   relationships:
   - rel_type: Parent
     target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
-    created_at: 2025-11-30T05:30:18.498914165Z
+    created_at: 2025-11-30T18:36:27.790694848Z
+    created_by: Unknown User
+- id: e3a175d0-bc4f-4d13-9bc9-d0bd8c43a230
+  spec_id: FR-0136
+  title: Support Attachments
+  description: |-
+    Support Attachments
+
+    Support file attachments for requirements with the following capabilities:
+
+    **Storage:**
+    - Store attachments on the filesystem in a project-specific attachments directory
+    - Support common file types: images (PNG, JPG, GIF), documents (PDF, TXT, MD), and archives (ZIP)
+    - Maximum file size: 10MB per attachment (settings allow set limits)
+    - Maximum attachments per requirement: 10 (settings allow set limits)
+    - Settings allow command line specification for a file type with '{{path}}' as a substitution pattern for the attachment path. (Support other metadata field substitutions based on field name (case insensitive) {{id}} for id etc.
+
+    **User Interface:**
+    - Display attachments as a list showing filename, size, and type icon
+    - Double-click attachment to open with the system's default application
+    - Provide add, delete, and download attachment buttons
+    - Show error message if the operating system cannot open the file type
+
+    **Data Management:**
+    - Include attachment metadata in exports (filename, size, hash)
+    - Optionally include attachment files in export archives
+    - Maintain referential integrity when requirements are deleted (prompt to delete or orphan attachments)
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 64-Uncategorized
+  created_at: 2025-11-30T18:38:19.957263864Z
+  created_by: Unknown User
+  modified_at: 2025-11-30T18:51:57.653655859Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
+    created_at: 2025-11-30T18:38:19.957296143Z
+    created_by: Unknown User
+  history:
+  - id: 80ce459d-4a04-47da-8f70-70c334765e6d
+    author: Unknown User
+    timestamp: 2025-11-30T18:51:57.653652700Z
+    changes:
+    - field_name: description
+      old_value: "Support Attachments\n\nEither store the attachments on the filesystem or optionally attach as a blog to the database (only if you think that makes sense) \n\nWe should be able to double click and open the attachment if the operating system supports opening a file of that type."
+      new_value: |-
+        Support Attachments
+
+        Support file attachments for requirements with the following capabilities:
+
+        **Storage:**
+        - Store attachments on the filesystem in a project-specific attachments directory
+        - Support common file types: images (PNG, JPG, GIF), documents (PDF, TXT, MD), and archives (ZIP)
+        - Maximum file size: 10MB per attachment (settings allow set limits)
+        - Maximum attachments per requirement: 10 (settings allow set limits)
+        - Settings allow command line specification for a file type with '{{path}}' as a substitution pattern for the attachment path. (Support other metadata field substitutions based on field name (case insensitive) {{id}} for id etc.
+
+        **User Interface:**
+        - Display attachments as a list showing filename, size, and type icon
+        - Double-click attachment to open with the system's default application
+        - Provide add, delete, and download attachment buttons
+        - Show error message if the operating system cannot open the file type
+
+        **Data Management:**
+        - Include attachment metadata in exports (filename, size, hash)
+        - Optionally include attachment files in export archives
+        - Maintain referential integrity when requirements are deleted (prompt to delete or orphan attachments)
+- id: 764789da-765b-426d-97ae-28cb5fe10850
+  spec_id: FR-0137
+  title: In "List|Detail" layout slider to resize panelse
+  description: |-
+    In "List|Detail" layout slider to resize panels
+
+    Can we insert a slider so that we can widen either panel?
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-30T18:41:47.754459652Z
+  created_by: Unknown User
+  modified_at: 2025-11-30T18:41:47.754459652Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
+    created_at: 2025-11-30T18:41:47.754487172Z
+    created_by: Unknown User
+- id: ae8231e7-3f3b-4ab4-8b90-d1827de04eaa
+  spec_id: FR-0138
+  title: Manual evaluation in background
+  description: "Manual evaluation \n\nSince manual triggering via Actions → AI → Evaluate is very slow and the gui appears to the o/s to have stopped working, we should run that in\n  the background. It should then update the AI evaluation in the database on its own and maybe we could have a completion notification?"
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-30T18:56:03.086426200Z
+  created_by: Unknown User
+  modified_at: 2025-11-30T18:56:03.086426200Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 4de3b4f0-b157-4d50-8549-e98153d2324d
+    created_at: 2025-11-30T18:56:03.086460517Z
+    created_by: Unknown User
+- id: 5fe84b57-05db-415b-90a5-604f1bf3f9eb
+  spec_id: FR-0139
+  title: Report Generation
+  description: |-
+    Report Generation
+
+    requirements related to generating reports
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-11-30T18:58:47.347645927Z
+  created_by: Unknown User
+  modified_at: 2025-11-30T18:58:47.347645927Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
+    created_at: 2025-11-30T18:58:47.347672969Z
     created_by: Unknown User
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
@@ -5785,8 +6051,8 @@ id_config:
     prefix: CR
     description: Change requests for modifications to existing functionality
 features: []
-next_feature_number: 63
-next_spec_number: 133
+next_feature_number: 65
+next_spec_number: 140
 prefix_counters: {}
 relationship_definitions:
 - name: parent
@@ -6012,6 +6278,7 @@ type_definitions:
   color: '#9333ea'
 allowed_prefixes:
 - ADDREQ
+- AI
 - DB
 - DETAILVIEW
 - DOC

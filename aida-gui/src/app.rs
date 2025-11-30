@@ -1,15 +1,18 @@
 use aida_core::{
     ai::AiClient,
     determine_requirements_path, Cardinality, Comment, CustomFieldDefinition, CustomFieldType,
-    FieldChange, IdFormat, NumberingStrategy, RelationshipDefinition, RelationshipType,
-    Requirement, RequirementPriority, RequirementStatus, RequirementType, RequirementsStore,
-    Storage, UrlLink,
+    EvaluationResponse, FieldChange, IdFormat, NumberingStrategy, RelationshipDefinition,
+    RelationshipType, Requirement, RequirementPriority, RequirementStatus, RequirementType,
+    RequirementsStore, Storage, StoredAiEvaluation, UrlLink,
 };
 use eframe::egui;
 use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
+use std::sync::mpsc;
+use std::thread;
+use std::time::Instant;
 use uuid::Uuid;
 
 // =============================================================================
@@ -2242,6 +2245,28 @@ pub struct RequirementsApp {
     ai_last_result: Option<AiResult>,             // Result from last AI action
     show_ai_results_panel: bool,                  // Whether to show AI results panel
     ai_loading: bool,                             // True while AI request is in progress
+
+    // Background AI evaluation state (for non-blocking evaluation)
+    ai_eval_receiver: Option<mpsc::Receiver<BackgroundAiResult>>, // Channel to receive results
+    ai_eval_in_progress: Option<(Uuid, String)>,  // (req_id, spec_id) of req being evaluated
+
+    // Toast notification state
+    toast_message: Option<ToastNotification>,     // Current toast message to display
+}
+
+/// Result from background AI evaluation thread
+struct BackgroundAiResult {
+    req_id: Uuid,
+    spec_id: String,
+    content_hash: String,
+    result: Result<EvaluationResponse, String>,
+}
+
+/// Toast notification for displaying temporary messages
+struct ToastNotification {
+    message: String,
+    is_success: bool,
+    show_until: Instant,
 }
 
 /// Stores text selection state for context menu operations.
@@ -2551,6 +2576,13 @@ impl RequirementsApp {
             ai_last_result: None,
             show_ai_results_panel: false,
             ai_loading: false,
+
+            // Background AI evaluation state
+            ai_eval_receiver: None,
+            ai_eval_in_progress: None,
+
+            // Toast notification state
+            toast_message: None,
         }
     }
 
@@ -2939,6 +2971,68 @@ impl RequirementsApp {
             self.message = Some((format!("Error saving: {}", e), true));
         } else {
             self.message = Some(("Saved successfully".to_string(), false));
+        }
+    }
+
+    /// Display toast notification overlay at the bottom of the screen
+    fn show_toast_notification(&mut self, ctx: &egui::Context) {
+        // Check if toast should still be displayed
+        if let Some(toast) = &self.toast_message {
+            if Instant::now() > toast.show_until {
+                self.toast_message = None;
+                return;
+            }
+        }
+
+        if let Some(toast) = &self.toast_message {
+            let screen_rect = ctx.screen_rect();
+            let toast_width = (screen_rect.width() * 0.4).min(500.0);
+            let toast_height = 50.0;
+            let margin = 20.0;
+
+            let toast_pos = egui::pos2(
+                (screen_rect.width() - toast_width) / 2.0,
+                screen_rect.height() - toast_height - margin,
+            );
+
+            let toast_rect = egui::Rect::from_min_size(toast_pos, egui::vec2(toast_width, toast_height));
+
+            egui::Area::new(egui::Id::new("toast_notification"))
+                .fixed_pos(toast_pos)
+                .order(egui::Order::Foreground)
+                .show(ctx, |ui| {
+                    let bg_color = if toast.is_success {
+                        egui::Color32::from_rgb(34, 139, 34) // Forest green
+                    } else {
+                        egui::Color32::from_rgb(178, 34, 34) // Firebrick red
+                    };
+
+                    egui::Frame::none()
+                        .fill(bg_color)
+                        .rounding(8.0)
+                        .inner_margin(egui::Margin::same(12.0))
+                        .show(ui, |ui| {
+                            ui.set_min_width(toast_width - 24.0);
+                            ui.set_max_width(toast_width - 24.0);
+                            ui.horizontal(|ui| {
+                                let icon = if toast.is_success { "✓" } else { "✗" };
+                                ui.label(
+                                    egui::RichText::new(icon)
+                                        .color(egui::Color32::WHITE)
+                                        .size(18.0),
+                                );
+                                ui.add_space(8.0);
+                                ui.label(
+                                    egui::RichText::new(&toast.message)
+                                        .color(egui::Color32::WHITE)
+                                        .size(14.0),
+                                );
+                            });
+                        });
+                });
+
+            // Request repaint to keep checking the timer
+            ctx.request_repaint();
         }
     }
 
@@ -10600,38 +10694,52 @@ impl RequirementsApp {
                             let req = req.clone(); // Clone to avoid borrow issues
                             let result = match &action {
                                 AiAction::Evaluate(_) => {
-                                    match self.ai_client.evaluate_requirement(&req, &self.store) {
-                                        Ok(response) => AiResult {
-                                            action_name: "Evaluate".to_string(),
-                                            success: true,
-                                            message: format!(
-                                                "Quality Score: {}/10\n\nStrengths:\n{}\n\nIssues:\n{}",
-                                                response.quality_score,
-                                                response.strengths.iter()
-                                                    .map(|s| format!("• {}", s))
-                                                    .collect::<Vec<_>>()
-                                                    .join("\n"),
-                                                response.issues.iter()
-                                                    .map(|i| format!("• [{}] {}: {}", i.severity, i.issue_type, i.text))
-                                                    .collect::<Vec<_>>()
-                                                    .join("\n")
-                                            ),
-                                            details: response.suggested_improvements.as_ref().map(|imp| {
-                                                format!("Suggested improvement:\n{}\n\nRationale: {}",
-                                                    imp.description.as_deref().unwrap_or("(none)"),
-                                                    imp.rationale)
-                                            }),
-                                        },
-                                        Err(e) => AiResult {
-                                            action_name: "Evaluate".to_string(),
-                                            success: false,
-                                            message: format!("AI error: {}", e),
-                                            details: None,
-                                        },
+                                    // Check if already evaluating
+                                    if self.ai_eval_in_progress.is_some() {
+                                        self.toast_message = Some(ToastNotification {
+                                            message: "AI evaluation already in progress...".to_string(),
+                                            is_success: false,
+                                            show_until: Instant::now() + std::time::Duration::from_secs(3),
+                                        });
+                                        None // Skip, return no result
+                                    } else {
+                                        // Spawn background thread for evaluation
+                                        let (tx, rx) = mpsc::channel();
+                                        let ai_client = self.ai_client.clone();
+                                        let store_clone = self.store.clone();
+                                        let req_clone = req.clone();
+                                        let req_id = req.id;
+                                        let spec_id = req.spec_id.clone().unwrap_or_else(|| req.id.to_string());
+                                        let content_hash = req.content_hash();
+
+                                        self.ai_eval_receiver = Some(rx);
+                                        self.ai_eval_in_progress = Some((req_id, spec_id.clone()));
+
+                                        // Show toast that evaluation started
+                                        self.toast_message = Some(ToastNotification {
+                                            message: format!("Evaluating {}...", spec_id),
+                                            is_success: true,
+                                            show_until: Instant::now() + std::time::Duration::from_secs(3),
+                                        });
+
+                                        thread::spawn(move || {
+                                            let result = match ai_client.evaluate_requirement(&req_clone, &store_clone) {
+                                                Ok(response) => Ok(response),
+                                                Err(e) => Err(e.to_string()),
+                                            };
+                                            let _ = tx.send(BackgroundAiResult {
+                                                req_id,
+                                                spec_id,
+                                                content_hash,
+                                                result,
+                                            });
+                                        });
+
+                                        None // No immediate result, will be polled later
                                     }
                                 },
                                 AiAction::FindDuplicates(_) => {
-                                    match self.ai_client.find_duplicates(&req, &self.store) {
+                                    Some(match self.ai_client.find_duplicates(&req, &self.store) {
                                         Ok(response) => {
                                             let msg = if response.potential_duplicates.is_empty() {
                                                 "No potential duplicates found.".to_string()
@@ -10660,10 +10768,10 @@ impl RequirementsApp {
                                             message: format!("AI error: {}", e),
                                             details: None,
                                         },
-                                    }
+                                    })
                                 },
                                 AiAction::SuggestRelationships(_) => {
-                                    match self.ai_client.suggest_relationships(&req, &self.store) {
+                                    Some(match self.ai_client.suggest_relationships(&req, &self.store) {
                                         Ok(response) => {
                                             let msg = if response.suggested_relationships.is_empty() {
                                                 "No relationship suggestions found.".to_string()
@@ -10692,10 +10800,10 @@ impl RequirementsApp {
                                             message: format!("AI error: {}", e),
                                             details: None,
                                         },
-                                    }
+                                    })
                                 },
                                 AiAction::ImproveDescription(_) => {
-                                    match self.ai_client.improve_description(&req, &self.store) {
+                                    Some(match self.ai_client.improve_description(&req, &self.store) {
                                         Ok(response) => AiResult {
                                             action_name: "Improve Description".to_string(),
                                             success: true,
@@ -10716,10 +10824,10 @@ impl RequirementsApp {
                                             message: format!("AI error: {}", e),
                                             details: None,
                                         },
-                                    }
+                                    })
                                 },
                                 AiAction::GenerateChildren(_) => {
-                                    match self.ai_client.generate_children(&req, &self.store) {
+                                    Some(match self.ai_client.generate_children(&req, &self.store) {
                                         Ok(response) => {
                                             let msg = if response.suggested_children.is_empty() {
                                                 "No child requirements suggested.".to_string()
@@ -10748,11 +10856,14 @@ impl RequirementsApp {
                                             message: format!("AI error: {}", e),
                                             details: None,
                                         },
-                                    }
+                                    })
                                 },
                             };
-                            self.ai_last_result = Some(result);
-                            self.show_ai_results_panel = true;
+                            // Only set result and show panel if we got an immediate result
+                            if let Some(result) = result {
+                                self.ai_last_result = Some(result);
+                                self.show_ai_results_panel = true;
+                            }
                         } else {
                             self.ai_last_result = Some(AiResult {
                                 action_name: action.name().to_string(),
@@ -15026,6 +15137,72 @@ impl eframe::App for RequirementsApp {
         // Reset per-frame flags at the start of each frame
         self.quick_change_consumed_action = false;
 
+        // Poll for background AI evaluation results
+        if let Some(receiver) = &self.ai_eval_receiver {
+            if let Ok(result) = receiver.try_recv() {
+                eprintln!("DEBUG: Background AI evaluation completed for {}", result.spec_id);
+
+                // Clear the in-progress state
+                self.ai_eval_in_progress = None;
+                self.ai_eval_receiver = None;
+
+                match result.result {
+                    Ok(response) => {
+                        // Create the stored evaluation
+                        let stored_eval = StoredAiEvaluation::new(response.clone(), result.content_hash);
+
+                        // Find and update the requirement
+                        if let Some(req) = self.store.requirements.iter_mut().find(|r| r.id == result.req_id) {
+                            req.ai_evaluation = Some(stored_eval);
+                            eprintln!("DEBUG: Updated AI evaluation for {}", result.spec_id);
+                        }
+
+                        // Save the store
+                        self.save();
+
+                        // Show success toast
+                        self.toast_message = Some(ToastNotification {
+                            message: format!("AI evaluation complete for {} (Score: {}/10)",
+                                result.spec_id, response.quality_score),
+                            is_success: true,
+                            show_until: Instant::now() + std::time::Duration::from_secs(5),
+                        });
+
+                        // Also update the AI result panel
+                        self.ai_last_result = Some(AiResult {
+                            action_name: "Evaluate".to_string(),
+                            success: true,
+                            message: format!(
+                                "Quality Score: {}/10\n\nStrengths:\n{}\n\nIssues:\n{}",
+                                response.quality_score,
+                                response.strengths.iter()
+                                    .map(|s| format!("• {}", s))
+                                    .collect::<Vec<_>>()
+                                    .join("\n"),
+                                response.issues.iter()
+                                    .map(|i| format!("• [{}] {}: {}", i.severity, i.issue_type, i.text))
+                                    .collect::<Vec<_>>()
+                                    .join("\n")
+                            ),
+                            details: response.suggested_improvements.as_ref().map(|imp| {
+                                format!("Suggested improvement:\n{}\n\nRationale: {}",
+                                    imp.description.as_deref().unwrap_or("(none)"),
+                                    imp.rationale)
+                            }),
+                        });
+                    }
+                    Err(e) => {
+                        // Show error toast
+                        self.toast_message = Some(ToastNotification {
+                            message: format!("AI evaluation failed for {}: {}", result.spec_id, e),
+                            is_success: false,
+                            show_until: Instant::now() + std::time::Duration::from_secs(5),
+                        });
+                    }
+                }
+            }
+        }
+
         // Update window title based on database name and title
         // Format: "Name - Title" or just "Title" or just "Name" or "Requirements Manager"
         let title = match (self.store.name.is_empty(), self.store.title.is_empty()) {
@@ -15850,6 +16027,9 @@ impl eframe::App for RequirementsApp {
         if self.show_ai_results_panel {
             self.show_ai_results_modal(ctx);
         }
+
+        // Show toast notification overlay (must be last to appear on top)
+        self.show_toast_notification(ctx);
     }
 }
 
