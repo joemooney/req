@@ -60,4 +60,6 @@ pub use registry::{get_config_dir, get_registry_path, get_templates_dir, Registr
 pub use scaffolding::{
     ProjectType, ScaffoldArtifact, ScaffoldConfig, ScaffoldError, ScaffoldPreview, Scaffolder,
 };
-pub use storage::{Storage, StorageError};
+pub use storage::{
+    ConflictInfo, ConflictResolution, FieldConflict, SaveResult, Storage, StorageError,
+};

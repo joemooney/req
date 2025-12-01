@@ -123,6 +123,14 @@
 - **REQ-MIGRATE-003**: System shall support JSON export format
 - **REQ-MIGRATE-004**: System shall support JSON import format
 
+### 7.5 Concurrency Control (FR-0153)
+- **REQ-CONCUR-001**: System shall implement optimistic concurrency control using modified_at timestamps
+- **REQ-CONCUR-002**: System shall reload database before saving to detect external changes
+- **REQ-CONCUR-003**: System shall detect field-level conflicts when modified_at differs
+- **REQ-CONCUR-004**: System shall auto-merge non-conflicting changes to different fields
+- **REQ-CONCUR-005**: System shall display conflict resolution dialog showing field differences
+- **REQ-CONCUR-006**: System shall offer conflict resolution options: force local, keep disk, or merge
+
 ## 8. Command Line Interface
 
 ### 8.1 CLI Commands

@@ -1,11 +1,15 @@
+// trace:FR-0153 | ai:claude:high
 use anyhow::{Context, Result};
+use chrono::{DateTime, Utc};
 use fs2::FileExt;
+use std::collections::HashMap;
 use std::fs::{self, File, OpenOptions};
 use std::io::{BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
+use uuid::Uuid;
 
-use crate::models::RequirementsStore;
+use crate::models::{Requirement, RequirementsStore};
 
 /// Error type for storage operations
 #[derive(Debug)]
@@ -16,6 +20,61 @@ pub enum StorageError {
     IoError(std::io::Error),
     /// Parse error
     ParseError(String),
+    /// Conflict detected during save
+    Conflict(ConflictInfo),
+}
+
+/// Information about a conflict detected during save
+#[derive(Debug, Clone)]
+pub struct ConflictInfo {
+    /// ID of the requirement with conflict
+    pub requirement_id: Uuid,
+    /// SPEC-ID for display
+    pub spec_id: String,
+    /// Fields that have conflicting changes
+    pub conflicting_fields: Vec<FieldConflict>,
+    /// The version from disk (external changes)
+    pub disk_version: Box<Requirement>,
+    /// The version we're trying to save (local changes)
+    pub local_version: Box<Requirement>,
+}
+
+/// Describes a conflict in a specific field
+#[derive(Debug, Clone)]
+pub struct FieldConflict {
+    /// Name of the field
+    pub field_name: String,
+    /// Original value when we last loaded
+    pub original_value: String,
+    /// Value on disk (external change)
+    pub disk_value: String,
+    /// Value we're trying to save (local change)
+    pub local_value: String,
+}
+
+/// Result of attempting a save with conflict detection
+#[derive(Debug)]
+pub enum SaveResult {
+    /// Save succeeded without conflicts
+    Success,
+    /// Save succeeded after auto-merging non-conflicting changes
+    Merged {
+        /// Number of requirements that were merged
+        merged_count: usize,
+    },
+    /// Conflict detected - user action required
+    Conflict(ConflictInfo),
+}
+
+/// Resolution strategy when a conflict is detected
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ConflictResolution {
+    /// Keep the local version, overwrite disk
+    ForceLocal,
+    /// Keep the disk version, discard local changes
+    KeepDisk,
+    /// Merge field by field (take local changes for modified fields)
+    Merge,
 }
 
 impl std::fmt::Display for StorageError {
@@ -24,6 +83,13 @@ impl std::fmt::Display for StorageError {
             StorageError::FileLocked => write!(f, "File is locked by another user/process"),
             StorageError::IoError(e) => write!(f, "IO error: {}", e),
             StorageError::ParseError(s) => write!(f, "Parse error: {}", s),
+            StorageError::Conflict(info) => write!(
+                f,
+                "Conflict detected for {} ({}): {} field(s) changed externally",
+                info.spec_id,
+                info.requirement_id,
+                info.conflicting_fields.len()
+            ),
         }
     }
 }
@@ -256,5 +322,563 @@ impl Storage {
 
         // Lock is released when lock_file is dropped
         Ok(store)
+    }
+
+    // trace:FR-0153 | ai:claude:high
+    /// Save with conflict detection for a specific requirement
+    ///
+    /// This method:
+    /// 1. Reloads the file from disk
+    /// 2. Checks if the requirement was modified externally (based on modified_at timestamp)
+    /// 3. If no external changes, applies the update
+    /// 4. If external changes exist, performs field-level conflict detection
+    /// 5. Auto-merges non-conflicting changes, returns conflict info for conflicts
+    ///
+    /// # Arguments
+    /// * `local_store` - The local copy of the store with pending changes
+    /// * `original_timestamps` - Map of requirement IDs to their modified_at timestamps when loaded
+    /// * `modified_requirement_ids` - Set of requirement IDs that were modified locally
+    ///
+    /// # Returns
+    /// * `SaveResult::Success` - No conflicts, save completed
+    /// * `SaveResult::Merged` - External changes merged, save completed
+    /// * `SaveResult::Conflict` - Conflict detected, user action required
+    pub fn save_with_conflict_detection(
+        &self,
+        local_store: &RequirementsStore,
+        original_timestamps: &HashMap<Uuid, DateTime<Utc>>,
+        modified_requirement_ids: &[Uuid],
+    ) -> Result<SaveResult> {
+        // Acquire exclusive lock
+        let mut lock_file = self.acquire_write_lock()?;
+
+        // Write lock holder info
+        let _ = writeln!(
+            lock_file,
+            "Locked by PID {} at {}",
+            std::process::id(),
+            chrono::Utc::now().to_rfc3339()
+        );
+
+        // Load latest version from disk
+        let disk_store = if self.file_path.exists() {
+            let file = File::open(&self.file_path)
+                .with_context(|| format!("Failed to open file: {:?}", self.file_path))?;
+            let reader = BufReader::new(file);
+            serde_yaml::from_reader(reader)
+                .with_context(|| format!("Failed to parse YAML from {:?}", self.file_path))?
+        } else {
+            RequirementsStore::new()
+        };
+
+        // Check for conflicts in modified requirements
+        let mut merged_count = 0;
+        let mut final_store = disk_store.clone();
+
+        for &req_id in modified_requirement_ids {
+            let local_req = local_store.requirements.iter().find(|r| r.id == req_id);
+            let disk_req = disk_store.requirements.iter().find(|r| r.id == req_id);
+            let original_timestamp = original_timestamps.get(&req_id);
+
+            match (local_req, disk_req, original_timestamp) {
+                // New requirement (not on disk yet)
+                (Some(local), None, _) => {
+                    final_store.requirements.push(local.clone());
+                }
+
+                // Requirement exists on disk - check for conflicts
+                (Some(local), Some(disk), Some(&orig_ts)) => {
+                    // Check if disk version was modified after we loaded
+                    if disk.modified_at > orig_ts {
+                        // External modification detected - check for field conflicts
+                        let conflicts = Self::detect_field_conflicts(local, disk, &orig_ts);
+
+                        if !conflicts.is_empty() {
+                            // Real conflict - fields we want to modify were also modified externally
+                            return Ok(SaveResult::Conflict(ConflictInfo {
+                                requirement_id: req_id,
+                                spec_id: disk.spec_id.clone().unwrap_or_else(|| req_id.to_string()),
+                                conflicting_fields: conflicts,
+                                disk_version: Box::new(disk.clone()),
+                                local_version: Box::new(local.clone()),
+                            }));
+                        }
+
+                        // No real conflicts - merge: take our changes + disk's other changes
+                        let merged = Self::merge_requirement(local, disk);
+                        if let Some(idx) = final_store.requirements.iter().position(|r| r.id == req_id) {
+                            final_store.requirements[idx] = merged;
+                        }
+                        merged_count += 1;
+                    } else {
+                        // No external changes - just use our version
+                        if let Some(idx) = final_store.requirements.iter().position(|r| r.id == req_id) {
+                            final_store.requirements[idx] = local.clone();
+                        }
+                    }
+                }
+
+                // Requirement exists on disk but we don't have original timestamp
+                // This is a fallback - just overwrite (legacy behavior)
+                (Some(local), Some(_disk), None) => {
+                    if let Some(idx) = final_store.requirements.iter().position(|r| r.id == req_id) {
+                        final_store.requirements[idx] = local.clone();
+                    }
+                }
+
+                // Local deletion (requirement exists on disk but not in local)
+                (None, Some(_), _) => {
+                    // Keep deletion - remove from final store
+                    final_store.requirements.retain(|r| r.id != req_id);
+                }
+
+                // Already deleted on both sides
+                (None, None, _) => {}
+            }
+        }
+
+        // Copy over non-requirement changes from local_store
+        // (users, features, id_config, etc. - these don't have per-item conflict detection yet)
+        final_store.name = local_store.name.clone();
+        final_store.title = local_store.title.clone();
+        final_store.description = local_store.description.clone();
+        final_store.users = local_store.users.clone();
+        final_store.id_config = local_store.id_config.clone();
+        final_store.features = local_store.features.clone();
+        final_store.relationship_definitions = local_store.relationship_definitions.clone();
+        final_store.reaction_definitions = local_store.reaction_definitions.clone();
+        final_store.type_definitions = local_store.type_definitions.clone();
+        final_store.ai_prompts = local_store.ai_prompts.clone();
+        final_store.allowed_prefixes = local_store.allowed_prefixes.clone();
+        final_store.restrict_prefixes = local_store.restrict_prefixes;
+
+        // Save the merged/updated store
+        let yaml = serde_yaml::to_string(&final_store)?;
+        fs::write(&self.file_path, yaml)?;
+
+        if merged_count > 0 {
+            Ok(SaveResult::Merged { merged_count })
+        } else {
+            Ok(SaveResult::Success)
+        }
+    }
+
+    /// Detect field-level conflicts between local and disk versions
+    /// Returns list of fields that were modified both locally and externally
+    fn detect_field_conflicts(
+        local: &Requirement,
+        disk: &Requirement,
+        _original_timestamp: &DateTime<Utc>,
+    ) -> Vec<FieldConflict> {
+        let mut conflicts = Vec::new();
+
+        // We consider a conflict if:
+        // 1. Local changed a field from its original value
+        // 2. Disk also changed that same field from its original value
+        // 3. The final values are different
+        //
+        // Since we don't have the original values stored separately,
+        // we compare local vs disk and flag as conflict if different
+        // This is a simpler but slightly more conservative approach
+
+        // Compare key fields
+        if local.title != disk.title {
+            conflicts.push(FieldConflict {
+                field_name: "title".to_string(),
+                original_value: String::new(), // Unknown without snapshot
+                disk_value: disk.title.clone(),
+                local_value: local.title.clone(),
+            });
+        }
+
+        if local.description != disk.description {
+            conflicts.push(FieldConflict {
+                field_name: "description".to_string(),
+                original_value: String::new(),
+                disk_value: disk.description.clone(),
+                local_value: local.description.clone(),
+            });
+        }
+
+        if local.status != disk.status {
+            conflicts.push(FieldConflict {
+                field_name: "status".to_string(),
+                original_value: String::new(),
+                disk_value: disk.status.to_string(),
+                local_value: local.status.to_string(),
+            });
+        }
+
+        if local.priority != disk.priority {
+            conflicts.push(FieldConflict {
+                field_name: "priority".to_string(),
+                original_value: String::new(),
+                disk_value: disk.priority.to_string(),
+                local_value: local.priority.to_string(),
+            });
+        }
+
+        if local.owner != disk.owner {
+            conflicts.push(FieldConflict {
+                field_name: "owner".to_string(),
+                original_value: String::new(),
+                disk_value: disk.owner.clone(),
+                local_value: local.owner.clone(),
+            });
+        }
+
+        if local.feature != disk.feature {
+            conflicts.push(FieldConflict {
+                field_name: "feature".to_string(),
+                original_value: String::new(),
+                disk_value: disk.feature.clone(),
+                local_value: local.feature.clone(),
+            });
+        }
+
+        if local.req_type != disk.req_type {
+            conflicts.push(FieldConflict {
+                field_name: "type".to_string(),
+                original_value: String::new(),
+                disk_value: disk.req_type.to_string(),
+                local_value: local.req_type.to_string(),
+            });
+        }
+
+        if local.tags != disk.tags {
+            conflicts.push(FieldConflict {
+                field_name: "tags".to_string(),
+                original_value: String::new(),
+                disk_value: disk.tags.iter().cloned().collect::<Vec<_>>().join(", "),
+                local_value: local.tags.iter().cloned().collect::<Vec<_>>().join(", "),
+            });
+        }
+
+        conflicts
+    }
+
+    /// Merge two versions of a requirement
+    /// Takes local changes and merges with disk version
+    fn merge_requirement(local: &Requirement, disk: &Requirement) -> Requirement {
+        // Start with local (our changes)
+        let mut merged = local.clone();
+
+        // Merge comments: include all comments from both versions
+        // Use a set to deduplicate by comment ID
+        let mut comment_ids: std::collections::HashSet<Uuid> =
+            merged.comments.iter().map(|c| c.id).collect();
+        for comment in &disk.comments {
+            if comment_ids.insert(comment.id) {
+                merged.comments.push(comment.clone());
+            }
+        }
+        // Sort comments by created_at
+        merged.comments.sort_by_key(|c| c.created_at);
+
+        // Merge history: include all history entries from both versions
+        let mut history_ids: std::collections::HashSet<Uuid> =
+            merged.history.iter().map(|h| h.id).collect();
+        for entry in &disk.history {
+            if history_ids.insert(entry.id) {
+                merged.history.push(entry.clone());
+            }
+        }
+        // Sort history by timestamp
+        merged.history.sort_by_key(|h| h.timestamp);
+
+        // Merge relationships: include all from both (dedupe by target_id + rel_type)
+        let existing_rels: std::collections::HashSet<_> = merged
+            .relationships
+            .iter()
+            .map(|r| (r.target_id, r.rel_type.clone()))
+            .collect();
+        for rel in &disk.relationships {
+            if !existing_rels.contains(&(rel.target_id, rel.rel_type.clone())) {
+                merged.relationships.push(rel.clone());
+            }
+        }
+
+        // Merge URLs: include all from both (dedupe by URL)
+        let existing_urls: std::collections::HashSet<_> =
+            merged.urls.iter().map(|u| u.url.clone()).collect();
+        for url in &disk.urls {
+            if !existing_urls.contains(&url.url) {
+                merged.urls.push(url.clone());
+            }
+        }
+
+        // Keep the later modified_at timestamp
+        if disk.modified_at > merged.modified_at {
+            merged.modified_at = disk.modified_at;
+        }
+
+        // If disk has AI evaluation and we don't, take it
+        if merged.ai_evaluation.is_none() && disk.ai_evaluation.is_some() {
+            merged.ai_evaluation = disk.ai_evaluation.clone();
+        }
+
+        merged
+    }
+
+    /// Force save with a specific conflict resolution strategy
+    pub fn save_with_resolution(
+        &self,
+        local_store: &RequirementsStore,
+        requirement_id: Uuid,
+        resolution: ConflictResolution,
+    ) -> Result<RequirementsStore> {
+        // Acquire exclusive lock
+        let mut lock_file = self.acquire_write_lock()?;
+
+        let _ = writeln!(
+            lock_file,
+            "Locked by PID {} at {}",
+            std::process::id(),
+            chrono::Utc::now().to_rfc3339()
+        );
+
+        // Load disk version
+        let mut disk_store: RequirementsStore = if self.file_path.exists() {
+            let file = File::open(&self.file_path)?;
+            let reader = BufReader::new(file);
+            serde_yaml::from_reader(reader)?
+        } else {
+            RequirementsStore::new()
+        };
+
+        match resolution {
+            ConflictResolution::ForceLocal => {
+                // Replace disk requirement with local version
+                if let Some(local_req) = local_store.requirements.iter().find(|r| r.id == requirement_id) {
+                    if let Some(idx) = disk_store.requirements.iter().position(|r| r.id == requirement_id) {
+                        disk_store.requirements[idx] = local_req.clone();
+                    } else {
+                        disk_store.requirements.push(local_req.clone());
+                    }
+                }
+            }
+            ConflictResolution::KeepDisk => {
+                // Do nothing - disk version is already in disk_store
+            }
+            ConflictResolution::Merge => {
+                // Merge local changes into disk version
+                if let Some(local_req) = local_store.requirements.iter().find(|r| r.id == requirement_id) {
+                    if let Some(disk_req) = disk_store.requirements.iter().find(|r| r.id == requirement_id) {
+                        let merged = Self::merge_requirement(local_req, disk_req);
+                        if let Some(idx) = disk_store.requirements.iter().position(|r| r.id == requirement_id) {
+                            disk_store.requirements[idx] = merged;
+                        }
+                    } else {
+                        disk_store.requirements.push(local_req.clone());
+                    }
+                }
+            }
+        }
+
+        // Save the updated store
+        let yaml = serde_yaml::to_string(&disk_store)?;
+        fs::write(&self.file_path, yaml)?;
+
+        Ok(disk_store)
+    }
+
+    /// Get a snapshot of requirement timestamps for conflict detection
+    pub fn get_requirement_timestamps(store: &RequirementsStore) -> HashMap<Uuid, DateTime<Utc>> {
+        store
+            .requirements
+            .iter()
+            .map(|r| (r.id, r.modified_at))
+            .collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    fn create_test_store() -> RequirementsStore {
+        let mut store = RequirementsStore::new();
+        store.name = "test".to_string();
+        store
+    }
+
+    fn create_test_requirement(title: &str) -> Requirement {
+        Requirement::new(title.to_string(), format!("Description for {}", title))
+    }
+
+    #[test]
+    fn test_save_and_load() {
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("test.yaml");
+        let storage = Storage::new(&file_path);
+
+        let mut store = create_test_store();
+        store.requirements.push(create_test_requirement("Test Req"));
+
+        // Save
+        storage.save(&store).unwrap();
+
+        // Load
+        let loaded = storage.load().unwrap();
+        assert_eq!(loaded.requirements.len(), 1);
+        assert_eq!(loaded.requirements[0].title, "Test Req");
+    }
+
+    #[test]
+    fn test_conflict_detection_no_conflict() {
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("test.yaml");
+        let storage = Storage::new(&file_path);
+
+        // Create initial store with one requirement
+        let mut store = create_test_store();
+        let mut req = create_test_requirement("Test Req");
+        req.spec_id = Some("FR-0001".to_string());
+        let req_id = req.id;
+        store.requirements.push(req);
+
+        // Save initial version
+        storage.save(&store).unwrap();
+
+        // Capture timestamps
+        let timestamps = Storage::get_requirement_timestamps(&store);
+
+        // Modify the requirement
+        store.requirements[0].title = "Modified Title".to_string();
+        store.requirements[0].modified_at = Utc::now();
+
+        // Save with conflict detection - should succeed
+        let result = storage
+            .save_with_conflict_detection(&store, &timestamps, &[req_id])
+            .unwrap();
+
+        match result {
+            SaveResult::Success => {} // Expected
+            _ => panic!("Expected SaveResult::Success"),
+        }
+    }
+
+    #[test]
+    fn test_conflict_detection_with_external_change() {
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("test.yaml");
+        let storage = Storage::new(&file_path);
+
+        // Create initial store with one requirement
+        let mut store = create_test_store();
+        let mut req = create_test_requirement("Test Req");
+        req.spec_id = Some("FR-0001".to_string());
+        let req_id = req.id;
+        store.requirements.push(req);
+
+        // Save initial version
+        storage.save(&store).unwrap();
+
+        // Capture timestamps (simulating GUI loading the store)
+        let timestamps = Storage::get_requirement_timestamps(&store);
+        let mut local_store = store.clone();
+
+        // Simulate external change (another tool modifies the file)
+        store.requirements[0].title = "External Change".to_string();
+        store.requirements[0].modified_at = Utc::now();
+        storage.save(&store).unwrap();
+
+        // Local change (different field modified by same field in external)
+        local_store.requirements[0].title = "Local Change".to_string();
+        local_store.requirements[0].modified_at = Utc::now();
+
+        // Save with conflict detection - should detect conflict
+        let result = storage
+            .save_with_conflict_detection(&local_store, &timestamps, &[req_id])
+            .unwrap();
+
+        match result {
+            SaveResult::Conflict(info) => {
+                assert_eq!(info.requirement_id, req_id);
+                assert!(!info.conflicting_fields.is_empty());
+                assert!(info.conflicting_fields.iter().any(|f| f.field_name == "title"));
+            }
+            _ => panic!("Expected SaveResult::Conflict"),
+        }
+    }
+
+    #[test]
+    fn test_conflict_resolution_force_local() {
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("test.yaml");
+        let storage = Storage::new(&file_path);
+
+        // Create initial store
+        let mut store = create_test_store();
+        let mut req = create_test_requirement("Test Req");
+        req.spec_id = Some("FR-0001".to_string());
+        let req_id = req.id;
+        store.requirements.push(req);
+        storage.save(&store).unwrap();
+
+        // External change
+        store.requirements[0].title = "External".to_string();
+        storage.save(&store).unwrap();
+
+        // Local version with different title
+        let mut local_store = store.clone();
+        local_store.requirements[0].title = "Local".to_string();
+
+        // Resolve with ForceLocal
+        let result = storage
+            .save_with_resolution(&local_store, req_id, ConflictResolution::ForceLocal)
+            .unwrap();
+
+        assert_eq!(result.requirements[0].title, "Local");
+    }
+
+    #[test]
+    fn test_conflict_resolution_keep_disk() {
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("test.yaml");
+        let storage = Storage::new(&file_path);
+
+        // Create initial store
+        let mut store = create_test_store();
+        let mut req = create_test_requirement("Test Req");
+        req.spec_id = Some("FR-0001".to_string());
+        let req_id = req.id;
+        store.requirements.push(req);
+        storage.save(&store).unwrap();
+
+        // External change
+        store.requirements[0].title = "External".to_string();
+        storage.save(&store).unwrap();
+
+        // Local version with different title
+        let mut local_store = store.clone();
+        local_store.requirements[0].title = "Local".to_string();
+
+        // Resolve with KeepDisk
+        let result = storage
+            .save_with_resolution(&local_store, req_id, ConflictResolution::KeepDisk)
+            .unwrap();
+
+        assert_eq!(result.requirements[0].title, "External");
+    }
+
+    #[test]
+    fn test_get_requirement_timestamps() {
+        let mut store = create_test_store();
+        let req1 = create_test_requirement("Req1");
+        let req2 = create_test_requirement("Req2");
+        let id1 = req1.id;
+        let id2 = req2.id;
+        let ts1 = req1.modified_at;
+        let ts2 = req2.modified_at;
+
+        store.requirements.push(req1);
+        store.requirements.push(req2);
+
+        let timestamps = Storage::get_requirement_timestamps(&store);
+        assert_eq!(timestamps.len(), 2);
+        assert_eq!(timestamps.get(&id1), Some(&ts1));
+        assert_eq!(timestamps.get(&id2), Some(&ts2));
     }
 }

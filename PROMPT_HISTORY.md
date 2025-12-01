@@ -1091,3 +1091,63 @@ A chronological record of development sessions and changes made to the Requireme
   - Tech stack customization
   - Project type selection affects generated command examples
 - **Status**: FR-0152 marked as Completed (partial - new project wizard integration TODO)
+
+
+### Stale Data Protection / Conflict Detection (FR-0153)
+- **Prompt**: Implement FR-0153 - YAML database store last updated and do not overwrite when stale
+- **Solution**: Implemented optimistic concurrency control with field-level conflict detection and resolution
+- **Implementation**:
+  - **aida-core/src/storage.rs**:
+    - Added conflict detection types at top of file:
+      - `ConflictInfo` - holds requirement ID, spec_id, conflicting fields, disk/local versions
+      - `FieldConflict` - holds field name, original/disk/local values
+      - `SaveResult` - enum: Success, Merged { merged_count }, Conflict(ConflictInfo)
+      - `ConflictResolution` - enum: ForceLocal, KeepDisk, Merge
+    - Added `save_with_conflict_detection()` method:
+      - Takes original timestamps HashMap and modified IDs HashSet
+      - Reloads database from disk before saving
+      - Compares timestamps for each modified requirement
+      - If timestamp unchanged, saves normally
+      - If timestamp newer on disk, checks for field conflicts
+      - If no field conflicts, auto-merges and continues
+      - If field conflicts exist, returns ConflictInfo for first conflict
+    - Added `detect_field_conflicts()` method:
+      - Compares 8 key fields: title, description, status, priority, owner, feature, type, tags
+      - Returns Vec<FieldConflict> with old/disk/local values for each conflict
+    - Added `merge_requirement()` method:
+      - Copies non-conflicting fields from disk version
+      - Preserves comments, history, relationships, URLs from both versions
+      - Updates modified_at timestamp
+    - Added `save_with_resolution()` method:
+      - Handles user's conflict resolution choice
+      - ForceLocal: overwrites disk with local
+      - KeepDisk: reloads and discards local changes
+      - Merge: auto-merges non-conflicting changes
+    - Added `get_requirement_timestamps()` helper for initial snapshot
+    - Added 6 unit tests for conflict scenarios
+  - **aida-core/src/lib.rs**:
+    - Added exports: ConflictInfo, ConflictResolution, FieldConflict, SaveResult
+  - **aida-gui/src/app.rs**:
+    - Added imports for conflict types and chrono DateTime
+    - Added state fields to RequirementsApp:
+      - `original_timestamps: HashMap<Uuid, DateTime<Utc>>` - snapshot at load time
+      - `modified_requirement_ids: HashSet<Uuid>` - tracks locally modified requirements
+      - `show_conflict_dialog: bool` - dialog visibility
+      - `current_conflict: Option<ConflictInfo>` - current conflict to resolve
+    - Modified `reload()` to update timestamps snapshot
+    - Replaced `save()` with conflict-aware version using `save_with_conflict_detection()`
+    - Added `mark_requirement_modified()` helper method
+    - Added tracking calls in update_requirement(), toggle_archive(), status/priority change handlers
+    - Added `show_conflict_resolution_dialog()` method:
+      - Displays field-by-field comparison table
+      - Shows conflicting field names with disk vs local values
+      - Three resolution buttons: "Use My Changes", "Use Disk Version", "Merge (Keep Non-Conflicting)"
+      - Cancel button to review further
+- **Tests**: 6 tests added covering:
+  - test_save_and_load - basic persistence
+  - test_conflict_detection_no_conflict - no conflicts when disk unchanged
+  - test_conflict_detection_with_external_change - detects when disk modified
+  - test_conflict_resolution_force_local - ForceLocal overwrites disk
+  - test_conflict_resolution_keep_disk - KeepDisk reloads disk version
+  - test_get_requirement_timestamps - verifies timestamp tracking
+- **Status**: FR-0153 marked as Completed

@@ -1,12 +1,14 @@
 use aida_core::{
     ai::AiClient,
-    determine_requirements_path, Cardinality, Comment, CustomFieldDefinition, CustomFieldType,
-    EvaluationResponse, FieldChange, IdFormat, NumberingStrategy, RelationshipDefinition,
-    RelationshipType, Requirement, RequirementPriority, RequirementStatus, RequirementType,
-    RequirementsStore, Storage, StoredAiEvaluation, UrlLink,
+    determine_requirements_path, Cardinality, Comment, ConflictInfo, ConflictResolution,
+    CustomFieldDefinition, CustomFieldType, EvaluationResponse, FieldChange, IdFormat,
+    NumberingStrategy, RelationshipDefinition, RelationshipType, Requirement, RequirementPriority,
+    RequirementStatus, RequirementType, RequirementsStore, SaveResult, Storage, StoredAiEvaluation,
+    UrlLink,
 };
 use eframe::egui;
 use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
@@ -2305,6 +2307,12 @@ pub struct RequirementsApp {
     scaffold_config: aida_core::ScaffoldConfig,   // Scaffolding configuration
     scaffold_preview: Option<aida_core::ScaffoldPreview>, // Preview of artifacts to generate
     scaffold_tech_stack_input: String,            // Input for adding tech stack items
+
+    // Conflict detection state (FR-0153)
+    original_timestamps: HashMap<Uuid, DateTime<Utc>>,  // Requirement timestamps when loaded
+    modified_requirement_ids: HashSet<Uuid>,            // IDs of requirements modified since load
+    show_conflict_dialog: bool,                         // Whether to show conflict resolution dialog
+    current_conflict: Option<ConflictInfo>,             // Current conflict being resolved
 }
 
 /// Result from background AI evaluation thread
@@ -2412,6 +2420,9 @@ impl RequirementsApp {
         let initial_id_format = store.id_config.format.clone();
         let initial_numbering = store.id_config.numbering.clone();
         let initial_digits = store.id_config.digits;
+
+        // Capture timestamps for conflict detection (FR-0153)
+        let initial_timestamps = Storage::get_requirement_timestamps(&store);
 
         // Apply saved preferences
         let initial_font_size = user_settings.base_font_size;
@@ -2663,6 +2674,12 @@ impl RequirementsApp {
             scaffold_config: aida_core::ScaffoldConfig::default(),
             scaffold_preview: None,
             scaffold_tech_stack_input: String::new(),
+
+            // Conflict detection state (FR-0153)
+            original_timestamps: initial_timestamps,
+            modified_requirement_ids: HashSet::new(),
+            show_conflict_dialog: false,
+            current_conflict: None,
         }
     }
 
@@ -3039,6 +3056,9 @@ impl RequirementsApp {
 
     fn reload(&mut self) {
         if let Ok(store) = self.storage.load() {
+            // Update timestamps snapshot when reloading
+            self.original_timestamps = Storage::get_requirement_timestamps(&store);
+            self.modified_requirement_ids.clear();
             self.store = store;
             self.message = Some(("Reloaded successfully".to_string(), false));
         } else {
@@ -3046,12 +3066,58 @@ impl RequirementsApp {
         }
     }
 
+    // trace:FR-0153 | ai:claude:high
     fn save(&mut self) {
-        if let Err(e) = self.storage.save(&self.store) {
-            self.message = Some((format!("Error saving: {}", e), true));
-        } else {
-            self.message = Some(("Saved successfully".to_string(), false));
+        // If no requirements were modified, use standard save
+        if self.modified_requirement_ids.is_empty() {
+            if let Err(e) = self.storage.save(&self.store) {
+                self.message = Some((format!("Error saving: {}", e), true));
+            } else {
+                self.message = Some(("Saved successfully".to_string(), false));
+            }
+            return;
         }
+
+        // Use conflict-aware save
+        let modified_ids: Vec<Uuid> = self.modified_requirement_ids.iter().cloned().collect();
+        match self.storage.save_with_conflict_detection(
+            &self.store,
+            &self.original_timestamps,
+            &modified_ids,
+        ) {
+            Ok(SaveResult::Success) => {
+                // Update timestamps and clear modified set
+                self.original_timestamps = Storage::get_requirement_timestamps(&self.store);
+                self.modified_requirement_ids.clear();
+                self.message = Some(("Saved successfully".to_string(), false));
+            }
+            Ok(SaveResult::Merged { merged_count }) => {
+                // Reload to get merged changes
+                if let Ok(store) = self.storage.load() {
+                    self.store = store;
+                    self.original_timestamps = Storage::get_requirement_timestamps(&self.store);
+                    self.modified_requirement_ids.clear();
+                }
+                self.message = Some((
+                    format!("Saved with {} merged external change(s)", merged_count),
+                    false,
+                ));
+            }
+            Ok(SaveResult::Conflict(conflict_info)) => {
+                // Show conflict resolution dialog
+                self.current_conflict = Some(conflict_info);
+                self.show_conflict_dialog = true;
+                // Don't clear modified_requirement_ids - user needs to resolve
+            }
+            Err(e) => {
+                self.message = Some((format!("Error saving: {}", e), true));
+            }
+        }
+    }
+
+    /// Mark a requirement as modified (for conflict tracking)
+    fn mark_requirement_modified(&mut self, req_id: Uuid) {
+        self.modified_requirement_ids.insert(req_id);
     }
 
     /// Display toast notification overlay at the bottom of the screen
@@ -3550,6 +3616,9 @@ impl RequirementsApp {
             // Record changes with author from user settings
             req.record_change(self.user_settings.display_name(), changes);
 
+            // Mark requirement as modified for conflict tracking (FR-0153)
+            self.mark_requirement_modified(req_uuid);
+
             self.save();
             self.clear_form();
             self.current_view = View::Detail;
@@ -3568,9 +3637,9 @@ impl RequirementsApp {
     }
 
     fn toggle_archive(&mut self, idx: usize) {
-        let (new_archived, author) = {
+        let (new_archived, author, req_id) = {
             if let Some(req) = self.store.requirements.get(idx) {
-                (!req.archived, self.user_settings.display_name())
+                (!req.archived, self.user_settings.display_name(), req.id)
             } else {
                 return;
             }
@@ -3588,6 +3657,9 @@ impl RequirementsApp {
             );
             req.record_change(author, vec![change]);
         }
+
+        // Mark requirement as modified for conflict tracking (FR-0153)
+        self.mark_requirement_modified(req_id);
 
         self.save();
         let action = if new_archived {
@@ -4291,6 +4363,158 @@ impl RequirementsApp {
         if close_dialog {
             self.show_scaffold_dialog = false;
             self.scaffold_preview = None;
+        }
+    }
+
+    // trace:FR-0153 | ai:claude:high
+    /// Show the conflict resolution dialog when a save conflict is detected
+    fn show_conflict_resolution_dialog(&mut self, ctx: &egui::Context) {
+        if !self.show_conflict_dialog {
+            return;
+        }
+
+        let conflict = match &self.current_conflict {
+            Some(c) => c.clone(),
+            None => {
+                self.show_conflict_dialog = false;
+                return;
+            }
+        };
+
+        let mut close_dialog = false;
+        let mut resolution: Option<ConflictResolution> = None;
+        let max_size = modal_max_size(ctx);
+
+        egui::Window::new("⚠ Conflict Detected")
+            .collapsible(false)
+            .resizable(true)
+            .min_width(600.0)
+            .max_width(max_size.x)
+            .max_height(max_size.y)
+            .scroll([false, true])
+            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+            .show(ctx, |ui| {
+                ui.heading("Save Conflict");
+                ui.add_space(5.0);
+                ui.colored_label(
+                    egui::Color32::from_rgb(255, 180, 100),
+                    format!(
+                        "Requirement {} was modified externally while you were editing it.",
+                        conflict.spec_id
+                    ),
+                );
+                ui.add_space(10.0);
+
+                // Show conflicting fields
+                ui.heading("Conflicting Fields");
+                ui.add_space(5.0);
+
+                egui::ScrollArea::vertical()
+                    .max_height(300.0)
+                    .show(ui, |ui| {
+                        for field in &conflict.conflicting_fields {
+                            ui.group(|ui| {
+                                ui.strong(&field.field_name);
+                                ui.add_space(5.0);
+
+                                egui::Grid::new(format!("conflict_{}", field.field_name))
+                                    .num_columns(2)
+                                    .spacing([10.0, 5.0])
+                                    .show(ui, |ui| {
+                                        ui.colored_label(
+                                            egui::Color32::from_rgb(100, 150, 255),
+                                            "Your change:",
+                                        );
+                                        ui.add(
+                                            egui::TextEdit::multiline(
+                                                &mut field.local_value.clone(),
+                                            )
+                                            .desired_rows(2)
+                                            .desired_width(250.0)
+                                            .interactive(false),
+                                        );
+                                        ui.end_row();
+
+                                        ui.colored_label(
+                                            egui::Color32::from_rgb(255, 150, 100),
+                                            "External change:",
+                                        );
+                                        ui.add(
+                                            egui::TextEdit::multiline(&mut field.disk_value.clone())
+                                                .desired_rows(2)
+                                                .desired_width(250.0)
+                                                .interactive(false),
+                                        );
+                                        ui.end_row();
+                                    });
+                            });
+                            ui.add_space(5.0);
+                        }
+                    });
+
+                ui.add_space(15.0);
+                ui.separator();
+                ui.add_space(10.0);
+
+                // Resolution options
+                ui.heading("Resolution Options");
+                ui.add_space(5.0);
+
+                ui.horizontal(|ui| {
+                    if ui
+                        .button("📥 Keep My Changes")
+                        .on_hover_text("Overwrite the external changes with your version")
+                        .clicked()
+                    {
+                        resolution = Some(ConflictResolution::ForceLocal);
+                    }
+
+                    if ui
+                        .button("📤 Keep External Changes")
+                        .on_hover_text("Discard your changes and keep the external version")
+                        .clicked()
+                    {
+                        resolution = Some(ConflictResolution::KeepDisk);
+                    }
+
+                    if ui
+                        .button("🔀 Merge")
+                        .on_hover_text("Keep your field changes, merge comments/history/relationships")
+                        .clicked()
+                    {
+                        resolution = Some(ConflictResolution::Merge);
+                    }
+                });
+
+                ui.add_space(10.0);
+
+                if ui.button("Cancel").clicked() {
+                    close_dialog = true;
+                }
+            });
+
+        if let Some(res) = resolution {
+            let req_id = conflict.requirement_id;
+            match self.storage.save_with_resolution(&self.store, req_id, res) {
+                Ok(new_store) => {
+                    self.store = new_store;
+                    self.original_timestamps = Storage::get_requirement_timestamps(&self.store);
+                    self.modified_requirement_ids.remove(&req_id);
+                    self.message = Some((
+                        format!("Conflict resolved for {}", conflict.spec_id),
+                        false,
+                    ));
+                    close_dialog = true;
+                }
+                Err(e) => {
+                    self.message = Some((format!("Error resolving conflict: {}", e), true));
+                }
+            }
+        }
+
+        if close_dialog {
+            self.show_conflict_dialog = false;
+            self.current_conflict = None;
         }
     }
 
@@ -11220,6 +11444,7 @@ impl RequirementsApp {
                 // Apply priority change
                 if let Some(priority) = new_priority {
                     if let Some(req) = self.store.requirements.get_mut(idx) {
+                        let req_id = req.id;
                         let old_priority = req.priority.clone();
                         req.priority = priority.clone();
                         let change = Requirement::field_change(
@@ -11228,6 +11453,7 @@ impl RequirementsApp {
                             priority.to_string(),
                         );
                         req.record_change(self.user_settings.display_name(), vec![change]);
+                        self.mark_requirement_modified(req_id);
                         self.save();
                     }
                 }
@@ -11235,6 +11461,7 @@ impl RequirementsApp {
                 // Apply status change
                 if let Some(status) = new_status {
                     if let Some(req) = self.store.requirements.get_mut(idx) {
+                        let req_id = req.id;
                         let old_status = req.status.clone();
                         req.status = status.clone();
                         let change = Requirement::field_change(
@@ -11243,6 +11470,7 @@ impl RequirementsApp {
                             status.to_string(),
                         );
                         req.record_change(self.user_settings.display_name(), vec![change]);
+                        self.mark_requirement_modified(req_id);
                         self.save();
                     }
                 }
@@ -16699,6 +16927,9 @@ impl eframe::App for RequirementsApp {
 
         // Show scaffolding dialog (FR-0152)
         self.show_scaffold_dialog(ctx);
+
+        // Show conflict resolution dialog (FR-0153)
+        self.show_conflict_resolution_dialog(ctx);
 
         // Show migration confirmation dialog
         self.show_migration_confirmation_dialog(ctx);
