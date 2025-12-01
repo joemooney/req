@@ -48,6 +48,7 @@ cargo clippy --workspace            # Linting
 - **registry.rs**: Multi-project registry management (stored at `~/.requirements.config`)
 - **project.rs**: Project resolution logic
 - **export.rs**: Export functionality (mapping, JSON)
+- **scaffolding.rs**: Claude Code project scaffolding (CLAUDE.md, commands, skills generation)
 
 ### Module Structure (aida-cli)
 
@@ -174,3 +175,13 @@ The GUI includes AI-powered features (requires LLM API access):
 - **Improve**: AI-suggested description improvements
 - **Generate Children**: Break down into sub-requirements
 - **Copy for Claude Code**: Format requirement for implementation
+- **Scaffold Project**: Generate Claude Code integration artifacts (Settings > AI tab)
+
+### Project Scaffolding
+
+Generate Claude Code integration files from Settings > AI > "Scaffold Project":
+- **CLAUDE.md**: Project instructions with context, tech stack, and features
+- **.claude/commands/**: Project-specific slash commands (status, review)
+- **.claude/skills/**: Requirements-driven development skills (aida-req, aida-implement)
+
+Supported project types: Rust, Python, TypeScript, Web, API, CLI, Generic

@@ -4,6 +4,7 @@ pub mod export;
 pub mod models;
 pub mod project;
 pub mod registry;
+pub mod scaffolding;
 pub mod storage;
 
 // Re-export commonly used types
@@ -56,4 +57,7 @@ pub use models::{
 };
 pub use project::determine_requirements_path;
 pub use registry::{get_config_dir, get_registry_path, get_templates_dir, Registry};
+pub use scaffolding::{
+    ProjectType, ScaffoldArtifact, ScaffoldConfig, ScaffoldError, ScaffoldPreview, Scaffolder,
+};
 pub use storage::{Storage, StorageError};

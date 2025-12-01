@@ -1056,3 +1056,38 @@ A chronological record of development sessions and changes made to the Requireme
 - **Result**: Find Duplicates now runs in background, UI remains responsive during AI API calls
 - **Status**: FR-0148 marked as Completed
 
+
+
+### AI Project Scaffolding (FR-0152)
+- **Prompt**: Implement FR-0152 - AI scaffhold project with skills during new project creation
+- **Solution**: Added project scaffolding feature to generate Claude Code integration artifacts
+- **Implementation**:
+  - Created `aida-core/src/scaffolding.rs` module with:
+    - `ScaffoldConfig` struct for configuration options
+    - `ProjectType` enum (Generic, Rust, Python, TypeScript, Web, Api, Cli)
+    - `Scaffolder` struct with `preview()` and `apply()` methods
+    - `ScaffoldArtifact` and `ScaffoldPreview` for generated content
+  - Added to `aida-core/src/lib.rs` with public re-exports
+  - Updated `aida-gui/src/app.rs`:
+    - Added scaffolding state fields: `show_scaffold_dialog`, `scaffold_config`, `scaffold_preview`, `scaffold_tech_stack_input`
+    - Added "Claude Code Integration" section to Settings > AI tab
+    - Added "🔧 Scaffold Project" button that opens dialog
+    - Implemented `show_scaffold_dialog()` method with:
+      - Artifact selection checkboxes (CLAUDE.md, commands, skills)
+      - Project type dropdown
+      - Tech stack input with add/remove
+      - Preview section showing new files, overwrites, directories
+      - Collapsible artifact details
+      - Apply and Cancel buttons
+- **Generated Artifacts**:
+  - `CLAUDE.md` - Project instructions with title, description, tech stack, features, type-specific commands
+  - `.claude/commands/status.md` - Project status command
+  - `.claude/commands/review.md` - Requirement review command
+  - `.claude/skills/aida-req.md` - Requirement creation skill
+  - `.claude/skills/aida-implement.md` - Implementation skill with language-specific traceability examples
+- **Features**:
+  - Preview shows new files vs overwrites with color coding
+  - Refresh preview button when config changes
+  - Tech stack customization
+  - Project type selection affects generated command examples
+- **Status**: FR-0152 marked as Completed (partial - new project wizard integration TODO)

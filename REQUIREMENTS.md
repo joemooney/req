@@ -205,3 +205,12 @@
 ### 12.3 Claude Code Integration
 - **REQ-AI-011**: System shall provide "Copy for Claude Code" action for approved requirements
 - **REQ-AI-012**: Copied text shall format requirement with implementation instructions
+
+### 12.4 Project Scaffolding (FR-0152)
+- **REQ-AI-013**: System shall provide project scaffolding via Settings > AI tab
+- **REQ-AI-014**: Scaffolding shall generate CLAUDE.md with project context
+- **REQ-AI-015**: Scaffolding shall generate .claude/commands/ with project-specific commands
+- **REQ-AI-016**: Scaffolding shall generate .claude/skills/ with requirements-driven development skills
+- **REQ-AI-017**: Scaffolding shall support project type selection (Rust, Python, TypeScript, Web, API, CLI, Generic)
+- **REQ-AI-018**: Scaffolding shall preview artifacts before generation
+- **REQ-AI-019**: Scaffolding shall warn before overwriting existing files

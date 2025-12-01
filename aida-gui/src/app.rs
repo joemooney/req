@@ -2299,6 +2299,12 @@ pub struct RequirementsApp {
 
     // Toast notification state
     toast_message: Option<ToastNotification>,     // Current toast message to display
+
+    // Project scaffolding state (FR-0152)
+    show_scaffold_dialog: bool,                   // Whether to show the scaffolding dialog
+    scaffold_config: aida_core::ScaffoldConfig,   // Scaffolding configuration
+    scaffold_preview: Option<aida_core::ScaffoldPreview>, // Preview of artifacts to generate
+    scaffold_tech_stack_input: String,            // Input for adding tech stack items
 }
 
 /// Result from background AI evaluation thread
@@ -2651,6 +2657,12 @@ impl RequirementsApp {
 
             // Toast notification state
             toast_message: None,
+
+            // Project scaffolding state (FR-0152)
+            show_scaffold_dialog: false,
+            scaffold_config: aida_core::ScaffoldConfig::default(),
+            scaffold_preview: None,
+            scaffold_tech_stack_input: String::new(),
         }
     }
 
@@ -4065,6 +4077,220 @@ impl RequirementsApp {
 
         if close_dialog {
             self.show_new_project_dialog = false;
+        }
+    }
+
+    // trace:FR-0152 | ai:claude:high
+    /// Show the project scaffolding dialog for generating Claude Code artifacts
+    fn show_scaffold_dialog(&mut self, ctx: &egui::Context) {
+        if !self.show_scaffold_dialog {
+            return;
+        }
+
+        let mut close_dialog = false;
+        let mut apply_scaffolding = false;
+        let max_size = modal_max_size(ctx);
+
+        egui::Window::new("🔧 Scaffold Project")
+            .collapsible(false)
+            .resizable(true)
+            .min_width(500.0)
+            .max_width(max_size.x)
+            .max_height(max_size.y)
+            .scroll([false, true])
+            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+            .show(ctx, |ui| {
+                ui.heading("Generate Claude Code Integration");
+                ui.add_space(5.0);
+                ui.label("Configure and generate Claude Code artifacts for this project.");
+                ui.add_space(10.0);
+
+                // Configuration options
+                ui.heading("Artifacts to Generate");
+                ui.add_space(5.0);
+
+                ui.checkbox(&mut self.scaffold_config.generate_claude_md, "CLAUDE.md")
+                    .on_hover_text("Project instructions file for Claude Code");
+                ui.checkbox(&mut self.scaffold_config.generate_commands, ".claude/commands/")
+                    .on_hover_text("Slash commands directory for project-specific commands");
+                ui.checkbox(&mut self.scaffold_config.generate_skills, ".claude/skills/")
+                    .on_hover_text("Skills directory for requirements-driven development");
+
+                if self.scaffold_config.generate_skills {
+                    ui.indent("skills_indent", |ui| {
+                        ui.checkbox(&mut self.scaffold_config.include_aida_req_skill, "Include aida-req skill")
+                            .on_hover_text("Skill for adding requirements with AI evaluation");
+                        ui.checkbox(&mut self.scaffold_config.include_aida_implement_skill, "Include aida-implement skill")
+                            .on_hover_text("Skill for implementing requirements with traceability");
+                    });
+                }
+
+                ui.add_space(10.0);
+                ui.separator();
+                ui.add_space(10.0);
+
+                // Project type selection
+                ui.heading("Project Type");
+                ui.add_space(5.0);
+                ui.label("Select project type to customize generated content:");
+
+                egui::ComboBox::from_id_salt("project_type_combo")
+                    .selected_text(self.scaffold_config.project_type.label())
+                    .show_ui(ui, |ui| {
+                        for project_type in aida_core::ProjectType::all() {
+                            ui.selectable_value(
+                                &mut self.scaffold_config.project_type,
+                                project_type.clone(),
+                                project_type.label(),
+                            );
+                        }
+                    });
+
+                ui.add_space(10.0);
+
+                // Tech stack input
+                ui.heading("Tech Stack");
+                ui.add_space(5.0);
+                ui.label("Add technologies used in this project:");
+
+                ui.horizontal(|ui| {
+                    let response = ui.add(
+                        egui::TextEdit::singleline(&mut self.scaffold_tech_stack_input)
+                            .hint_text("e.g., Rust, egui, SQLite")
+                            .desired_width(200.0),
+                    );
+                    if ui.button("Add").clicked() || (response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter))) {
+                        let tech = self.scaffold_tech_stack_input.trim().to_string();
+                        if !tech.is_empty() && !self.scaffold_config.tech_stack.contains(&tech) {
+                            self.scaffold_config.tech_stack.push(tech);
+                            self.scaffold_tech_stack_input.clear();
+                        }
+                    }
+                });
+
+                if !self.scaffold_config.tech_stack.is_empty() {
+                    ui.add_space(5.0);
+                    ui.horizontal_wrapped(|ui| {
+                        let mut to_remove = None;
+                        for (idx, tech) in self.scaffold_config.tech_stack.iter().enumerate() {
+                            ui.horizontal(|ui| {
+                                ui.label(format!("• {}", tech));
+                                if ui.small_button("✕").clicked() {
+                                    to_remove = Some(idx);
+                                }
+                            });
+                        }
+                        if let Some(idx) = to_remove {
+                            self.scaffold_config.tech_stack.remove(idx);
+                        }
+                    });
+                }
+
+                ui.add_space(10.0);
+                ui.separator();
+                ui.add_space(10.0);
+
+                // Preview section
+                ui.heading("Preview");
+                ui.add_space(5.0);
+
+                if let Some(ref preview) = self.scaffold_preview {
+                    // Show what will be created/overwritten
+                    if !preview.new_dirs.is_empty() {
+                        ui.label("📁 Directories to create:");
+                        for dir in &preview.new_dirs {
+                            ui.label(format!("   • {}", dir.display()));
+                        }
+                        ui.add_space(5.0);
+                    }
+
+                    if !preview.new_files.is_empty() {
+                        ui.colored_label(egui::Color32::from_rgb(100, 200, 100), "📄 New files:");
+                        for file in &preview.new_files {
+                            ui.label(format!("   • {}", file.display()));
+                        }
+                        ui.add_space(5.0);
+                    }
+
+                    if !preview.overwrites.is_empty() {
+                        ui.colored_label(egui::Color32::from_rgb(255, 180, 100), "⚠ Files to overwrite:");
+                        for file in &preview.overwrites {
+                            ui.label(format!("   • {}", file.display()));
+                        }
+                        ui.add_space(5.0);
+                    }
+
+                    // Artifact details (collapsible)
+                    ui.add_space(5.0);
+                    egui::CollapsingHeader::new("📋 Artifact Details")
+                        .default_open(false)
+                        .show(ui, |ui| {
+                            for artifact in &preview.artifacts {
+                                ui.horizontal(|ui| {
+                                    if artifact.exists {
+                                        ui.colored_label(egui::Color32::from_rgb(255, 180, 100), "⚠");
+                                    } else {
+                                        ui.colored_label(egui::Color32::from_rgb(100, 200, 100), "✓");
+                                    }
+                                    ui.label(artifact.path.display().to_string());
+                                });
+                                ui.indent("artifact_desc", |ui| {
+                                    ui.label(&artifact.description);
+                                });
+                            }
+                        });
+                } else {
+                    ui.label("No preview available");
+                }
+
+                ui.add_space(15.0);
+                ui.separator();
+                ui.add_space(10.0);
+
+                // Buttons
+                ui.horizontal(|ui| {
+                    // Refresh preview button
+                    if ui.button("🔄 Refresh Preview").clicked() {
+                        let project_dir = self.storage.path().parent()
+                            .map(|p| p.to_path_buf())
+                            .unwrap_or_else(|| std::path::PathBuf::from("."));
+                        let scaffolder = aida_core::Scaffolder::new(project_dir, self.scaffold_config.clone());
+                        self.scaffold_preview = Some(scaffolder.preview(&self.store));
+                    }
+
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("Cancel").clicked() {
+                            close_dialog = true;
+                        }
+                        if ui.button("Apply").clicked() {
+                            apply_scaffolding = true;
+                        }
+                    });
+                });
+            });
+
+        if apply_scaffolding {
+            if let Some(ref preview) = self.scaffold_preview {
+                let project_dir = self.storage.path().parent()
+                    .map(|p| p.to_path_buf())
+                    .unwrap_or_else(|| std::path::PathBuf::from("."));
+                let scaffolder = aida_core::Scaffolder::new(project_dir, self.scaffold_config.clone());
+
+                match scaffolder.apply(preview) {
+                    Ok(files) => {
+                        self.message = Some((format!("Scaffolding complete! Created {} files", files.len()), false));
+                        close_dialog = true;
+                    }
+                    Err(e) => {
+                        self.message = Some((format!("Scaffolding failed: {}", e), true));
+                    }
+                }
+            }
+        }
+
+        if close_dialog {
+            self.show_scaffold_dialog = false;
+            self.scaffold_preview = None;
         }
     }
 
@@ -6981,6 +7207,27 @@ impl RequirementsApp {
                 self.store.ai_prompts.type_prompts.remove(idx);
                 self.save();
             }
+
+            ui.add_space(15.0);
+            ui.separator();
+            ui.add_space(10.0);
+
+            // Project Scaffolding Section (FR-0152)
+            ui.heading("Claude Code Integration");
+            ui.add_space(5.0);
+            ui.label("Generate Claude Code artifacts (CLAUDE.md, skills, commands) for this project.");
+            ui.add_space(10.0);
+
+            if ui.button("🔧 Scaffold Project").clicked() {
+                // Generate preview when opening dialog
+                let project_dir = self.storage.path().parent()
+                    .map(|p| p.to_path_buf())
+                    .unwrap_or_else(|| std::path::PathBuf::from("."));
+                let scaffolder = aida_core::Scaffolder::new(project_dir, self.scaffold_config.clone());
+                self.scaffold_preview = Some(scaffolder.preview(&self.store));
+                self.show_scaffold_dialog = true;
+            }
+            ui.label("Creates CLAUDE.md, .claude/commands/, and .claude/skills/ directories.");
 
             ui.add_space(15.0);
             ui.separator();
@@ -16449,6 +16696,9 @@ impl eframe::App for RequirementsApp {
         // Show project dialogs
         self.show_switch_project_dialog(ctx);
         self.show_new_project_dialog(ctx);
+
+        // Show scaffolding dialog (FR-0152)
+        self.show_scaffold_dialog(ctx);
 
         // Show migration confirmation dialog
         self.show_migration_confirmation_dialog(ctx);
