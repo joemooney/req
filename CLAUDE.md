@@ -4,27 +4,27 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-A Rust-based requirements management system with both CLI and GUI interfaces. Stores requirements as YAML files. Requirements can be organized by features, filtered by various attributes, and managed across multiple projects via a central registry.
+AIDA (AI-Driven Architecture) is a Rust-based requirements management system with both CLI and GUI interfaces. Stores requirements as YAML files. Requirements can be organized by features, filtered by various attributes, and managed across multiple projects via a central registry. Includes AI-powered evaluation, duplicate detection, and Claude Code integration.
 
 ## Project Structure
 
 This is a Cargo workspace with three crates:
 
-- **requirements-core**: Shared library containing models, storage, and business logic
-- **requirements-cli**: Command-line interface (`req` binary)
-- **requirements-gui**: Graphical interface using egui (`req-gui` binary)
+- **aida-core**: Shared library containing models, storage, and business logic
+- **aida-cli**: Command-line interface (`aida` binary)
+- **aida-gui**: Graphical interface using egui (`aida-gui` binary)
 
 ## Common Commands
 
 ### Build and Run
 ```bash
 cargo build --workspace --release   # Build all crates
-cargo run -p requirements-cli -- <command>  # Run CLI
-cargo run -p requirements-gui       # Run GUI
+cargo run --bin aida -- <command>   # Run CLI
+cargo run --bin aida-gui            # Run GUI
 
 # Or after building:
-./target/release/req <command>      # CLI binary
-./target/release/req-gui            # GUI binary
+./target/release/aida <command>     # CLI binary
+./target/release/aida-gui           # GUI binary
 ```
 
 ### Testing and Development
@@ -36,7 +36,7 @@ cargo clippy --workspace            # Linting
 
 ## Architecture
 
-### Module Structure (requirements-core)
+### Module Structure (aida-core)
 
 - **models.rs**: Core data structures (`Requirement`, `RequirementsStore`, `RequirementStatus`, `RequirementPriority`, `RequirementType`, `Comment`, `HistoryEntry`, `Relationship`)
 - **storage.rs**: YAML file persistence layer using `serde_yaml`
@@ -49,13 +49,13 @@ cargo clippy --workspace            # Linting
 - **project.rs**: Project resolution logic
 - **export.rs**: Export functionality (mapping, JSON)
 
-### Module Structure (requirements-cli)
+### Module Structure (aida-cli)
 
 - **main.rs**: Entry point and command handlers
 - **cli.rs**: Clap-based CLI definitions
 - **prompts.rs**: Interactive user prompts using `inquire`
 
-### Module Structure (requirements-gui)
+### Module Structure (aida-gui)
 
 - **main.rs**: Entry point
 - **app.rs**: Main application state and UI rendering (egui)
@@ -103,16 +103,16 @@ Requirements have:
 ## CLI Commands
 
 ```bash
-req add [--interactive]             # Add requirement
-req list [--status X --priority Y]  # List with filters
-req show <ID>                       # Show details (UUID or SPEC-ID)
-req edit <ID>                       # Edit requirement
-req del <ID> [-y]                   # Delete requirement
-req rel add --from X --to Y --type T  # Add relationship
-req comment add --id X --content Y  # Add comment
-req feature list                    # List features
-req db list                         # List projects
-req user-guide [--dark]             # Open documentation
+aida add [--interactive]            # Add requirement
+aida list [--status X --priority Y] # List with filters
+aida show <ID>                      # Show details (UUID or SPEC-ID)
+aida edit <ID>                      # Edit requirement
+aida del <ID> [-y]                  # Delete requirement
+aida rel add --from X --to Y --type T  # Add relationship
+aida comment add --id X --content Y # Add comment
+aida feature list                   # List features
+aida db list                        # List projects
+aida user-guide [--dark]            # Open documentation
 ```
 
 ## Documentation
@@ -129,3 +129,48 @@ req user-guide [--dark]             # Open documentation
 - GUI persists user settings to `~/.requirements_gui_settings.yaml`
 - Comments support threading with parent references
 - History tracks all field changes with old/new values
+
+## Claude Code Skills
+
+AIDA provides Claude Code skills for requirements-driven development:
+
+### /aida-req
+Add new requirements with AI evaluation:
+- Interactive requirement gathering
+- Immediate database storage with draft status
+- Background AI evaluation for quality feedback
+- Follow-up actions: improve, split, link, accept
+
+### /aida-implement
+Implement requirements with traceability:
+- Load and display requirement context
+- Break down into child requirements as needed
+- Update requirements during implementation
+- Add inline traceability comments to code
+
+## Code Traceability
+
+When implementing requirements, add inline trace comments:
+
+```rust
+// trace:FR-0042 | ai:claude:high
+fn implement_feature() {
+    // Implementation
+}
+```
+
+Format: `// trace:<SPEC-ID> | ai:<tool>:<confidence>`
+
+Confidence levels:
+- `high`: >80% AI-generated
+- `med`: 40-80% AI with modifications
+- `low`: <40% AI, mostly human
+
+## AI Integration
+
+The GUI includes AI-powered features (requires LLM API access):
+- **Evaluate**: Quality assessment with scoring
+- **Find Duplicates**: Detect similar requirements
+- **Improve**: AI-suggested description improvements
+- **Generate Children**: Break down into sub-requirements
+- **Copy for Claude Code**: Format requirement for implementation
