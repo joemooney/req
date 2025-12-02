@@ -2412,8 +2412,15 @@ impl RequirementsApp {
         let requirements_path = determine_requirements_path(None)
             .unwrap_or_else(|_| std::path::PathBuf::from("requirements.yaml"));
 
-        let storage = Storage::new(requirements_path);
-        let store = storage.load().unwrap_or_else(|_| RequirementsStore::new());
+        let storage = Storage::new(&requirements_path);
+        let store = match storage.load() {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("ERROR: Failed to load requirements from {:?}: {}", requirements_path, e);
+                eprintln!("Creating empty store. Your data may still be in the file.");
+                RequirementsStore::new()
+            }
+        };
         let user_settings = UserSettings::load();
 
         // Extract project settings before store is moved
@@ -3055,14 +3062,54 @@ impl RequirementsApp {
     }
 
     fn reload(&mut self) {
-        if let Ok(store) = self.storage.load() {
-            // Update timestamps snapshot when reloading
-            self.original_timestamps = Storage::get_requirement_timestamps(&store);
-            self.modified_requirement_ids.clear();
-            self.store = store;
-            self.message = Some(("Reloaded successfully".to_string(), false));
-        } else {
-            self.message = Some(("Failed to reload".to_string(), true));
+        match self.storage.load() {
+            Ok(store) => {
+                // Update timestamps snapshot when reloading
+                self.original_timestamps = Storage::get_requirement_timestamps(&store);
+                self.modified_requirement_ids.clear();
+                self.store = store;
+                self.message = Some(("Reloaded successfully".to_string(), false));
+            }
+            Err(e) => {
+                eprintln!("ERROR: Failed to reload: {}", e);
+                self.message = Some((format!("Failed to reload: {}", e), true));
+            }
+        }
+    }
+
+    /// Save current requirements to a new file location
+    fn save_as(&mut self) {
+        // Use rfd for native file dialog
+        if let Some(path) = rfd::FileDialog::new()
+            .add_filter("YAML files", &["yaml", "yml"])
+            .set_file_name("requirements.yaml")
+            .save_file()
+        {
+            // Serialize and save to the new path
+            match serde_yaml::to_string(&self.store) {
+                Ok(yaml) => {
+                    match std::fs::write(&path, yaml) {
+                        Ok(()) => {
+                            self.message = Some((
+                                format!("Saved to: {}", path.display()),
+                                false,
+                            ));
+                        }
+                        Err(e) => {
+                            self.message = Some((
+                                format!("Failed to write file: {}", e),
+                                true,
+                            ));
+                        }
+                    }
+                }
+                Err(e) => {
+                    self.message = Some((
+                        format!("Failed to serialize: {}", e),
+                        true,
+                    ));
+                }
+            }
         }
     }
 
@@ -3684,6 +3731,10 @@ impl RequirementsApp {
                 ui.menu_button("☰ Menu", |ui| {
                     if ui.button("🔄 Reload").clicked() {
                         self.reload();
+                        ui.close_menu();
+                    }
+                    if ui.button("💾 Save As...").clicked() {
+                        self.save_as();
                         ui.close_menu();
                     }
                     ui.separator();

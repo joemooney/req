@@ -1328,6 +1328,10 @@ requirements:
     target_id: 9af27c34-8a93-4285-9ae6-2448a6bcddde
     created_at: 2025-12-01T06:58:53.115721740Z
     created_by: Unknown User
+  - rel_type: Child
+    target_id: 9802115f-d7ab-465e-a850-d305fc9bd01f
+    created_at: 2025-12-02T01:50:03.460366982Z
+    created_by: Unknown User
   history:
   - id: c2aa6626-c857-41f9-9851-9306815d33df
     author: '@joe'
@@ -7242,6 +7246,61 @@ requirements:
   req_type: Functional
   dependencies: []
   tags: []
+- id: 9802115f-d7ab-465e-a850-d305fc9bd01f
+  spec_id: FR-0156
+  title: Support disconnected mode
+  description: |-
+    Support disconnected mode
+
+    When the database is not available, be able to update requiremetns locally and provide a mechanism to sync the changes. For example, we could have a patch file of operations that we performed and then play those operations back when we sync with the mothership.
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-12-02T01:50:03.460324841Z
+  created_by: Unknown User
+  modified_at: 2025-12-02T01:50:03.460324841Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: bb81e51e-dd32-48ef-9806-cf26a09643f5
+    created_at: 2025-12-02T01:50:03.460366982Z
+    created_by: Unknown User
+- id: 0dbbd399-9c61-4524-8404-08a9b5ea4245
+  spec_id: FR-0157
+  title: testing 111
+  description: testing 111
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-12-02T01:51:10.257562453Z
+  created_by: Unknown User
+  modified_at: 2025-12-02T01:51:10.257562453Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+- id: 913e3985-c014-403f-a7bf-bb321c04c168
+  spec_id: FR-0158
+  title: testing 222
+  description: testing 222
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-12-02T01:51:11.525491266Z
+  created_by: Unknown User
+  modified_at: 2025-12-02T01:51:11.525491266Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 44c3a73f-f643-4833-8398-4e0738b31d08
+    created_at: 2025-12-02T01:51:11.525541094Z
+    created_by: Unknown User
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
   spec_id: $USER-001
@@ -7295,7 +7354,7 @@ id_config:
     description: Change requests for modifications to existing functionality
 features: []
 next_feature_number: 75
-next_spec_number: 156
+next_spec_number: 157
 prefix_counters: {}
 relationship_definitions:
 - name: parent
