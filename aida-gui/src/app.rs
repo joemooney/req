@@ -1581,6 +1581,7 @@ impl UserSettings {
 
     /// Load settings from file, or return defaults if not found
     /// Also loads themes from the themes directory
+    /// For new users, attempts to populate name/email from git config and environment
     pub fn load() -> Self {
         let path = Self::settings_path();
         let mut settings = if path.exists() {
@@ -1593,6 +1594,11 @@ impl UserSettings {
             Self::default()
         };
 
+        // For new users, try to get name/email from git config and environment
+        if settings.name.is_empty() || settings.email.is_empty() {
+            Self::populate_from_git_and_env(&mut settings);
+        }
+
         // Load themes from files and merge with embedded custom themes
         let file_themes = Self::load_file_themes();
         for file_theme in file_themes {
@@ -1603,6 +1609,51 @@ impl UserSettings {
         }
 
         settings
+    }
+
+    /// Populate name and email from git config and environment variables
+    fn populate_from_git_and_env(settings: &mut Self) {
+        // Try to read from ~/.gitconfig
+        if let Some(home) = dirs::home_dir() {
+            let gitconfig_path = home.join(".gitconfig");
+            if gitconfig_path.exists() {
+                if let Ok(contents) = std::fs::read_to_string(&gitconfig_path) {
+                    // Parse git config for user.name and user.email
+                    let mut in_user_section = false;
+                    for line in contents.lines() {
+                        let trimmed = line.trim();
+                        if trimmed.starts_with('[') {
+                            in_user_section = trimmed.to_lowercase().starts_with("[user");
+                        } else if in_user_section {
+                            if let Some(value) = trimmed.strip_prefix("name") {
+                                if settings.name.is_empty() {
+                                    let value = value.trim_start_matches(|c| c == ' ' || c == '=').trim();
+                                    if !value.is_empty() {
+                                        settings.name = value.to_string();
+                                    }
+                                }
+                            } else if let Some(value) = trimmed.strip_prefix("email") {
+                                if settings.email.is_empty() {
+                                    let value = value.trim_start_matches(|c| c == ' ' || c == '=').trim();
+                                    if !value.is_empty() {
+                                        settings.email = value.to_string();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // If name is still empty, try USER or USERNAME environment variable
+        if settings.name.is_empty() {
+            if let Ok(user) = std::env::var("USER") {
+                settings.name = user;
+            } else if let Ok(username) = std::env::var("USERNAME") {
+                settings.name = username;
+            }
+        }
     }
 
     /// Save settings to file
