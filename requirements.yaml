@@ -7286,6 +7286,85 @@ requirements:
   req_type: Functional
   dependencies: []
   tags: []
+- id: 7fd252be-0736-4b40-b0ab-6e484d6e3b4b
+  spec_id: FR-0171
+  title: Drag requirement in Requirements List - scroll ...
+  description: |-
+    Drag requirement in Requirements List - scroll pane when at top or bottom
+
+    When you are dragging a requirement and reach the top or bottom of the visible list, then page up/down so that we can continue dragging up or down.
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 86-Uncategorized
+  created_at: 2025-12-02T05:52:03.999904662Z
+  created_by: Joe Mooney
+  modified_at: 2025-12-02T05:52:03.999904662Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
+    created_at: 2025-12-02T05:52:03.999947782Z
+    created_by: Joe Mooney
+- id: 99b3fe30-03e4-4b7e-b52a-aaee0553dc57
+  spec_id: IMPL-0171
+  prefix_override: IMPL
+  title: Implement stateless type concept with built-in Folder type (FR-0146)
+  description: |-
+    Implemented (FR-0146)
+
+    ## Changes Made
+
+    ### 1. Core Model Changes (aida-core/src/models.rs)
+    - Added `stateless: bool` field to `CustomTypeDefinition` struct
+    - Added `built_in_stateless()` constructor for creating stateless built-in types
+    - Added `as_stateless()` builder method
+    - Added `Folder` variant to `RequirementType` enum
+    - Created built-in Folder type definition (prefix: FLD, color: gray)
+    - Added `is_type_stateless()` method to `RequirementsStore`
+    - Added `migrate_type_definitions()` method to auto-add missing built-in types
+
+    ### 2. Storage Migration (aida-core/src/storage.rs)
+    - Added automatic migration on load to include missing built-in types
+    - Existing YAML files automatically get new built-in types like Folder
+
+    ### 3. GUI Updates (aida-gui/src/app.rs)
+    - Settings/Types now separated into two sections:
+      - Stateful types (Functional, Non-Functional, etc.)
+      - Organizational Types (Stateless) with folder heading
+    - Added show_type_def_entry() helper method for rendering type entries
+    - Stateless types show folder icon, "[Stateless - no status/priority]" label
+    - Status section hidden for stateless types in expanded view
+    - Status/Priority fields hidden in edit forms for stateless types
+    - Status/Priority hidden in detail views for stateless requirements
+    - Folder added to Type dropdown with folder icon
+
+    ### 4. CLI Updates (aida-cli/src/main.rs)
+    - Added Folder case to type display
+
+    ### 5. SQLite Backend (aida-core/src/db/sqlite_backend.rs)
+    - Added Folder type conversion support
+
+    ## Behavior
+    - Folder type available as organizational container
+    - No status/priority tracking for Folder requirements
+    - Uses FLD- prefix for SPEC-IDs
+    - Automatically added to existing projects on first load
+  status: Completed
+  priority: Medium
+  owner: ''
+  feature: 87-Uncategorized
+  created_at: 2025-12-02T05:53:26.997634796Z
+  modified_at: 2025-12-02T05:53:26.997634796Z
+  req_type: Task
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 62ea913d-8f31-4349-b043-5fe49b102671
+    created_at: 2025-12-02T05:53:32.076386577Z
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
   spec_id: $USER-001
@@ -7347,8 +7426,8 @@ id_config:
     prefix: SPIKE
     description: Research or investigation task to reduce uncertainty or explore technical approaches
 features: []
-next_feature_number: 86
-next_spec_number: 171
+next_feature_number: 88
+next_spec_number: 172
 prefix_counters: {}
 relationship_definitions:
 - name: parent
@@ -7577,6 +7656,13 @@ type_definitions:
   built_in: true
   color: '#9333ea'
   stateless: false
+- name: Folder
+  display_name: Folder
+  description: Organizational container for grouping related requirements
+  prefix: FLD
+  built_in: true
+  color: '#6b7280'
+  stateless: true
 allowed_prefixes:
 - ADDREQ
 - AI
