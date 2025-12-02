@@ -7188,9 +7188,22 @@ requirements:
   status: Completed
   priority: Medium
   owner: ''
-  feature: GUI
+  feature: 82-GUI
   created_at: 2025-12-02T03:58:27.536662755Z
   modified_at: 2025-12-02T03:58:27.536662755Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+- id: 6e872298-1951-4290-a1e4-3d3303151a45
+  spec_id: FR-0168
+  title: Scaffolding generates AIDA-aware CLAUDE.md with /aida-capture skill
+  description: Project scaffolding now generates CLAUDE.md with Requirements Management section, CLI commands, and session workflow guidance. New /aida-capture skill reviews conversations at session end to capture missed requirements.
+  status: Completed
+  priority: Medium
+  owner: ''
+  feature: AI Integration
+  created_at: 2025-12-02T04:15:51.551465521Z
+  modified_at: 2025-12-02T04:15:51.551465521Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -7246,8 +7259,8 @@ id_config:
     prefix: CR
     description: Change requests for modifications to existing functionality
 features: []
-next_feature_number: 82
-next_spec_number: 168
+next_feature_number: 83
+next_spec_number: 169
 prefix_counters: {}
 relationship_definitions:
 - name: parent
