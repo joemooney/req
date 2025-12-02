@@ -7091,26 +7091,26 @@ requirements:
   dependencies: []
   tags: []
 - id: a29ad02a-9f63-4b1a-b7d0-89d7d33b35f1
-  spec_id: FR-0159
+  spec_id: FR-0161
   title: Icon editor wraps items in 4-column grid layout
   description: Status and priority icon editors display 4 items per row instead of 1, reducing panel width. Vertical scrollbar available when content exceeds max height.
   status: Completed
   priority: Low
   owner: ''
-  feature: GUI
+  feature: 78-GUI
   created_at: 2025-12-02T03:30:57.336895595Z
   modified_at: 2025-12-02T03:30:57.336895595Z
   req_type: Functional
   dependencies: []
   tags: []
 - id: 394d69b4-8503-4247-b329-4ce6f6a92a83
-  spec_id: FR-0159
+  spec_id: FR-0162
   title: Skills related requirements
   description: Skills related requirements
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 79-Uncategorized
   created_at: 2025-12-02T03:31:15.832402271Z
   created_by: Unknown User
   modified_at: 2025-12-02T03:31:15.832402271Z
@@ -7123,13 +7123,13 @@ requirements:
     created_at: 2025-12-02T03:31:15.832430936Z
     created_by: Unknown User
 - id: 0a1ab189-cf84-41d9-a3d0-3e91a671b75a
-  spec_id: FR-0160
+  spec_id: FR-0164
   title: 'Add requirement, focus cursor in Description '
   description: 'Add requirement, focus cursor in Description '
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 79-Uncategorized
   created_at: 2025-12-02T03:32:09.873396891Z
   created_by: Unknown User
   modified_at: 2025-12-02T03:32:09.873396891Z
@@ -7141,6 +7141,19 @@ requirements:
     target_id: 394d69b4-8503-4247-b329-4ce6f6a92a83
     created_at: 2025-12-02T03:32:09.873437636Z
     created_by: Unknown User
+- id: 452fc8ef-4d73-43af-a759-5435b8ae922c
+  spec_id: FR-0165
+  title: Smart parent selection for new requirements
+  description: 'Add button uses smart heuristic: if selected has children, new req becomes child; if selected has no children but has parent, new req becomes sibling; if selected has no children and no parent, new req is root. New keybindings: Ctrl+N (smart), ''n'' (sibling), ''N'' (child).'
+  status: Completed
+  priority: Medium
+  owner: ''
+  feature: GUI
+  created_at: 2025-12-02T03:40:09.411039075Z
+  modified_at: 2025-12-02T03:40:09.411039075Z
+  req_type: Functional
+  dependencies: []
+  tags: []
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
   spec_id: $USER-001
@@ -7193,8 +7206,8 @@ id_config:
     prefix: CR
     description: Change requests for modifications to existing functionality
 features: []
-next_feature_number: 78
-next_spec_number: 160
+next_feature_number: 80
+next_spec_number: 166
 prefix_counters: {}
 relationship_definitions:
 - name: parent
