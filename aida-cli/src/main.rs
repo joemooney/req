@@ -374,6 +374,7 @@ fn show_requirement(storage: &Storage, id_str: &str) -> Result<()> {
         RequirementType::Story => "Story",
         RequirementType::Task => "Task",
         RequirementType::Spike => "Spike",
+        RequirementType::Folder => "Folder",
     };
     println!("{}: {}", "Type".blue(), type_str);
 

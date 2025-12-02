@@ -59,6 +59,8 @@ pub enum RequirementType {
     Story,
     Task,
     Spike,
+    // Organizational types (stateless)
+    Folder,
 }
 
 impl fmt::Display for RequirementType {
@@ -74,6 +76,7 @@ impl fmt::Display for RequirementType {
             RequirementType::Story => write!(f, "Story"),
             RequirementType::Task => write!(f, "Task"),
             RequirementType::Spike => write!(f, "Spike"),
+            RequirementType::Folder => write!(f, "Folder"),
         }
     }
 }
@@ -337,6 +340,12 @@ pub struct CustomTypeDefinition {
     /// Color for visual distinction (hex color code)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub color: Option<String>,
+
+    /// Whether this type is stateless (no status/priority tracking)
+    /// Stateless types are used for organizational purposes (e.g., Folders)
+    /// They are excluded from status metrics and reports by default
+    #[serde(default)]
+    pub stateless: bool,
 }
 
 impl CustomTypeDefinition {
@@ -352,6 +361,7 @@ impl CustomTypeDefinition {
             custom_fields: Vec::new(),
             built_in: false,
             color: None,
+            stateless: false,
         }
     }
 
@@ -367,6 +377,23 @@ impl CustomTypeDefinition {
             custom_fields: Vec::new(),
             built_in: true,
             color: None,
+            stateless: false,
+        }
+    }
+
+    /// Creates a built-in stateless type definition (no status/priority tracking)
+    pub fn built_in_stateless(name: impl Into<String>, display_name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            display_name: display_name.into(),
+            description: None,
+            prefix: None,
+            statuses: Vec::new(),
+            priorities: Vec::new(),
+            custom_fields: Vec::new(),
+            built_in: true,
+            color: None,
+            stateless: true,
         }
     }
 
@@ -403,6 +430,12 @@ impl CustomTypeDefinition {
     /// Sets the color
     pub fn with_color(mut self, color: impl Into<String>) -> Self {
         self.color = Some(color.into());
+        self
+    }
+
+    /// Marks this type as stateless (no status/priority tracking)
+    pub fn as_stateless(mut self) -> Self {
+        self.stateless = true;
         self
     }
 
@@ -496,6 +529,11 @@ pub fn default_type_definitions() -> Vec<CustomTypeDefinition> {
                     .with_description("Business justification for the change")
                     .with_order(4),
             ),
+        // Stateless organizational types
+        CustomTypeDefinition::built_in_stateless("Folder", "Folder")
+            .with_prefix("FLD")
+            .with_description("Organizational container for grouping related requirements")
+            .with_color("#6b7280"),
     ]
 }
 
@@ -2003,6 +2041,7 @@ impl RequirementsStore {
             RequirementType::Story => "Story",
             RequirementType::Task => "Task",
             RequirementType::Spike => "Spike",
+            RequirementType::Folder => "Folder",
         };
         self.type_definitions.iter().find(|td| td.name == type_name)
     }
@@ -2046,6 +2085,13 @@ impl RequirementsStore {
                 fields
             })
             .unwrap_or_default()
+    }
+
+    /// Checks if a requirement type is stateless (no status/priority tracking)
+    pub fn is_type_stateless(&self, req_type: &RequirementType) -> bool {
+        self.get_type_definition(req_type)
+            .map(|td| td.stateless)
+            .unwrap_or(false)
     }
 
     /// Gets all unique prefixes currently in use from requirements
@@ -2520,6 +2566,7 @@ impl RequirementsStore {
             RequirementType::Story => "Story",
             RequirementType::Task => "Task",
             RequirementType::Spike => "Spike",
+            RequirementType::Folder => "Folder",
         };
         self.id_config
             .get_type_by_name(type_name)
@@ -2640,6 +2687,7 @@ impl RequirementsStore {
                     RequirementType::Story => Some("STORY".to_string()),
                     RequirementType::Task => Some("TASK".to_string()),
                     RequirementType::Spike => Some("SPIKE".to_string()),
+                    RequirementType::Folder => Some("FLD".to_string()),
                 };
                 (i, prefix_override, feature_prefix, type_prefix)
             })
@@ -2812,6 +2860,7 @@ impl RequirementsStore {
                     RequirementType::Story => Some("STORY".to_string()),
                     RequirementType::Task => Some("TASK".to_string()),
                     RequirementType::Spike => Some("SPIKE".to_string()),
+                    RequirementType::Folder => Some("FLD".to_string()),
                 };
                 (i, prefix_override, feature_prefix, type_prefix)
             })

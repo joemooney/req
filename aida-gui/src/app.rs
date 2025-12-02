@@ -7386,6 +7386,17 @@ impl RequirementsApp {
                 false
             },
             color: None,
+            stateless: if let Some(ref editing_name) = self.editing_type_def {
+                // Preserve stateless status when editing
+                self.store
+                    .type_definitions
+                    .iter()
+                    .find(|t| &t.name == editing_name)
+                    .map(|t| t.stateless)
+                    .unwrap_or(false)
+            } else {
+                false
+            },
         };
 
         if let Some(ref editing_name) = self.editing_type_def {
@@ -12179,17 +12190,20 @@ impl RequirementsApp {
                                             ui.label(req.spec_id.as_deref().unwrap_or("N/A"));
                                             ui.end_row();
 
-                                            ui.label("Status:");
-                                            ui.label(format!("{:?}", req.status));
-                                            ui.end_row();
-
-                                            ui.label("Priority:");
-                                            ui.label(format!("{:?}", req.priority));
-                                            ui.end_row();
-
                                             ui.label("Type:");
                                             ui.label(format!("{:?}", req.req_type));
                                             ui.end_row();
+
+                                            // Only show status/priority for stateful types
+                                            if !self.store.is_type_stateless(&req.req_type) {
+                                                ui.label("Status:");
+                                                ui.label(format!("{:?}", req.status));
+                                                ui.end_row();
+
+                                                ui.label("Priority:");
+                                                ui.label(format!("{:?}", req.priority));
+                                                ui.end_row();
+                                            }
 
                                             ui.label("Feature:");
                                             ui.label(&req.feature);
@@ -12302,17 +12316,20 @@ impl RequirementsApp {
                             ui.label(req.spec_id.as_deref().unwrap_or("N/A"));
                             ui.end_row();
 
-                            ui.label("Status:");
-                            ui.label(format!("{:?}", req.status));
-                            ui.end_row();
-
-                            ui.label("Priority:");
-                            ui.label(format!("{:?}", req.priority));
-                            ui.end_row();
-
                             ui.label("Type:");
                             ui.label(format!("{:?}", req.req_type));
                             ui.end_row();
+
+                            // Only show status/priority for stateful types
+                            if !self.store.is_type_stateless(&req.req_type) {
+                                ui.label("Status:");
+                                ui.label(format!("{:?}", req.status));
+                                ui.end_row();
+
+                                ui.label("Priority:");
+                                ui.label(format!("{:?}", req.priority));
+                                ui.end_row();
+                            }
 
                             ui.label("Feature:");
                             ui.label(&req.feature);
@@ -13910,42 +13927,47 @@ fn main() {
                     ui.selectable_value(&mut self.form_type, RequirementType::Story, "Story");
                     ui.selectable_value(&mut self.form_type, RequirementType::Task, "Task");
                     ui.selectable_value(&mut self.form_type, RequirementType::Spike, "Spike");
+                    ui.separator();
+                    ui.selectable_value(&mut self.form_type, RequirementType::Folder, "📁 Folder");
                 });
             type_changed = old_type != self.form_type;
 
-            ui.add_space(16.0);
-            ui.label("Status:");
-            // Get statuses for current type
-            let statuses = self.store.get_statuses_for_type(&self.form_type);
-            egui::ComboBox::new("status_combo", "")
-                .selected_text(&self.form_status_string)
-                .show_ui(ui, |ui| {
-                    for status in &statuses {
-                        if ui
-                            .selectable_label(self.form_status_string == *status, status)
-                            .clicked()
-                        {
-                            self.form_status_string = status.clone();
+            // Only show status/priority for stateful types
+            if !self.store.is_type_stateless(&self.form_type) {
+                ui.add_space(16.0);
+                ui.label("Status:");
+                // Get statuses for current type
+                let statuses = self.store.get_statuses_for_type(&self.form_type);
+                egui::ComboBox::new("status_combo", "")
+                    .selected_text(&self.form_status_string)
+                    .show_ui(ui, |ui| {
+                        for status in &statuses {
+                            if ui
+                                .selectable_label(self.form_status_string == *status, status)
+                                .clicked()
+                            {
+                                self.form_status_string = status.clone();
+                            }
                         }
-                    }
-                });
+                    });
 
-            ui.add_space(16.0);
-            ui.label("Priority:");
-            // Get priorities for current type
-            let priorities = self.store.get_priorities_for_type(&self.form_type);
-            egui::ComboBox::new("priority_combo", "")
-                .selected_text(&self.form_priority_string)
-                .show_ui(ui, |ui| {
-                    for priority in &priorities {
-                        if ui
-                            .selectable_label(self.form_priority_string == *priority, priority)
-                            .clicked()
-                        {
-                            self.form_priority_string = priority.clone();
+                ui.add_space(16.0);
+                ui.label("Priority:");
+                // Get priorities for current type
+                let priorities = self.store.get_priorities_for_type(&self.form_type);
+                egui::ComboBox::new("priority_combo", "")
+                    .selected_text(&self.form_priority_string)
+                    .show_ui(ui, |ui| {
+                        for priority in &priorities {
+                            if ui
+                                .selectable_label(self.form_priority_string == *priority, priority)
+                                .clicked()
+                            {
+                                self.form_priority_string = priority.clone();
+                            }
                         }
-                    }
-                });
+                    });
+            }
         });
 
         // If type changed, check if current status/priority is valid for new type
@@ -14563,33 +14585,38 @@ fn main() {
                                         ui.selectable_value(&mut self.form_type, RequirementType::Story, "Story");
                                         ui.selectable_value(&mut self.form_type, RequirementType::Task, "Task");
                                         ui.selectable_value(&mut self.form_type, RequirementType::Spike, "Spike");
+                                        ui.separator();
+                                        ui.selectable_value(&mut self.form_type, RequirementType::Folder, "📁 Folder");
                                     });
                                 ui.end_row();
 
-                                // Status dropdown
-                                ui.label("Status:");
-                                let statuses = self.store.get_statuses_for_type(&self.form_type);
-                                egui::ComboBox::new("form_status_combo", "")
-                                    .selected_text(&self.form_status_string)
-                                    .show_ui(ui, |ui| {
-                                        for status in &statuses {
-                                            if ui.selectable_label(self.form_status_string == *status, status).clicked() {
-                                                self.form_status_string = status.clone();
+                                // Status and Priority only for stateful types
+                                if !self.store.is_type_stateless(&self.form_type) {
+                                    // Status dropdown
+                                    ui.label("Status:");
+                                    let statuses = self.store.get_statuses_for_type(&self.form_type);
+                                    egui::ComboBox::new("form_status_combo", "")
+                                        .selected_text(&self.form_status_string)
+                                        .show_ui(ui, |ui| {
+                                            for status in &statuses {
+                                                if ui.selectable_label(self.form_status_string == *status, status).clicked() {
+                                                    self.form_status_string = status.clone();
+                                                }
                                             }
-                                        }
-                                    });
-                                ui.end_row();
+                                        });
+                                    ui.end_row();
 
-                                // Priority dropdown
-                                ui.label("Priority:");
-                                egui::ComboBox::new("form_priority_combo", "")
-                                    .selected_text(format!("{:?}", self.form_priority))
-                                    .show_ui(ui, |ui| {
-                                        ui.selectable_value(&mut self.form_priority, RequirementPriority::High, "High");
-                                        ui.selectable_value(&mut self.form_priority, RequirementPriority::Medium, "Medium");
-                                        ui.selectable_value(&mut self.form_priority, RequirementPriority::Low, "Low");
-                                    });
-                                ui.end_row();
+                                    // Priority dropdown
+                                    ui.label("Priority:");
+                                    egui::ComboBox::new("form_priority_combo", "")
+                                        .selected_text(format!("{:?}", self.form_priority))
+                                        .show_ui(ui, |ui| {
+                                            ui.selectable_value(&mut self.form_priority, RequirementPriority::High, "High");
+                                            ui.selectable_value(&mut self.form_priority, RequirementPriority::Medium, "Medium");
+                                            ui.selectable_value(&mut self.form_priority, RequirementPriority::Low, "Low");
+                                        });
+                                    ui.end_row();
+                                }
 
                                 // Feature
                                 ui.label("Feature:");
