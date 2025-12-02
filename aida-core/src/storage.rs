@@ -881,4 +881,93 @@ mod tests {
         assert_eq!(timestamps.get(&id1), Some(&ts1));
         assert_eq!(timestamps.get(&id2), Some(&ts2));
     }
+
+    #[test]
+    fn test_new_requirement_preserves_external_additions() {
+        // Scenario: Instance A adds R1, Instance B adds R2 (not knowing about R1)
+        // Both should be preserved
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("test.yaml");
+        let storage = Storage::new(&file_path);
+
+        // Instance A: Create initial store with R1
+        let mut store_a = create_test_store();
+        let req1 = create_test_requirement("Req1 from Instance A");
+        let req1_id = req1.id;
+        store_a.requirements.push(req1);
+        storage.save(&store_a).unwrap();
+
+        // Instance B: Started with empty store (before R1 was added)
+        // Now adds R2 without knowing about R1
+        let mut store_b = create_test_store();
+        let req2 = create_test_requirement("Req2 from Instance B");
+        let req2_id = req2.id;
+        store_b.requirements.push(req2);
+
+        // Instance B saves with conflict detection
+        // modified_requirement_ids contains only R2 (the new one)
+        let original_timestamps: HashMap<Uuid, DateTime<Utc>> = HashMap::new();
+        let modified_ids = vec![req2_id];
+
+        let result = storage
+            .save_with_conflict_detection(&store_b, &original_timestamps, &modified_ids)
+            .unwrap();
+
+        // Should succeed (no conflict - R2 is new)
+        match result {
+            SaveResult::Success => {}
+            SaveResult::Merged { .. } => {}
+            SaveResult::Conflict(_) => panic!("Should not have conflict"),
+        }
+
+        // Verify both requirements are preserved
+        let final_store = storage.load().unwrap();
+        assert_eq!(final_store.requirements.len(), 2);
+        assert!(final_store.requirements.iter().any(|r| r.id == req1_id));
+        assert!(final_store.requirements.iter().any(|r| r.id == req2_id));
+    }
+
+    #[test]
+    fn test_deletion_preserves_external_additions() {
+        // Scenario: Instance A adds R1, Instance B deletes R2 (not knowing about R1)
+        // R1 should be preserved, R2 should be deleted
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("test.yaml");
+        let storage = Storage::new(&file_path);
+
+        // Initial store with R2
+        let mut initial_store = create_test_store();
+        let req2 = create_test_requirement("Req2");
+        let req2_id = req2.id;
+        initial_store.requirements.push(req2);
+        storage.save(&initial_store).unwrap();
+
+        // Instance A: Adds R1 externally
+        let req1 = create_test_requirement("Req1 from Instance A");
+        let req1_id = req1.id;
+        let mut store_a = initial_store.clone();
+        store_a.requirements.push(req1);
+        storage.save(&store_a).unwrap();
+
+        // Instance B: Started before R1, now deletes R2
+        let store_b = create_test_store(); // Empty - R2 was deleted
+        let original_timestamps: HashMap<Uuid, DateTime<Utc>> = HashMap::new();
+        let modified_ids = vec![req2_id]; // Marking R2 as modified (deleted)
+
+        let result = storage
+            .save_with_conflict_detection(&store_b, &original_timestamps, &modified_ids)
+            .unwrap();
+
+        match result {
+            SaveResult::Success => {}
+            SaveResult::Merged { .. } => {}
+            SaveResult::Conflict(_) => panic!("Should not have conflict"),
+        }
+
+        // Verify R1 is preserved, R2 is deleted
+        let final_store = storage.load().unwrap();
+        assert_eq!(final_store.requirements.len(), 1);
+        assert!(final_store.requirements.iter().any(|r| r.id == req1_id));
+        assert!(!final_store.requirements.iter().any(|r| r.id == req2_id));
+    }
 }

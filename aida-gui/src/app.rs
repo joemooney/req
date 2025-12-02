@@ -3398,6 +3398,9 @@ impl RequirementsApp {
         self.store
             .add_requirement_with_id(req, feature_prefix.as_deref(), type_prefix.as_deref());
 
+        // Mark as modified for conflict detection (FR-0153)
+        self.modified_requirement_ids.insert(new_req_id);
+
         // Create parent relationship if specified
         if let Some(parent_id) = parent_id {
             // New requirement (child) stores Parent relationship pointing to parent
@@ -3628,7 +3631,11 @@ impl RequirementsApp {
 
     fn delete_requirement(&mut self, idx: usize) {
         if idx < self.store.requirements.len() {
+            // Capture ID before removing for conflict detection (FR-0153)
+            let deleted_id = self.store.requirements[idx].id;
             self.store.requirements.remove(idx);
+            // Mark as modified so conflict detection handles the deletion
+            self.modified_requirement_ids.insert(deleted_id);
             self.save();
             self.selected_idx = None;
             self.current_view = View::List;

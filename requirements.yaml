@@ -7216,7 +7216,7 @@ requirements:
   status: Approved
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 74-Uncategorized
   created_at: 2025-12-01T15:20:55.158696623Z
   created_by: Unknown User
   modified_at: 2025-12-01T15:20:55.158696623Z
@@ -7228,6 +7228,20 @@ requirements:
     target_id: 9af27c34-8a93-4285-9ae6-2448a6bcddde
     created_at: 2025-12-01T15:20:55.158732180Z
     created_by: Unknown User
+- id: 44c3a73f-f643-4833-8398-4e0738b31d08
+  spec_id: FR-0155
+  title: testing abc
+  description: testing abc
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-12-02T01:42:13.794806722Z
+  created_by: Unknown User
+  modified_at: 2025-12-02T01:42:13.794806722Z
+  req_type: Functional
+  dependencies: []
+  tags: []
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
   spec_id: $USER-001
@@ -7280,8 +7294,8 @@ id_config:
     prefix: CR
     description: Change requests for modifications to existing functionality
 features: []
-next_feature_number: 74
-next_spec_number: 155
+next_feature_number: 75
+next_spec_number: 156
 prefix_counters: {}
 relationship_definitions:
 - name: parent
