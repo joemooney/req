@@ -131,6 +131,19 @@
 - **REQ-CONCUR-005**: System shall display conflict resolution dialog showing field differences
 - **REQ-CONCUR-006**: System shall offer conflict resolution options: force local, keep disk, or merge
 
+### 7.6 Session Tracking (FR-0160)
+- **REQ-SESSION-001**: System shall register GUI sessions in lock file with user/hostname/PID
+- **REQ-SESSION-002**: System shall update heartbeat every 5 seconds to indicate active session
+- **REQ-SESSION-003**: System shall track which requirement is being edited per session
+- **REQ-SESSION-004**: System shall auto-remove stale sessions (no heartbeat for 30 seconds)
+- **REQ-SESSION-005**: System shall warn when other users have the file open
+- **REQ-SESSION-006**: System shall warn when entering edit on a requirement being edited by another
+
+### 7.7 File Operations (FR-0159)
+- **REQ-FILE-001**: System shall provide "Save As..." menu option for saving to alternate location
+- **REQ-FILE-002**: System shall use native file dialog for Save As destination selection
+- **REQ-FILE-003**: System shall display success/error feedback after Save As operation
+
 ## 8. Command Line Interface
 
 ### 8.1 CLI Commands

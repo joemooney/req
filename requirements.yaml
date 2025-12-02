@@ -5737,49 +5737,6 @@ requirements:
         - [ ] Status filters include "Folder" as a filter option
         - [ ] Metrics dashboards exclude "Folder" requirements from status counts unless explicitly included
         - [ ] Child requirements under a "Folder" parent are not affected by the parent's status
-  ai_evaluation:
-    evaluation:
-      quality_score: 6
-      issues:
-      - type: vague_language
-        severity: medium
-        text: The requirement uses informal language ('Support "Folder" status') rather than formal 'shall/must' statements
-        suggestion: 'Rewrite as: ''The system shall support a "Folder" status value for requirements that serve as organizational containers'''
-      - type: missing_criteria
-        severity: medium
-        text: No acceptance criteria defined for how the Folder status should behave
-        suggestion: 'Add specific acceptance criteria: display behavior, filtering behavior, metric exclusion rules'
-      - type: incomplete
-        severity: low
-        text: Does not specify the icon to be used or how it differs visually from other status icons
-        suggestion: Specify the visual representation or reference a UI specification
-      - type: incomplete
-        severity: low
-        text: Does not clarify interaction with existing status transitions or workflows
-        suggestion: Specify if Folder status requirements can transition to other statuses or are permanently organizational
-      strengths:
-      - Clear rationale explaining why the feature is needed
-      - Specific use case identified (organizational hierarchy containers)
-      - Acknowledges filtering and reporting considerations
-      suggested_improvements:
-        description: |-
-          ## Overview
-          The system shall support a "Folder" status value for requirements that serve as organizational containers in a hierarchical structure.
-
-          ## Behavior
-          - The system shall display a folder icon for requirements with "Folder" status in the Requirements List view
-          - The system shall allow filtering requirements by "Folder" status
-          - The system shall exclude "Folder" status requirements from completion metrics and status reports by default
-
-          ## Acceptance Criteria
-          - [ ] "Folder" is available as a selectable status value when creating or editing requirements
-          - [ ] Requirements with "Folder" status display a distinct folder icon in list views
-          - [ ] Status filters include "Folder" as a filter option
-          - [ ] Metrics dashboards exclude "Folder" requirements from status counts unless explicitly included
-          - [ ] Child requirements under a "Folder" parent are not affected by the parent's status
-        rationale: Formalizes the requirement with 'shall' language, adds concrete acceptance criteria for testability, and clarifies the expected behavior in different contexts (display, filtering, metrics)
-    evaluated_at: 2025-11-30T20:29:17.526842822Z
-    content_hash: c04d4dbcf36c5ddf
 - id: 6111bb0c-9309-4fa5-ad73-9106f46b49e9
   spec_id: FR-0129
   title: Status/Priority per type
@@ -6189,73 +6146,6 @@ requirements:
     target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
     created_at: 2025-11-30T19:13:07.115036072Z
     created_by: Unknown User
-  ai_evaluation:
-    evaluation:
-      quality_score: 4
-      issues:
-      - type: vague_language
-        severity: high
-        text: The phrase 'if that makes sense' indicates uncertainty about the requirement itself
-        suggestion: Make a clear decision about whether command results should be stored in history and document the rationale
-      - type: incomplete
-        severity: high
-        text: No specification of which 'types' can have commands associated with them
-        suggestion: Explicitly list which requirement types (Functional, NonFunctional, System, User, ChangeRequest) or other entity types support custom commands
-      - type: ambiguous
-        severity: medium
-        text: The scope of metadata field substitution is unclear - only '{{id}}' is mentioned as an example
-        suggestion: Define the complete list of supported substitution variables (e.g., {{id}}, {{title}}, {{status}}, {{owner}}, {{spec_id}})
-      - type: incomplete
-        severity: medium
-        text: No acceptance criteria for background execution or process detachment behavior
-        suggestion: 'Specify exact behavior: What happens on GUI close? Should process continue? How is the user notified of completion?'
-      - type: vague_language
-        severity: medium
-        text: Phrases like 'we can worry about that later' and 'maybe' indicate deferred decisions mixed into the requirement
-        suggestion: Split into core requirement (command execution) and separate future requirements (execution history, markdown reports)
-      - type: untestable
-        severity: medium
-        text: No success criteria defined for command execution
-        suggestion: 'Define: What constitutes successful execution? How are errors handled? What timeout limits apply?'
-      - type: incomplete
-        severity: low
-        text: No mention of security considerations for executing arbitrary commands
-        suggestion: 'Add security requirements: command validation, sandboxing, user confirmation prompts, allowed/blocked commands'
-      strengths:
-      - Core concept is clearly articulated - associating commands with types using variable substitution
-      - Identifies real technical concern about long-running processes and GUI lifecycle
-      - Proposes reasonable solution for history separation (markdown report via Action)
-      suggested_improvements:
-        description: |-
-          Custom Command Association
-
-          Allow custom shell commands to be associated with requirement types. Commands support variable substitution using double-brace syntax (case-insensitive):
-
-          **Supported Variables:**
-          - {{id}} - Requirement UUID
-          - {{spec_id}} - Human-readable SPEC-ID
-          - {{title}} - Requirement title
-          - {{status}} - Current status
-          - {{owner}} - Assigned owner
-          - {{feature}} - Feature name
-
-          **Execution Behavior:**
-          - Commands execute in background by default
-          - Process continues if GUI is closed (detached execution)
-          - User receives notification on completion or error
-          - Configurable timeout (default: 5 minutes)
-
-          **Command History:**
-          - Execution history stored separately from requirement history
-          - Accessible via 'View Command History' action
-          - Displays: timestamp, command executed, exit code, stdout/stderr summary
-
-          **Security:**
-          - User confirmation required before first execution of new command
-          - Commands logged for audit purposes
-        rationale: This improvement removes ambiguity, provides complete variable list, defines concrete execution behavior, separates concerns (history storage), and addresses security considerations - making the requirement implementable and testable
-    evaluated_at: 2025-11-30T19:16:28.768396183Z
-    content_hash: b963d04f620843c2
 - id: d61fa9f5-9f5f-4390-b7fb-32c1759ddd50
   spec_id: FR-0141
   title: AI Prompts in settings
@@ -6415,77 +6305,6 @@ requirements:
         - Prompt building with template/placeholder support in `prompts.rs`
         - Settings UI with AI tab
         - SQLite backend support
-  ai_evaluation:
-    evaluation:
-      quality_score: 3
-      issues:
-      - type: incomplete
-        severity: high
-        text: This is a conversation log/design discussion rather than a formal requirement. It contains the full implementation history, design decisions, and completion summary rather than specifying what the system shall do.
-        suggestion: Extract the core requirement from this discussion and create a formal requirement statement. This appears to document an already-implemented feature, so consider marking it as Completed and creating a clean requirement description.
-      - type: ambiguous
-        severity: medium
-        text: The description mixes questions ('Do you think we should...'), design proposals, implementation details, and completion summaries. It's unclear what remains to be done vs what is already implemented.
-        suggestion: 'Separate into: (1) A formal requirement describing what the system shall support, (2) Design documentation for the implementation approach, (3) Update status to reflect current state.'
-      - type: missing_criteria
-        severity: medium
-        text: No clear acceptance criteria defined despite the detailed implementation being described.
-        suggestion: 'Add acceptance criteria such as: ''User can edit AI prompts via Settings UI'', ''Custom prompts are persisted to project/user settings'', ''Default prompts used when no customization provided''.'
-      - type: vague_language
-        severity: low
-        text: Uses informal language like 'Do you think', 'Would you like me to implement this' rather than formal requirement language.
-        suggestion: Convert to formal requirement statements using 'shall' or 'must' language.
-      strengths:
-      - Comprehensive design rationale and implementation approach documented
-      - Clear benefits articulated (customization, methodology support, inheritance)
-      - Implementation appears complete with detailed summary of changes
-      - Good technical detail about storage locations, prompt structure, and UI components
-      suggested_improvements:
-        description: |-
-          # AI Prompts Configuration
-
-          The system shall provide customizable AI prompts for requirement evaluation and improvement.
-
-          ## Functional Requirements
-
-          - The system shall store AI prompt configurations in project settings (`requirements.yaml`)
-          - The system shall support global context that applies to all AI prompts
-          - The system shall allow per-action prompt customization (evaluate, duplicates, relationships, improve, generate_children)
-          - The system shall support per-requirement-type specific instructions
-          - The system shall use default prompts when no customization is provided
-
-          ## UI Requirements
-
-          - The Settings UI shall include an "AI" tab for prompt configuration
-          - The AI tab shall provide editors for:
-            - Global context
-            - Evaluation prompt additional instructions
-            - Improve description prompt additional instructions
-            - Generate children prompt additional instructions
-            - Type-specific instructions with add/remove capability
-          - The UI shall display available template placeholders for reference
-
-          ## Acceptance Criteria
-
-          - [ ] User can edit global AI context via Settings > AI tab
-          - [ ] User can add additional instructions per AI action
-          - [ ] User can define type-specific instructions for any requirement type
-          - [ ] Custom prompts are persisted to `requirements.yaml`
-          - [ ] AI features use configured prompts with placeholder substitution
-          - [ ] Default prompts function correctly when no customization exists
-
-          ## Implementation Status
-
-          **Status: Implemented**
-
-          Components completed:
-          - `AiPromptConfig`, `AiActionPromptConfig`, `AiTypePromptConfig` models
-          - Prompt building with template/placeholder support in `prompts.rs`
-          - Settings UI with AI tab
-          - SQLite backend support
-        rationale: The original description is a valuable design discussion but not a proper requirement. The improved version extracts the formal requirements using 'shall' language, adds clear acceptance criteria, organizes by functional area, and notes the implementation status. The original discussion could be preserved in a design document or requirement comments.
-    evaluated_at: 2025-11-30T20:23:44.594217643Z
-    content_hash: 4f36382addbe2184
 - id: 652d7124-8cf8-422b-875c-0f9784eeb3df
   spec_id: FR-0142
   title: AI Evaluation Apply button to replace with suggested description
@@ -6973,72 +6792,6 @@ requirements:
     - field_name: status
       old_value: Draft
       new_value: Approved
-  ai_evaluation:
-    evaluation:
-      quality_score: 3
-      issues:
-      - type: vague_language
-        severity: high
-        text: The term 'scaffold' is used without definition - it's unclear what scaffolding entails in this context
-        suggestion: 'Define specifically what scaffolding means: file generation, directory structure, configuration files, Claude Code skills, documentation templates, etc.'
-      - type: incomplete
-        severity: high
-        text: References external project (~/ai/ai-provenance) for ideas but doesn't capture those ideas in the requirement itself
-        suggestion: Extract the specific scaffolding features from ai-provenance and list them explicitly in this requirement
-      - type: missing_criteria
-        severity: high
-        text: No acceptance criteria defined - cannot verify when this requirement is complete
-        suggestion: 'Add specific acceptance criteria: what files should be generated, what configuration should be created, what user workflow should be supported'
-      - type: ambiguous
-        severity: medium
-        text: '''On demand'' trigger is vague - unclear what user action initiates scaffolding outside of new project creation'
-        suggestion: Specify the UI elements and user actions that trigger on-demand scaffolding (button, menu item, command)
-      - type: incomplete
-        severity: medium
-        text: Missing specification of what 'skills' means and which skills should be scaffolded
-        suggestion: List the specific Claude Code skills that should be generated (e.g., /project-req, /implement, custom project-specific skills)
-      strengths:
-      - 'Identifies two clear trigger points: new project creation and on-demand'
-      - References existing implementation for consistency (ai-provenance project)
-      - Correctly linked to parent AI integration requirement
-      suggested_improvements:
-        description: |-
-          ## AI Project Scaffolding
-
-          The system shall provide AI-assisted project scaffolding capabilities accessible from the AI tab in Settings.
-
-          ### Trigger Points
-          Scaffolding shall be available:
-          - **During new project creation**: Automatically offer scaffolding as part of the new project wizard
-          - **On demand**: Via a "Scaffold Project" button in Settings > AI tab for existing projects
-
-          ### Scaffolding Components
-          The scaffolding feature shall generate the following project artifacts:
-          - [ ] CLAUDE.md - Project instructions for Claude Code
-          - [ ] .claude/commands/ directory with project-specific slash commands
-          - [ ] Requirements-driven development skills (/aida-req, /aida-implement)
-          - [ ] Project-specific custom skills based on project type
-          - [ ] Code traceability configuration
-
-          ### User Workflow
-          1. User selects "Scaffold Project" or creates new project
-          2. System analyzes project context (existing requirements, features, tech stack)
-          3. System presents scaffolding options with preview
-          4. User confirms or customizes selections
-          5. System generates selected artifacts
-
-          ### Acceptance Criteria
-          - [ ] Scaffold button visible in Settings > AI tab
-          - [ ] New project wizard includes scaffolding step
-          - [ ] Generated CLAUDE.md contains project-specific context
-          - [ ] Generated skills are functional in Claude Code
-          - [ ] User can preview artifacts before generation
-          - [ ] Existing files prompt for overwrite confirmation
-
-          **Reference**: See ~/ai/ai-provenance for implementation patterns
-        rationale: The improved description transforms the informal idea into a formal requirement with clear 'shall' statements, specific deliverables, defined user workflow, and testable acceptance criteria. It preserves the reference to ai-provenance while making the requirement self-contained and actionable.
-    evaluated_at: 2025-12-01T06:42:19.880388247Z
-    content_hash: 2abee11b20b5d694
 - id: 9af27c34-8a93-4285-9ae6-2448a6bcddde
   spec_id: FR-0153
   title: YAML database store last updated and do not ove...
@@ -7133,67 +6886,6 @@ requirements:
     - field_name: status
       old_value: Draft
       new_value: Approved
-  ai_evaluation:
-    evaluation:
-      quality_score: 4
-      issues:
-      - type: vague_language
-        severity: high
-        text: The requirement is written as a discussion/brainstorm rather than a formal requirement statement
-        suggestion: Rewrite using 'The system shall...' format with specific behaviors
-      - type: missing_criteria
-        severity: high
-        text: No acceptance criteria defined for verifying the stale data protection mechanism
-        suggestion: 'Add specific acceptance criteria covering: detection of stale data, handling of conflicts, user notification'
-      - type: ambiguous
-        severity: medium
-        text: The phrase 'Think about this' indicates the requirement is incomplete and needs further analysis
-        suggestion: Complete the analysis and document the chosen approach as concrete requirements
-      - type: incomplete
-        severity: medium
-        text: Multiple potential solutions are mentioned but no decision on which approach to implement
-        suggestion: Select one approach or split into multiple requirements for each mechanism
-      - type: untestable
-        severity: medium
-        text: No specific conditions defined for when data should be considered 'stale' or how conflicts should be resolved
-        suggestion: Define specific timestamps, comparison logic, and conflict resolution behavior
-      strengths:
-      - Identifies a real concurrency problem with multi-tool access to the YAML database
-      - Provides good context about the use case (Claude Code and AIDA tool concurrent access)
-      - Suggests multiple potential solutions showing thoughtful analysis
-      suggested_improvements:
-        description: |-
-          ## Stale Data Protection for YAML Database
-
-          The system shall implement optimistic concurrency control to prevent data loss when multiple tools (AIDA GUI/CLI, Claude Code) access the requirements database concurrently.
-
-          ### Requirements
-
-          1. **Freshness Check**: The system shall store a `modified_at` timestamp for each requirement and reload the database immediately before applying any update.
-
-          2. **Conflict Detection**: Before saving a requirement update, the system shall compare the `modified_at` timestamp of the in-memory requirement with the on-disk version:
-             - If timestamps match, proceed with the update
-             - If on-disk is newer, a conflict exists
-
-          3. **Field-Level Conflict Resolution**: When a conflict is detected, the system shall:
-             - Compare only the fields being modified
-             - If modified fields are unchanged on disk, merge and proceed
-             - If modified fields differ, notify the user of the conflict
-
-          4. **User Notification**: On conflict, the system shall display the conflicting changes and offer options to:
-             - Reload and discard local changes
-             - Force overwrite (with warning)
-             - Manually merge changes
-
-          ### Acceptance Criteria
-
-          - [ ] Concurrent edits from AIDA GUI and Claude Code do not silently overwrite each other
-          - [ ] User is notified when their edit conflicts with external changes
-          - [ ] Non-conflicting concurrent edits to different requirements are preserved
-          - [ ] Non-conflicting edits to different fields of the same requirement are merged
-        rationale: The improved description transforms the brainstorming notes into formal requirements with clear 'shall' statements, specific behaviors, and testable acceptance criteria. It breaks down the problem into distinct capabilities (freshness check, conflict detection, resolution, notification) that can be implemented and tested independently.
-    evaluated_at: 2025-12-01T06:59:22.806416209Z
-    content_hash: 56e875eb2a9b2364
 - id: 7b5170c6-97aa-429c-851e-086f89768ccf
   spec_id: REQ-0154
   title: Stale Data Protection / Conflict Detection
@@ -7239,7 +6931,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 75-Uncategorized
   created_at: 2025-12-02T01:42:13.794806722Z
   created_by: Unknown User
   modified_at: 2025-12-02T01:42:13.794806722Z
@@ -7256,7 +6948,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 75-Uncategorized
   created_at: 2025-12-02T01:50:03.460324841Z
   created_by: Unknown User
   modified_at: 2025-12-02T01:50:03.460324841Z
@@ -7275,7 +6967,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 75-Uncategorized
   created_at: 2025-12-02T01:51:10.257562453Z
   created_by: Unknown User
   modified_at: 2025-12-02T01:51:10.257562453Z
@@ -7289,7 +6981,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 75-Uncategorized
   created_at: 2025-12-02T01:51:11.525491266Z
   created_by: Unknown User
   modified_at: 2025-12-02T01:51:11.525491266Z
@@ -7301,6 +6993,96 @@ requirements:
     target_id: 44c3a73f-f643-4833-8398-4e0738b31d08
     created_at: 2025-12-02T01:51:11.525541094Z
     created_by: Unknown User
+- id: 84afa9b8-76f4-4bdb-95d2-8309c678d850
+  spec_id: FR-0159
+  title: Save As menu option for YAML files
+  description: |-
+    ## Save As Menu Option
+
+    The system shall provide a "Save As..." menu option that allows users to save the current requirements database to a new file location.
+
+    ### Requirements
+
+    1. **Menu Access**: The "Save As..." option shall be available in the main Menu dropdown
+    2. **File Dialog**: Clicking "Save As..." shall open a native file dialog for selecting the destination
+    3. **File Filter**: The dialog shall filter for YAML files (.yaml, .yml)
+    4. **Save Operation**: The system shall serialize and write all requirements to the selected path
+    5. **Feedback**: Success or failure messages shall be displayed to the user
+
+    ### Use Cases
+
+    - Emergency backup when normal save fails
+    - Creating a copy of requirements for sharing
+    - Exporting to a different location
+
+    ### Acceptance Criteria
+
+    - [x] Save As option appears in Menu
+    - [x] Native file dialog opens on click
+    - [x] Requirements are saved to selected location
+    - [x] Success/error message displayed
+  status: Completed
+  priority: Medium
+  owner: ''
+  feature: 76-Uncategorized
+  created_at: 2025-12-02T03:07:26.880567660Z
+  modified_at: 2025-12-02T03:07:26.880567660Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+- id: 83560219-ec6d-4512-b45f-686d7ec4da94
+  spec_id: FR-0160
+  title: Collaborative session tracking with heartbeat
+  description: |-
+    ## Collaborative Session Tracking
+
+    The system shall track active user sessions to provide awareness when multiple users (GUI instances, CLI, Claude Code) access the same requirements file concurrently.
+
+    ### Requirements
+
+    1. **Session Registration**: Each GUI instance shall register itself in the lock file on startup with:
+       - Unique session ID (PID + UUID)
+       - User name/handle
+       - Hostname
+       - Process ID
+       - Start timestamp
+
+    2. **Heartbeat Thread**: A background thread shall update the lock file every 5 seconds to indicate the session is still active
+
+    3. **Edit Lock Tracking**: When entering edit mode, the system shall record:
+       - Which requirement is being edited
+       - When editing started
+       - The user editing it
+
+    4. **Stale Session Cleanup**: Sessions without heartbeat for 30 seconds shall be automatically removed
+
+    5. **Concurrent User Warning**: Display a toast notification when:
+       - Another user has the file open (shown once per session)
+       - Entering edit mode on a requirement someone else is currently editing
+
+    6. **Session Unregistration**: On application close, the session shall be removed from the lock file
+
+    ### Lock File Format
+
+    The lock file shall use YAML format containing all active sessions with their details.
+
+    ### Acceptance Criteria
+
+    - [x] Sessions are registered on startup
+    - [x] Heartbeat updates every 5 seconds
+    - [x] Edit locks are tracked when entering edit mode
+    - [x] Stale sessions are cleaned up automatically
+    - [x] Toast warnings shown for concurrent users
+    - [x] Sessions unregistered on shutdown
+  status: Completed
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-12-02T03:08:18.298836311Z
+  modified_at: 2025-12-02T03:08:18.298836311Z
+  req_type: Functional
+  dependencies: []
+  tags: []
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
   spec_id: $USER-001
@@ -7353,8 +7135,8 @@ id_config:
     prefix: CR
     description: Change requests for modifications to existing functionality
 features: []
-next_feature_number: 75
-next_spec_number: 157
+next_feature_number: 77
+next_spec_number: 159
 prefix_counters: {}
 relationship_definitions:
 - name: parent
@@ -7594,124 +7376,3 @@ allowed_prefixes:
 - REQLIST
 - THEME
 restrict_prefixes: false
-ai_prompts:
-  global_context: |
-    This is a requirements management system for a software project. Requirements may be entered as:
-    - Formal requirements with clear "shall" or "must" statements
-    - Questions or ideas that need to be transformed into formal requirements
-    - Rough notes that need refinement
-    - Output from AI conversation with explanation of an implementation or recommendations, possible successive responses.
-
-    When evaluating or improving requirements:
-    - Descriptions should be formatted in Markdown
-    - Use bullet points for lists of criteria or acceptance conditions
-    - Use code blocks for any technical specifications
-    - Formal requirements should use "shall" or "must" language
-    - If the input is a question or idea, help transform it into one or more actionable requirements
-    - If the input doesn't represent a valid requirement and cannot be transformed, indicate it should be rejected or clarified
-  evaluation:
-    additional_instructions: |
-      When scoring quality, consider:
-      - If the description is a question/idea rather than a formal requirement, note this and suggest how to formalize it
-      - Check if the requirement is testable and verifiable
-      - Ensure the description uses proper Markdown formatting
-      - Flag requirements that are too vague or broad to implement
-      - Suggest splitting requirements that contain multiple distinct features
-
-      For issues, specifically flag:
-      - Missing acceptance criteria
-      - Ambiguous language (avoid "should", prefer "shall/must")
-      - Requirements that are actually questions needing answers
-      - Missing stakeholder or user context
-  improve:
-    additional_instructions: |
-      When improving descriptions:
-      - Convert the output to well-formatted Markdown
-      - If the input is a question or rough idea, transform it into a formal requirement statement
-      - Use "The system shall..." or "The user must be able to..." phrasing
-      - Add acceptance criteria as a Markdown bulleted list under "### Acceptance Criteria"
-      - Include any assumptions under "### Assumptions" if relevant
-      - If the requirement cannot be formalized (too vague, out of scope, or not a requirement), explain why and suggest next steps
-
-      Example format for improved description:
-      The system shall [action] [object] [condition].
-
-      ### Acceptance Criteria
-      - Criterion 1
-      - Criterion 2
-
-      ### Assumptions
-      - Assumption if applicable
-  generate_children:
-    additional_instructions: |
-      When generating child requirements:
-      - Each child requirement description should be in Markdown format
-      - Break down the parent into specific, implementable pieces
-      - If the parent is a question or idea, generate formal child requirements that answer/implement it
-      - Each child should be independently testable
-      - Include acceptance criteria for each child
-      - Suggest appropriate types (Functional, NonFunctional, System, User) for each child
-  type_prompts:
-  - type_name: Functional
-    evaluation_extra: |
-      Functional requirements should describe specific system behaviors.
-      - Use "The system shall..." format
-      - Include input/output specifications where applicable
-      - Describe the expected behavior, not implementation details
-      - Add acceptance criteria that can be verified through testing
-    improve_extra: |
-      Functional requirements should describe specific system behaviors.
-      - Use "The system shall..." format
-      - Include input/output specifications where applicable
-      - Describe the expected behavior, not implementation details
-      - Add acceptance criteria that can be verified through testing
-  - type_name: NonFunctional
-    evaluation_extra: |
-      Non-functional requirements should specify measurable quality attributes.
-      - Include specific metrics (response time < 200ms, 99.9% uptime, etc.)
-      - Reference industry standards where applicable (WCAG, ISO, etc.)
-      - Describe how compliance will be measured/verified
-      - Consider performance, security, scalability, accessibility, reliability
-    improve_extra: |
-      Non-functional requirements should specify measurable quality attributes.
-      - Include specific metrics (response time < 200ms, 99.9% uptime, etc.)
-      - Reference industry standards where applicable (WCAG, ISO, etc.)
-      - Describe how compliance will be measured/verified
-      - Consider performance, security, scalability, accessibility, reliability
-  - type_name: User
-    evaluation_extra: |
-      User requirements should focus on user needs and goals.
-      - Describe from the user's perspective ("As a user, I need to...")
-      - Include user context and motivation
-      - Focus on the "what" and "why", not the "how"
-      - Consider different user personas if applicable
-    improve_extra: |
-      User requirements should focus on user needs and goals.
-      - Describe from the user's perspective ("As a user, I need to...")
-      - Include user context and motivation
-      - Focus on the "what" and "why", not the "how"
-      - Consider different user personas if applicable
-  - type_name: System
-    evaluation_extra: |
-      System requirements should describe technical constraints and interfaces.
-      - Specify integration points and protocols
-      - Include data formats and API contracts where relevant
-      - Reference external systems and dependencies
-      - Use technical terminology appropriate for the domain
-    improve_extra: |
-      System requirements should describe technical constraints and interfaces.
-      - Specify integration points and protocols
-      - Include data formats and API contracts where relevant
-      - Reference external systems and dependencies
-      - Use technical terminology appropriate for the domain
-  - type_name: ChangeRequest
-    evaluation_extra: |
-      Change requests should clearly describe what needs to change and why.
-      - Identify the current behavior and desired behavior
-      - Include justification and impact assessment
-      - Reference related requirements that will be affected
-    improve_extra: |
-      Change requests should clearly describe what needs to change and why.
-      - Identify the current behavior and desired behavior
-      - Include justification and impact assessment
-      - Reference related requirements that will be affected
