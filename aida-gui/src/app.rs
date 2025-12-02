@@ -5068,25 +5068,32 @@ impl RequirementsApp {
                         self.settings_form_status_icons.icons.keys().cloned().collect();
                     status_keys.sort();
 
+                    const ITEMS_PER_ROW: usize = 4;
+
                     egui::ScrollArea::vertical()
                         .id_salt("status_icons_scroll")
                         .max_height(250.0)
                         .show(ui, |ui| {
                             let mut to_remove: Option<String> = None;
+                            // 4 entries per row, each with: Keyword, Icon, Delete = 12 columns
                             egui::Grid::new("status_icons_grid")
-                                .num_columns(3)
-                                .spacing([10.0, 4.0])
+                                .num_columns(ITEMS_PER_ROW * 3)
+                                .spacing([8.0, 4.0])
                                 .show(ui, |ui| {
-                                    ui.label(egui::RichText::new("Keyword").strong());
-                                    ui.label(egui::RichText::new("Icon").strong());
-                                    ui.label("");
+                                    // Header row
+                                    for _ in 0..ITEMS_PER_ROW {
+                                        ui.label(egui::RichText::new("Keyword").strong());
+                                        ui.label(egui::RichText::new("Icon").strong());
+                                        ui.label("");
+                                    }
                                     ui.end_row();
 
-                                    for key in &status_keys {
+                                    // Data rows - wrap after every ITEMS_PER_ROW entries
+                                    for (idx, key) in status_keys.iter().enumerate() {
                                         ui.label(key);
                                         if let Some(icon) = self.settings_form_status_icons.icons.get_mut(key) {
                                             let response = ui.add(
-                                                egui::TextEdit::singleline(icon).desired_width(60.0),
+                                                egui::TextEdit::singleline(icon).desired_width(40.0),
                                             );
                                             if response.clicked() {
                                                 self.symbol_picker_target = Some(format!("status:{}", key));
@@ -5096,6 +5103,13 @@ impl RequirementsApp {
                                         if ui.small_button("🗑").on_hover_text("Remove").clicked() {
                                             to_remove = Some(key.clone());
                                         }
+                                        // End row after every ITEMS_PER_ROW entries
+                                        if (idx + 1) % ITEMS_PER_ROW == 0 {
+                                            ui.end_row();
+                                        }
+                                    }
+                                    // End final row if not complete
+                                    if !status_keys.is_empty() && status_keys.len() % ITEMS_PER_ROW != 0 {
                                         ui.end_row();
                                     }
                                 });
@@ -5153,30 +5167,44 @@ impl RequirementsApp {
                         self.settings_form_priority_icons.icons.keys().cloned().collect();
                     priority_keys.sort();
 
+                    const ITEMS_PER_ROW: usize = 4;
+
                     egui::ScrollArea::vertical()
                         .id_salt("priority_icons_scroll")
                         .max_height(200.0)
                         .show(ui, |ui| {
                             let mut to_remove: Option<String> = None;
+                            // 4 entries per row, each with: Priority, Icon, Delete = 12 columns
                             egui::Grid::new("priority_icons_grid")
-                                .num_columns(3)
-                                .spacing([10.0, 4.0])
+                                .num_columns(ITEMS_PER_ROW * 3)
+                                .spacing([8.0, 4.0])
                                 .show(ui, |ui| {
-                                    ui.label(egui::RichText::new("Priority").strong());
-                                    ui.label(egui::RichText::new("Icon").strong());
-                                    ui.label("");
+                                    // Header row
+                                    for _ in 0..ITEMS_PER_ROW {
+                                        ui.label(egui::RichText::new("Priority").strong());
+                                        ui.label(egui::RichText::new("Icon").strong());
+                                        ui.label("");
+                                    }
                                     ui.end_row();
 
-                                    for key in &priority_keys {
+                                    // Data rows - wrap after every ITEMS_PER_ROW entries
+                                    for (idx, key) in priority_keys.iter().enumerate() {
                                         ui.label(key);
                                         if let Some(icon) = self.settings_form_priority_icons.icons.get_mut(key) {
                                             ui.add(
-                                                egui::TextEdit::singleline(icon).desired_width(60.0),
+                                                egui::TextEdit::singleline(icon).desired_width(40.0),
                                             );
                                         }
                                         if ui.small_button("🗑").on_hover_text("Remove").clicked() {
                                             to_remove = Some(key.clone());
                                         }
+                                        // End row after every ITEMS_PER_ROW entries
+                                        if (idx + 1) % ITEMS_PER_ROW == 0 {
+                                            ui.end_row();
+                                        }
+                                    }
+                                    // End final row if not complete
+                                    if !priority_keys.is_empty() && priority_keys.len() % ITEMS_PER_ROW != 0 {
                                         ui.end_row();
                                     }
                                 });
