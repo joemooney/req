@@ -77,6 +77,17 @@ pub enum ConflictResolution {
     Merge,
 }
 
+/// Result of adding a new requirement atomically
+#[derive(Debug)]
+pub struct AddResult {
+    /// The updated store with all changes (including external)
+    pub store: RequirementsStore,
+    /// Number of external requirements that were merged in
+    pub external_changes_merged: usize,
+    /// The SPEC-ID assigned to the new requirement
+    pub spec_id: String,
+}
+
 impl std::fmt::Display for StorageError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -864,6 +875,106 @@ impl Storage {
             .iter()
             .map(|r| (r.id, r.modified_at))
             .collect()
+    }
+
+    /// Atomically add a new requirement with reload-before-save
+    ///
+    /// This method:
+    /// 1. Acquires exclusive lock
+    /// 2. Reloads fresh data from disk
+    /// 3. Merges local non-requirement changes (features, users, config, etc.)
+    /// 4. Generates a new SPEC-ID based on fresh state
+    /// 5. Adds the new requirement
+    /// 6. Saves to disk
+    /// 7. Returns updated store with all changes
+    ///
+    /// This ensures:
+    /// - No duplicate SPEC-IDs even with concurrent modifications
+    /// - External requirement additions are preserved
+    /// - Local config/feature/user changes are applied
+    ///
+    /// # Arguments
+    /// * `local_store` - The local store with pending config/feature changes
+    /// * `new_req` - The new requirement to add (without SPEC-ID yet)
+    /// * `feature_prefix` - Optional feature prefix for ID generation
+    /// * `type_prefix` - Optional type prefix for ID generation
+    ///
+    /// # Returns
+    /// * `Ok(AddResult)` - Contains updated store, merge count, and assigned SPEC-ID
+    // trace:FR-0183 | ai:claude:high
+    pub fn add_requirement_atomic(
+        &self,
+        local_store: &RequirementsStore,
+        mut new_req: Requirement,
+        feature_prefix: Option<&str>,
+        type_prefix: Option<&str>,
+    ) -> Result<AddResult> {
+        // Acquire exclusive lock
+        let mut lock_file = self.acquire_write_lock()?;
+
+        let _ = writeln!(
+            lock_file,
+            "Locked by PID {} at {}",
+            std::process::id(),
+            chrono::Utc::now().to_rfc3339()
+        );
+
+        // Load fresh data from disk
+        let mut disk_store: RequirementsStore = if self.file_path.exists() {
+            let file = File::open(&self.file_path)?;
+            let reader = BufReader::new(file);
+            serde_yaml::from_reader(reader)?
+        } else {
+            RequirementsStore::new()
+        };
+
+        // Count external requirement additions (requirements in disk but not in local)
+        let local_req_ids: std::collections::HashSet<Uuid> = local_store
+            .requirements
+            .iter()
+            .map(|r| r.id)
+            .collect();
+        let external_changes_merged = disk_store
+            .requirements
+            .iter()
+            .filter(|r| !local_req_ids.contains(&r.id))
+            .count();
+
+        // Apply local non-requirement changes to the fresh disk store
+        // (users, features, config, etc. - these are simpler to just overwrite)
+        disk_store.name = local_store.name.clone();
+        disk_store.title = local_store.title.clone();
+        disk_store.description = local_store.description.clone();
+        disk_store.users = local_store.users.clone();
+        disk_store.id_config = local_store.id_config.clone();
+        disk_store.features = local_store.features.clone();
+        disk_store.relationship_definitions = local_store.relationship_definitions.clone();
+        disk_store.reaction_definitions = local_store.reaction_definitions.clone();
+        disk_store.type_definitions = local_store.type_definitions.clone();
+        disk_store.ai_prompts = local_store.ai_prompts.clone();
+        disk_store.allowed_prefixes = local_store.allowed_prefixes.clone();
+        disk_store.restrict_prefixes = local_store.restrict_prefixes;
+
+        // Generate SPEC-ID using the fresh disk store state (which has all existing IDs)
+        // This ensures we don't create duplicates
+        disk_store.add_requirement_with_id(new_req, feature_prefix, type_prefix);
+
+        // Get the SPEC-ID from the added requirement (last one in store)
+        let spec_id = disk_store
+            .requirements
+            .last()
+            .and_then(|r| r.spec_id.clone())
+            .unwrap_or_default();
+
+        // Save the updated store
+        let yaml = serde_yaml::to_string(&disk_store)?;
+        fs::write(&self.file_path, yaml)?;
+
+        Ok(AddResult {
+            store: disk_store,
+            external_changes_merged,
+            spec_id,
+        })
     }
 }
 

@@ -1,6 +1,6 @@
 use aida_core::{
     ai::AiClient,
-    determine_requirements_path, Cardinality, Comment, ConflictInfo, ConflictResolution,
+    determine_requirements_path, AddResult, Cardinality, Comment, ConflictInfo, ConflictResolution,
     CustomFieldDefinition, CustomFieldType, EditLock, EvaluationResponse, FieldChange, IdFormat,
     LockFileInfo, NumberingStrategy, RelationshipDefinition, RelationshipType, Requirement,
     RequirementPriority, RequirementStatus, RequirementType, RequirementsStore, SaveResult,
@@ -3627,6 +3627,7 @@ impl RequirementsApp {
         self.pending_view_change = Some(if is_edit { View::Detail } else { View::List });
     }
 
+    // trace:FR-0183 | ai:claude:high
     fn add_requirement(&mut self) {
         let tags: HashSet<String> = self
             .form_tags
@@ -3675,44 +3676,76 @@ impl RequirementsApp {
         // Capture the new requirement's ID before adding
         let new_req_id = req.id;
 
-        // Add requirement with auto-assigned ID based on configuration
-        self.store
-            .add_requirement_with_id(req, feature_prefix.as_deref(), type_prefix.as_deref());
+        // Use atomic add which reloads fresh data before adding (FR-0183)
+        // This prevents duplicate SPEC-IDs and preserves concurrent changes
+        match self.storage.add_requirement_atomic(
+            &self.store,
+            req,
+            feature_prefix.as_deref(),
+            type_prefix.as_deref(),
+        ) {
+            Ok(result) => {
+                // Update our store with the merged result
+                self.store = result.store;
 
-        // Mark as modified for conflict detection (FR-0153)
-        self.modified_requirement_ids.insert(new_req_id);
+                // Update timestamps for conflict detection
+                self.original_timestamps = Storage::get_requirement_timestamps(&self.store);
+                self.modified_requirement_ids.clear();
 
-        // Create parent relationship if specified
-        if let Some(parent_id) = parent_id {
-            // New requirement (child) stores Parent relationship pointing to parent
-            let _ = self.store.add_relationship_with_creator(
-                &new_req_id,
-                RelationshipType::Parent,
-                &parent_id,
-                true, // bidirectional
-                Some(self.user_settings.display_name()),
-            );
+                // Create parent relationship if specified
+                if let Some(parent_id) = parent_id {
+                    // New requirement (child) stores Parent relationship pointing to parent
+                    let _ = self.store.add_relationship_with_creator(
+                        &new_req_id,
+                        RelationshipType::Parent,
+                        &parent_id,
+                        true, // bidirectional
+                        Some(self.user_settings.display_name()),
+                    );
+                    // Save the relationship
+                    if let Err(e) = self.storage.save(&self.store) {
+                        self.message = Some((format!("Error saving relationship: {}", e), true));
+                        return;
+                    }
+                }
+
+                self.form_parent_id = None;
+                self.clear_form();
+
+                // Find the index of the newly added requirement and select it
+                if let Some(idx) = self
+                    .store
+                    .requirements
+                    .iter()
+                    .position(|r| r.id == new_req_id)
+                {
+                    self.selected_idx = Some(idx);
+                    self.scroll_to_requirement = Some(new_req_id);
+                    self.current_view = View::Detail;
+                } else {
+                    self.current_view = View::List;
+                }
+
+                // Show appropriate message
+                if result.external_changes_merged > 0 {
+                    self.message = Some((
+                        format!(
+                            "Requirement {} added (merged {} external change(s))",
+                            result.spec_id, result.external_changes_merged
+                        ),
+                        false,
+                    ));
+                } else {
+                    self.message = Some((
+                        format!("Requirement {} added successfully", result.spec_id),
+                        false,
+                    ));
+                }
+            }
+            Err(e) => {
+                self.message = Some((format!("Error adding requirement: {}", e), true));
+            }
         }
-
-        self.save();
-        self.form_parent_id = None; // Clear parent after adding
-        self.clear_form();
-
-        // Find the index of the newly added requirement and select it
-        if let Some(idx) = self
-            .store
-            .requirements
-            .iter()
-            .position(|r| r.id == new_req_id)
-        {
-            self.selected_idx = Some(idx);
-            self.scroll_to_requirement = Some(new_req_id);
-            self.current_view = View::Detail; // Show the new requirement's details
-        } else {
-            self.current_view = View::List;
-        }
-
-        self.message = Some(("Requirement added successfully".to_string(), false));
     }
 
     fn update_requirement(&mut self, idx: usize) {
