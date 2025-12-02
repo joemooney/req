@@ -279,6 +279,34 @@ impl CustomFieldDefinition {
         }
     }
 
+    /// Creates a new text area (multiline text) field definition
+    pub fn textarea(name: impl Into<String>, label: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            label: label.into(),
+            field_type: CustomFieldType::TextArea,
+            required: false,
+            options: Vec::new(),
+            default_value: None,
+            description: None,
+            order: 0,
+        }
+    }
+
+    /// Creates a new number field definition
+    pub fn number(name: impl Into<String>, label: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            label: label.into(),
+            field_type: CustomFieldType::Number,
+            required: false,
+            options: Vec::new(),
+            default_value: None,
+            description: None,
+            order: 0,
+        }
+    }
+
     /// Sets the field as required
     pub fn required(mut self) -> Self {
         self.required = true;
@@ -527,6 +555,125 @@ pub fn default_type_definitions() -> Vec<CustomTypeDefinition> {
                 CustomFieldDefinition::text("justification", "Justification")
                     .required()
                     .with_description("Business justification for the change")
+                    .with_order(4),
+            ),
+        // Bug tracking
+        CustomTypeDefinition::built_in("Bug", "Bug")
+            .with_prefix("BUG")
+            .with_description("Bug reports and defects")
+            .with_statuses(vec![
+                "New",
+                "Confirmed",
+                "In Progress",
+                "Fixed",
+                "Verified",
+                "Closed",
+                "Won't Fix",
+            ])
+            .with_color("#dc2626")
+            .with_field(
+                CustomFieldDefinition::select(
+                    "severity",
+                    "Severity",
+                    vec![
+                        "Critical".to_string(),
+                        "Major".to_string(),
+                        "Minor".to_string(),
+                        "Trivial".to_string(),
+                    ],
+                )
+                .with_description("Severity of the bug")
+                .with_order(1),
+            )
+            .with_field(
+                CustomFieldDefinition::text("steps_to_reproduce", "Steps to Reproduce")
+                    .with_description("Steps to reproduce the bug")
+                    .with_order(2),
+            )
+            .with_field(
+                CustomFieldDefinition::text("expected_behavior", "Expected Behavior")
+                    .with_description("What should happen")
+                    .with_order(3),
+            )
+            .with_field(
+                CustomFieldDefinition::text("actual_behavior", "Actual Behavior")
+                    .with_description("What actually happens")
+                    .with_order(4),
+            ),
+        // Agile types
+        CustomTypeDefinition::built_in("Epic", "Epic")
+            .with_prefix("EPIC")
+            .with_description("Large feature or initiative spanning multiple stories")
+            .with_statuses(vec![
+                "Draft",
+                "Ready",
+                "In Progress",
+                "Done",
+            ])
+            .with_color("#7c3aed")
+            .with_field(
+                CustomFieldDefinition::text("business_value", "Business Value")
+                    .with_description("Business value or benefit of this epic")
+                    .with_order(1),
+            )
+            .with_field(
+                CustomFieldDefinition::text("target_release", "Target Release")
+                    .with_description("Target release or milestone")
+                    .with_order(2),
+            )
+            .with_field(
+                CustomFieldDefinition::number("story_points", "Story Points")
+                    .with_description("Estimated story points")
+                    .with_order(3),
+            ),
+        CustomTypeDefinition::built_in("Task", "Task")
+            .with_prefix("TASK")
+            .with_description("Implementation task or work item")
+            .with_statuses(vec![
+                "To Do",
+                "In Progress",
+                "In Review",
+                "Done",
+            ])
+            .with_color("#0891b2")
+            .with_field(
+                CustomFieldDefinition::number("estimate_hours", "Estimate (hours)")
+                    .with_description("Estimated hours to complete")
+                    .with_order(1),
+            )
+            .with_field(
+                CustomFieldDefinition::user_ref("assignee", "Assignee")
+                    .with_description("Person assigned to this task")
+                    .with_order(2),
+            ),
+        CustomTypeDefinition::built_in("Spike", "Spike")
+            .with_prefix("SPIKE")
+            .with_description("Research or investigation task with time-boxed exploration")
+            .with_statuses(vec![
+                "Planned",
+                "In Progress",
+                "Completed",
+            ])
+            .with_color("#ca8a04")
+            .with_field(
+                CustomFieldDefinition::text("research_question", "Research Question")
+                    .required()
+                    .with_description("The question or problem to investigate")
+                    .with_order(1),
+            )
+            .with_field(
+                CustomFieldDefinition::text("time_box", "Time Box")
+                    .with_description("Time allocated for investigation (e.g., '2 days')")
+                    .with_order(2),
+            )
+            .with_field(
+                CustomFieldDefinition::textarea("findings", "Findings")
+                    .with_description("Results and conclusions from the investigation")
+                    .with_order(3),
+            )
+            .with_field(
+                CustomFieldDefinition::text("recommendation", "Recommendation")
+                    .with_description("Recommended next steps based on findings")
                     .with_order(4),
             ),
         // Stateless organizational types
