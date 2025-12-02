@@ -1659,6 +1659,13 @@ enum IdsSubTab {
 }
 
 #[derive(Default, PartialEq, Clone, Copy)]
+enum AiSubTab {
+    #[default]
+    Prompts,
+    Skills,
+}
+
+#[derive(Default, PartialEq, Clone, Copy)]
 enum FilterTab {
     #[default]
     Root,
@@ -2087,6 +2094,9 @@ pub struct RequirementsApp {
     show_settings_dialog: bool,
     settings_tab: SettingsTab,
     ids_subtab: IdsSubTab,
+    ai_subtab: AiSubTab,
+    // Skills loaded from .claude/skills/ directory
+    loaded_skills: Vec<(String, String)>, // (filename, content)
     // Prefix rename dialog
     rename_prefix_from: String,
     rename_prefix_to: String,
@@ -2570,6 +2580,8 @@ impl RequirementsApp {
             show_settings_dialog: false,
             settings_tab: SettingsTab::default(),
             ids_subtab: IdsSubTab::default(),
+            ai_subtab: AiSubTab::default(),
+            loaded_skills: Vec::new(),
             rename_prefix_from: String::new(),
             rename_prefix_to: String::new(),
             show_rename_prefix_dialog: false,
@@ -7524,8 +7536,119 @@ impl RequirementsApp {
         });
     }
 
-    /// Show the AI Prompts settings tab
+    /// Show the AI settings tab with Prompts and Skills subtabs
     fn show_settings_ai_prompts_tab(&mut self, ui: &mut egui::Ui) {
+        // Subtab selector
+        ui.horizontal(|ui| {
+            ui.selectable_value(&mut self.ai_subtab, AiSubTab::Prompts, "📝 Prompts");
+            ui.selectable_value(&mut self.ai_subtab, AiSubTab::Skills, "🛠 Skills");
+        });
+        ui.separator();
+        ui.add_space(5.0);
+
+        match self.ai_subtab {
+            AiSubTab::Prompts => self.show_ai_prompts_subtab(ui),
+            AiSubTab::Skills => self.show_ai_skills_subtab(ui),
+        }
+    }
+
+    /// Show the Skills subtab
+    fn show_ai_skills_subtab(&mut self, ui: &mut egui::Ui) {
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            ui.heading("Claude Code Skills");
+            ui.add_space(5.0);
+            ui.label("Skills are prompt templates that extend Claude Code's capabilities.");
+            ui.add_space(10.0);
+
+            // Load skills from .claude/skills/ directory if not already loaded
+            if self.loaded_skills.is_empty() {
+                let project_dir = self.storage.path().parent()
+                    .map(|p| p.to_path_buf())
+                    .unwrap_or_else(|| std::path::PathBuf::from("."));
+                let skills_dir = project_dir.join(".claude").join("skills");
+
+                if skills_dir.exists() {
+                    if let Ok(entries) = std::fs::read_dir(&skills_dir) {
+                        for entry in entries.flatten() {
+                            let path = entry.path();
+                            if path.extension().map_or(false, |ext| ext == "md") {
+                                if let Ok(content) = std::fs::read_to_string(&path) {
+                                    let filename = path.file_name()
+                                        .and_then(|n| n.to_str())
+                                        .unwrap_or("unknown")
+                                        .to_string();
+                                    self.loaded_skills.push((filename, content));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Refresh button
+            ui.horizontal(|ui| {
+                if ui.button("🔄 Refresh Skills").clicked() {
+                    self.loaded_skills.clear();
+                }
+
+                let project_dir = self.storage.path().parent()
+                    .map(|p| p.to_path_buf())
+                    .unwrap_or_else(|| std::path::PathBuf::from("."));
+                let skills_dir = project_dir.join(".claude").join("skills");
+                ui.label(format!("Path: {}", skills_dir.display()));
+            });
+            ui.add_space(10.0);
+
+            if self.loaded_skills.is_empty() {
+                ui.label("No skills found in .claude/skills/ directory.");
+                ui.add_space(10.0);
+                ui.label("Use the 'Scaffold Project' button in the Prompts tab to generate skills.");
+            } else {
+                // Display each skill
+                for (filename, content) in &self.loaded_skills {
+                    ui.group(|ui| {
+                        ui.horizontal(|ui| {
+                            ui.strong(filename);
+                            // Extract title from first markdown heading if present
+                            if let Some(title_line) = content.lines().find(|l| l.starts_with("# ")) {
+                                ui.label(format!("- {}", title_line.trim_start_matches("# ")));
+                            }
+                        });
+
+                        ui.add_space(5.0);
+
+                        // Show skill content in a collapsible section
+                        egui::CollapsingHeader::new("View Content")
+                            .id_salt(filename)
+                            .show(ui, |ui| {
+                                egui::ScrollArea::vertical()
+                                    .id_salt(format!("skill_content_{}", filename))
+                                    .max_height(300.0)
+                                    .show(ui, |ui| {
+                                        // Render as markdown using egui_commonmark
+                                        let mut cache = egui_commonmark::CommonMarkCache::default();
+                                        egui_commonmark::CommonMarkViewer::new()
+                                            .show(ui, &mut cache, content);
+                                    });
+                            });
+                    });
+                    ui.add_space(5.0);
+                }
+            }
+
+            ui.add_space(15.0);
+            ui.separator();
+            ui.add_space(10.0);
+
+            // Link to scaffold
+            ui.heading("Create New Skills");
+            ui.add_space(5.0);
+            ui.label("To generate skills for this project, go to the Prompts tab and click 'Scaffold Project'.");
+        });
+    }
+
+    /// Show the Prompts subtab
+    fn show_ai_prompts_subtab(&mut self, ui: &mut egui::Ui) {
         egui::ScrollArea::vertical().show(ui, |ui| {
             ui.heading("AI Prompt Configuration");
             ui.add_space(5.0);

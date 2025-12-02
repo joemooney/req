@@ -1,0 +1,9 @@
+sessions:
+  2350990-59458eb2-de2c-4526-8f0a-a89ef8821070:
+    session_id: 2350990-59458eb2-de2c-4526-8f0a-a89ef8821070
+    user_name: Unknown User
+    hostname: imac
+    pid: 2350990
+    started_at: 2025-12-02T03:41:02.014308465Z
+    last_heartbeat: 2025-12-02T03:47:37.137864611Z
+    editing_requirement: null
