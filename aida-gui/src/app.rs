@@ -1311,25 +1311,25 @@ pub struct StatusIconConfig {
 impl Default for StatusIconConfig {
     fn default() -> Self {
         let mut icons = std::collections::HashMap::new();
-        // Default ASCII-based markers
-        icons.insert("completed".to_string(), "[x]".to_string());
-        icons.insert("done".to_string(), "[x]".to_string());
-        icons.insert("rejected".to_string(), "[-]".to_string());
-        icons.insert("closed".to_string(), "[-]".to_string());
-        icons.insert("draft".to_string(), "[ ]".to_string());
-        icons.insert("review".to_string(), "[?]".to_string());
-        icons.insert("approved".to_string(), "[+]".to_string());
-        icons.insert("ready".to_string(), "[+]".to_string());
-        icons.insert("progress".to_string(), "[~]".to_string());
-        icons.insert("implement".to_string(), "[~]".to_string());
-        icons.insert("verified".to_string(), "[x]".to_string());
-        icons.insert("backlog".to_string(), "[.]".to_string());
-        icons.insert("open".to_string(), "[!]".to_string());
-        icons.insert("confirmed".to_string(), "[!]".to_string());
-        icons.insert("fixed".to_string(), "[x]".to_string());
+        // Unicode symbol markers
+        icons.insert("draft".to_string(), "? ".to_string());
+        icons.insert("approved".to_string(), "☆".to_string());
+        icons.insert("confirmed".to_string(), "★".to_string());
+        icons.insert("ready".to_string(), "◑".to_string());
+        icons.insert("progress".to_string(), "⇒".to_string());
+        icons.insert("implement".to_string(), "※".to_string());
+        icons.insert("review".to_string(), "†".to_string());
+        icons.insert("verified".to_string(), "‡".to_string());
+        icons.insert("completed".to_string(), "✔".to_string());
+        icons.insert("fixed".to_string(), "◐".to_string());
+        icons.insert("done".to_string(), "☒".to_string());
+        icons.insert("rejected".to_string(), "☒".to_string());
+        icons.insert("closed".to_string(), "☒".to_string());
+        icons.insert("backlog".to_string(), "☐".to_string());
+        icons.insert("open".to_string(), "○".to_string());
         Self {
             icons,
-            default_icon: "[*]".to_string(),
+            default_icon: "? ".to_string(),
         }
     }
 }
