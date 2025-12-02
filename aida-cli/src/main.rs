@@ -1207,9 +1207,21 @@ fn handle_export_command(
                 .unwrap_or_else(|| std::path::PathBuf::from("requirements.json"));
             export::export_json(&store, &output_path)?;
         }
+        "spec" | "requirements" => {
+            let output_path = output
+                .map(|p| p.to_path_buf())
+                .unwrap_or_else(|| std::path::PathBuf::from("REQUIREMENTS.md"));
+            export::export_requirements_spec(&store, &output_path)?;
+        }
+        "impl" | "implementation" => {
+            let output_path = output
+                .map(|p| p.to_path_buf())
+                .unwrap_or_else(|| std::path::PathBuf::from("IMPLEMENTATION.md"));
+            export::export_implementation_records(&store, &output_path)?;
+        }
         _ => {
             anyhow::bail!(
-                "Unknown export format: {}. Supported formats: mapping, json",
+                "Unknown export format: {}. Supported formats: mapping, json, spec, impl",
                 format
             );
         }
