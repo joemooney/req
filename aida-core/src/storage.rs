@@ -96,6 +96,90 @@ impl std::fmt::Display for StorageError {
 
 impl std::error::Error for StorageError {}
 
+/// Information about a user session with an open requirements file
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct SessionInfo {
+    /// Unique session ID (process-specific)
+    pub session_id: String,
+    /// User name/handle
+    pub user_name: String,
+    /// Hostname or machine identifier
+    pub hostname: String,
+    /// Process ID
+    pub pid: u32,
+    /// When this session started
+    pub started_at: DateTime<Utc>,
+    /// Last heartbeat timestamp
+    pub last_heartbeat: DateTime<Utc>,
+    /// Requirement currently being edited (if any)
+    pub editing_requirement: Option<EditLock>,
+}
+
+/// Information about a requirement being edited
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct EditLock {
+    /// ID of the requirement being edited
+    pub requirement_id: Uuid,
+    /// SPEC-ID for display
+    pub spec_id: String,
+    /// When edit mode started
+    pub started_at: DateTime<Utc>,
+}
+
+/// Lock file contents tracking all active sessions
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+pub struct LockFileInfo {
+    /// All active sessions (keyed by session_id)
+    pub sessions: HashMap<String, SessionInfo>,
+}
+
+impl LockFileInfo {
+    /// Create a new empty lock file info
+    pub fn new() -> Self {
+        Self {
+            sessions: HashMap::new(),
+        }
+    }
+
+    /// Remove stale sessions (no heartbeat in the last N seconds)
+    pub fn remove_stale_sessions(&mut self, stale_threshold_secs: i64) {
+        let now = Utc::now();
+        self.sessions.retain(|_, session| {
+            let elapsed = now.signed_duration_since(session.last_heartbeat);
+            elapsed.num_seconds() < stale_threshold_secs
+        });
+    }
+
+    /// Get sessions that have a specific requirement open for editing
+    pub fn get_editors(&self, requirement_id: Uuid) -> Vec<&SessionInfo> {
+        self.sessions
+            .values()
+            .filter(|s| {
+                s.editing_requirement
+                    .as_ref()
+                    .map(|e| e.requirement_id == requirement_id)
+                    .unwrap_or(false)
+            })
+            .collect()
+    }
+
+    /// Get all active sessions except the current one
+    pub fn get_other_sessions(&self, current_session_id: &str) -> Vec<&SessionInfo> {
+        self.sessions
+            .values()
+            .filter(|s| s.session_id != current_session_id)
+            .collect()
+    }
+}
+
+impl SessionInfo {
+    /// Check if this session's heartbeat is stale
+    pub fn is_stale(&self, threshold_secs: i64) -> bool {
+        let elapsed = Utc::now().signed_duration_since(self.last_heartbeat);
+        elapsed.num_seconds() > threshold_secs
+    }
+}
+
 /// Handles saving and loading requirements from disk with file locking
 /// for rudimentary multi-user support
 pub struct Storage {
@@ -117,6 +201,94 @@ impl Storage {
     /// Returns the path to the storage file
     pub fn path(&self) -> &Path {
         &self.file_path
+    }
+
+    /// Returns the path to the lock file
+    pub fn lock_file_path(&self) -> &Path {
+        &self.lock_file_path
+    }
+
+    /// Read the current lock file info (session tracking)
+    pub fn read_lock_info(&self) -> Result<LockFileInfo> {
+        if !self.lock_file_path.exists() {
+            return Ok(LockFileInfo::new());
+        }
+
+        let content = fs::read_to_string(&self.lock_file_path)
+            .with_context(|| format!("Failed to read lock file: {:?}", self.lock_file_path))?;
+
+        // Try to parse as YAML, fall back to empty if invalid
+        Ok(serde_yaml::from_str(&content).unwrap_or_else(|_| LockFileInfo::new()))
+    }
+
+    /// Write lock file info (session tracking)
+    /// This atomically updates the lock file with current session info
+    pub fn write_lock_info(&self, info: &LockFileInfo) -> Result<()> {
+        // Create parent directories if needed
+        if let Some(parent) = self.lock_file_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+
+        let yaml = serde_yaml::to_string(info)
+            .context("Failed to serialize lock info")?;
+
+        fs::write(&self.lock_file_path, yaml)
+            .with_context(|| format!("Failed to write lock file: {:?}", self.lock_file_path))?;
+
+        Ok(())
+    }
+
+    /// Register a new session in the lock file
+    pub fn register_session(&self, session: SessionInfo) -> Result<LockFileInfo> {
+        let mut info = self.read_lock_info().unwrap_or_default();
+
+        // Clean up stale sessions (no heartbeat in 30 seconds)
+        info.remove_stale_sessions(30);
+
+        // Add/update our session
+        info.sessions.insert(session.session_id.clone(), session);
+
+        self.write_lock_info(&info)?;
+        Ok(info)
+    }
+
+    /// Update heartbeat for a session
+    pub fn update_heartbeat(&self, session_id: &str, editing: Option<EditLock>) -> Result<LockFileInfo> {
+        let mut info = self.read_lock_info().unwrap_or_default();
+
+        // Clean up stale sessions
+        info.remove_stale_sessions(30);
+
+        // Update our session's heartbeat
+        if let Some(session) = info.sessions.get_mut(session_id) {
+            session.last_heartbeat = Utc::now();
+            session.editing_requirement = editing;
+        }
+
+        self.write_lock_info(&info)?;
+        Ok(info)
+    }
+
+    /// Unregister a session from the lock file
+    pub fn unregister_session(&self, session_id: &str) -> Result<()> {
+        let mut info = self.read_lock_info().unwrap_or_default();
+        info.sessions.remove(session_id);
+
+        // If no sessions left, we can delete the lock file
+        if info.sessions.is_empty() {
+            let _ = fs::remove_file(&self.lock_file_path);
+        } else {
+            self.write_lock_info(&info)?;
+        }
+
+        Ok(())
+    }
+
+    /// Get current active sessions (for displaying warnings)
+    pub fn get_active_sessions(&self) -> Result<LockFileInfo> {
+        let mut info = self.read_lock_info().unwrap_or_default();
+        info.remove_stale_sessions(30);
+        Ok(info)
     }
 
     /// Acquire an exclusive lock on the file for writing

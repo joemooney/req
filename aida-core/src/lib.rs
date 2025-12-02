@@ -61,5 +61,6 @@ pub use scaffolding::{
     ProjectType, ScaffoldArtifact, ScaffoldConfig, ScaffoldError, ScaffoldPreview, Scaffolder,
 };
 pub use storage::{
-    ConflictInfo, ConflictResolution, FieldConflict, SaveResult, Storage, StorageError,
+    ConflictInfo, ConflictResolution, EditLock, FieldConflict, LockFileInfo, SaveResult,
+    SessionInfo, Storage, StorageError,
 };

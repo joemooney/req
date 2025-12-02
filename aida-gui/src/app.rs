@@ -1,10 +1,10 @@
 use aida_core::{
     ai::AiClient,
     determine_requirements_path, Cardinality, Comment, ConflictInfo, ConflictResolution,
-    CustomFieldDefinition, CustomFieldType, EvaluationResponse, FieldChange, IdFormat,
-    NumberingStrategy, RelationshipDefinition, RelationshipType, Requirement, RequirementPriority,
-    RequirementStatus, RequirementType, RequirementsStore, SaveResult, Storage, StoredAiEvaluation,
-    UrlLink,
+    CustomFieldDefinition, CustomFieldType, EditLock, EvaluationResponse, FieldChange, IdFormat,
+    LockFileInfo, NumberingStrategy, RelationshipDefinition, RelationshipType, Requirement,
+    RequirementPriority, RequirementStatus, RequirementType, RequirementsStore, SaveResult,
+    SessionInfo, Storage, StoredAiEvaluation, UrlLink,
 };
 use eframe::egui;
 use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
@@ -16,6 +16,14 @@ use std::sync::mpsc;
 use std::thread;
 use std::time::Instant;
 use uuid::Uuid;
+
+/// Commands sent to the heartbeat thread
+enum HeartbeatCommand {
+    /// Update the edit lock for a requirement
+    SetEditLock(Option<EditLock>),
+    /// Shutdown the heartbeat thread
+    Shutdown,
+}
 
 // =============================================================================
 // TEXT EDIT CONTEXT MENU IMPLEMENTATION
@@ -2313,6 +2321,12 @@ pub struct RequirementsApp {
     modified_requirement_ids: HashSet<Uuid>,            // IDs of requirements modified since load
     show_conflict_dialog: bool,                         // Whether to show conflict resolution dialog
     current_conflict: Option<ConflictInfo>,             // Current conflict being resolved
+
+    // Session tracking state (collaborative awareness)
+    session_id: String,                                 // Unique session ID for this instance
+    heartbeat_sender: Option<std::sync::mpsc::Sender<HeartbeatCommand>>,  // Channel to heartbeat thread
+    last_lock_info: Option<LockFileInfo>,               // Last known lock file state
+    other_sessions_warning_shown: bool,                 // Whether we've shown the concurrent users warning
 }
 
 /// Result from background AI evaluation thread
@@ -2434,6 +2448,62 @@ impl RequirementsApp {
         // Apply saved preferences
         let initial_font_size = user_settings.base_font_size;
         let initial_perspective = user_settings.preferred_perspective.clone();
+
+        // Generate unique session ID and register session (collaborative awareness)
+        let session_id = format!("{}-{}", std::process::id(), Uuid::new_v4());
+        let hostname = hostname::get()
+            .map(|h| h.to_string_lossy().to_string())
+            .unwrap_or_else(|_| "unknown".to_string());
+
+        let session_info = SessionInfo {
+            session_id: session_id.clone(),
+            user_name: user_settings.display_name(),
+            hostname,
+            pid: std::process::id(),
+            started_at: Utc::now(),
+            last_heartbeat: Utc::now(),
+            editing_requirement: None,
+        };
+
+        // Register session and get initial lock info
+        let initial_lock_info = storage.register_session(session_info).ok();
+
+        // Start heartbeat thread
+        let (heartbeat_sender, heartbeat_receiver) = mpsc::channel::<HeartbeatCommand>();
+        let heartbeat_storage = Storage::new(storage.path());
+        let heartbeat_session_id = session_id.clone();
+
+        thread::spawn(move || {
+            let mut current_edit_lock: Option<EditLock> = None;
+
+            loop {
+                // Check for commands (non-blocking with timeout)
+                match heartbeat_receiver.recv_timeout(std::time::Duration::from_secs(5)) {
+                    Ok(HeartbeatCommand::SetEditLock(lock)) => {
+                        current_edit_lock = lock;
+                    }
+                    Ok(HeartbeatCommand::Shutdown) => {
+                        // Unregister session on shutdown
+                        let _ = heartbeat_storage.unregister_session(&heartbeat_session_id);
+                        break;
+                    }
+                    Err(mpsc::RecvTimeoutError::Timeout) => {
+                        // Normal timeout - update heartbeat
+                    }
+                    Err(mpsc::RecvTimeoutError::Disconnected) => {
+                        // Channel closed - cleanup and exit
+                        let _ = heartbeat_storage.unregister_session(&heartbeat_session_id);
+                        break;
+                    }
+                }
+
+                // Update heartbeat
+                let _ = heartbeat_storage.update_heartbeat(
+                    &heartbeat_session_id,
+                    current_edit_lock.clone(),
+                );
+            }
+        });
 
         Self {
             storage,
@@ -2687,6 +2757,12 @@ impl RequirementsApp {
             modified_requirement_ids: HashSet::new(),
             show_conflict_dialog: false,
             current_conflict: None,
+
+            // Session tracking state (collaborative awareness)
+            session_id: session_id.clone(),
+            heartbeat_sender: Some(heartbeat_sender),
+            last_lock_info: initial_lock_info,
+            other_sessions_warning_shown: false,
         }
     }
 
@@ -16048,6 +16124,28 @@ impl eframe::App for RequirementsApp {
         // Reset per-frame flags at the start of each frame
         self.quick_change_consumed_action = false;
 
+        // Periodically check for other concurrent users (every ~60 frames = ~1 second)
+        static CONCURRENT_CHECK_COUNTER: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+        let counter = CONCURRENT_CHECK_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        if counter % 60 == 0 {
+            if let Ok(lock_info) = self.storage.get_active_sessions() {
+                let other_sessions = lock_info.get_other_sessions(&self.session_id);
+                if !other_sessions.is_empty() && !self.other_sessions_warning_shown {
+                    // Show warning about other users
+                    let user_names: Vec<&str> = other_sessions.iter()
+                        .map(|s| s.user_name.as_str())
+                        .collect();
+                    self.toast_message = Some(ToastNotification {
+                        message: format!("⚠️ {} also has this file open", user_names.join(", ")),
+                        is_success: false,
+                        show_until: Instant::now() + std::time::Duration::from_secs(10),
+                    });
+                    self.other_sessions_warning_shown = true;
+                }
+                self.last_lock_info = Some(lock_info);
+            }
+        }
+
         // Poll for background AI evaluation results
         if let Some(receiver) = &self.ai_eval_receiver {
             if let Ok(result) = receiver.try_recv() {
@@ -16584,6 +16682,50 @@ impl eframe::App for RequirementsApp {
             self.delete_requirement(idx);
         }
         if let Some(view) = self.pending_view_change.take() {
+            // Track edit locks for collaborative awareness
+            let was_editing = self.current_view == View::Edit;
+            let will_edit = view == View::Edit;
+
+            if will_edit && !was_editing {
+                // Entering edit mode - check if someone else is editing and set edit lock
+                if let Some(idx) = self.selected_idx {
+                    if let Some(req) = self.store.requirements.get(idx) {
+                        // Check if someone else is editing this requirement
+                        if let Some(lock_info) = &self.last_lock_info {
+                            let editors = lock_info.get_editors(req.id);
+                            if !editors.is_empty() {
+                                let editor_names: Vec<&str> = editors.iter()
+                                    .filter(|s| s.session_id != self.session_id)
+                                    .map(|s| s.user_name.as_str())
+                                    .collect();
+                                if !editor_names.is_empty() {
+                                    self.toast_message = Some(ToastNotification {
+                                        message: format!("⚠️ {} is currently editing this requirement!",
+                                            editor_names.join(", ")),
+                                        is_success: false,
+                                        show_until: Instant::now() + std::time::Duration::from_secs(8),
+                                    });
+                                }
+                            }
+                        }
+
+                        let edit_lock = EditLock {
+                            requirement_id: req.id,
+                            spec_id: req.spec_id.clone().unwrap_or_else(|| req.id.to_string()),
+                            started_at: Utc::now(),
+                        };
+                        if let Some(sender) = &self.heartbeat_sender {
+                            let _ = sender.send(HeartbeatCommand::SetEditLock(Some(edit_lock)));
+                        }
+                    }
+                }
+            } else if was_editing && !will_edit {
+                // Exiting edit mode - clear edit lock
+                if let Some(sender) = &self.heartbeat_sender {
+                    let _ = sender.send(HeartbeatCommand::SetEditLock(None));
+                }
+            }
+
             self.current_view = view;
         }
         if let Some((author, content, parent_id)) = self.pending_comment_add.take() {
