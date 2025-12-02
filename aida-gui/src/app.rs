@@ -9861,10 +9861,10 @@ impl RequirementsApp {
                     let req_id = req.id;
                     let is_selected = self.split_selected_idx == Some(idx);
                     let should_scroll = self.split_scroll_to_requirement == Some(req_id);
-                    let status_string = format!("{}", req.status);
+                    let icon = self.get_requirement_icon(req);
                     let label = format!(
                         "{} {} - {}",
-                        self.get_status_icon(&status_string),
+                        icon,
                         req.spec_id.as_deref().unwrap_or("?"),
                         req.title
                     );
@@ -9942,10 +9942,10 @@ impl RequirementsApp {
                         String::new()
                     };
 
-                    let status_string = format!("{}", req.status);
+                    let icon = self.get_requirement_icon(req);
                     let label = format!(
                         "{} {} - {}{}",
-                        self.get_status_icon(&status_string),
+                        icon,
                         req.spec_id.as_deref().unwrap_or("?"),
                         req.title,
                         rel_indicator
@@ -10624,6 +10624,21 @@ impl RequirementsApp {
         self.user_settings.status_icons.get_icon(status_string).to_string()
     }
 
+    /// Get the icon for a requirement, considering both type and status
+    /// For stateless types like Folder, returns a type-specific icon instead of status icon
+    fn get_requirement_icon(&self, req: &Requirement) -> String {
+        // For stateless types, use type-specific icons
+        if self.store.is_type_stateless(&req.req_type) {
+            return match req.req_type {
+                RequirementType::Folder => "📁".to_string(),
+                // Add other stateless types here as needed
+                _ => "📄".to_string(), // Default for unknown stateless types
+            };
+        }
+        // For stateful types, use status-based icons
+        self.get_status_icon(&req.effective_status())
+    }
+
     /// Check if a status is considered "inactive" (greyed out)
     fn is_inactive_status(status_string: &str) -> bool {
         let status_lower = status_string.to_lowercase();
@@ -10645,6 +10660,7 @@ impl RequirementsApp {
         let title = req.title.clone();
         let status_string = req.effective_status();
         let is_inactive = Self::is_inactive_status(&status_string);
+        let icon = self.get_requirement_icon(req); // Get icon before req ref is dropped
         let selected = self.selected_idx == Some(idx);
         let is_drag_source = self.drag_source == Some(idx);
         let is_drop_target = self.drop_target == Some(idx);
@@ -10659,7 +10675,6 @@ impl RequirementsApp {
 
             // Build the label with optional status icon
             let label = if show_status_icons {
-                let icon = self.get_status_icon(&status_string);
                 format!("{} {} - {}", icon, spec_id.as_deref().unwrap_or("N/A"), title)
             } else {
                 format!("{} - {}", spec_id.as_deref().unwrap_or("N/A"), title)
@@ -10922,6 +10937,7 @@ impl RequirementsApp {
         let title = req.title.clone();
         let status_string = req.effective_status();
         let is_inactive = Self::is_inactive_status(&status_string);
+        let icon = self.get_requirement_icon(req); // Get icon before req ref is dropped
         let selected = self.selected_idx == Some(idx);
         let is_drag_source = self.drag_source == Some(idx);
         let is_drop_target = self.drop_target == Some(idx);
@@ -10930,7 +10946,6 @@ impl RequirementsApp {
 
         // Build the label with optional status icon
         let label = if show_status_icons {
-            let icon = self.get_status_icon(&status_string);
             format!("{} {} - {}", icon, spec_id.as_deref().unwrap_or("N/A"), title)
         } else {
             format!("{} - {}", spec_id.as_deref().unwrap_or("N/A"), title)
