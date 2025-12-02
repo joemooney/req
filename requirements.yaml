@@ -7432,7 +7432,7 @@ requirements:
   status: Completed
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 90-Uncategorized
   created_at: 2025-12-02T06:00:20.249140108Z
   modified_at: 2025-12-02T06:00:20.249140108Z
   req_type: Task
@@ -7442,6 +7442,252 @@ requirements:
   - rel_type: Parent
     target_id: a3af45a9-1b1c-4d4f-91c6-905955c0d9ab
     created_at: 2025-12-02T06:00:20.249173421Z
+- id: 5cd0934b-a782-40f3-bd96-0a26403db404
+  spec_id: FR-0175
+  prefix_override: FR
+  title: Release management skill (/aida-release)
+  description: |-
+    Provide a Claude Code skill for managing software releases with version bumping, release notes generation, and git tagging.
+
+    ## Overview
+    The /aida-release skill assists developers in preparing and executing software releases by automating common release tasks while maintaining traceability with the requirements database.
+
+    ## Core Capabilities
+    1. Version number management (bump major/minor/patch)
+    2. Release notes generation from requirements and git history
+    3. Git tagging with version numbers
+    4. Changelog maintenance
+    5. Pre-release validation checks
+
+    ## Integration Points
+    - Requirements database (completed items since last release)
+    - Git history (commits since last tag)
+    - Cargo.toml / package.json version fields
+    - CHANGELOG.md maintenance
+
+    ## User Workflow
+    1. Invoke /aida-release
+    2. Review pending changes and completed requirements
+    3. Select version bump type (major/minor/patch)
+    4. Review/edit generated release notes
+    5. Execute release (tag, update files, commit)
+  status: Draft
+  priority: High
+  owner: ''
+  feature: 91-Uncategorized
+  created_at: 2025-12-02T06:09:28.437117418Z
+  modified_at: 2025-12-02T06:09:28.437117418Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+- id: ba535047-8a69-437a-93ff-c46c961b4623
+  spec_id: FR-0176
+  prefix_override: FR
+  title: Version number detection and bumping
+  description: |-
+    The skill shall detect the current version from project files and support semantic version bumping.
+
+    ## Version Sources (in priority order)
+    1. Cargo.toml (Rust projects)
+    2. package.json (Node.js projects)
+    3. pyproject.toml (Python projects)
+    4. VERSION file
+    5. Git tags (v*.*.* pattern)
+
+    ## Bump Types
+    - **major**: Breaking changes (1.0.0 -> 2.0.0)
+    - **minor**: New features (1.0.0 -> 1.1.0)
+    - **patch**: Bug fixes (1.0.0 -> 1.0.1)
+    - **custom**: User-specified version
+
+    ## Acceptance Criteria
+    - Detect version from at least Cargo.toml and package.json
+    - Support major/minor/patch bump selection
+    - Preview version change before applying
+    - Update all relevant version files atomically
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 92-Uncategorized
+  created_at: 2025-12-02T06:09:39.427662965Z
+  modified_at: 2025-12-02T06:09:39.427662965Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 5cd0934b-a782-40f3-bd96-0a26403db404
+    created_at: 2025-12-02T06:09:39.427701668Z
+- id: 57147e65-bc9a-44fe-b1bf-5854dfb7c5af
+  spec_id: FR-0177
+  prefix_override: FR
+  title: Release notes generation from requirements
+  description: |-
+    The skill shall generate release notes from completed requirements since the last release.
+
+    ## Data Sources
+    1. Requirements with status=Completed modified since last release tag
+    2. IMPL tasks completed since last release
+    3. Git commits since last tag (for context)
+
+    ## Output Format
+    - Grouped by type (Features, Bug Fixes, etc.)
+    - Include SPEC-ID and title for each item
+    - Link to requirement details where applicable
+    - Summary statistics (X features, Y bug fixes, etc.)
+
+    ## Acceptance Criteria
+    - Query requirements by modified_at > last_release_date
+    - Group by requirement type
+    - Generate markdown-formatted release notes
+    - Support customization of output format
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 93-Uncategorized
+  created_at: 2025-12-02T06:09:48.027816148Z
+  modified_at: 2025-12-02T06:09:48.027816148Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 5cd0934b-a782-40f3-bd96-0a26403db404
+    created_at: 2025-12-02T06:09:48.027852948Z
+- id: 3f9e5185-3d6a-4ca5-82fd-387e94b52adf
+  spec_id: FR-0178
+  prefix_override: FR
+  title: Git tagging for releases
+  description: |-
+    The skill shall create git tags for releases with appropriate metadata.
+
+    ## Tag Format
+    - Default: v{major}.{minor}.{patch} (e.g., v1.2.3)
+    - Annotated tags with release notes as message
+    - Optional: GPG signing if configured
+
+    ## Operations
+    1. Verify working directory is clean
+    2. Create annotated tag with version
+    3. Include release notes in tag message
+    4. Optionally push tag to remote
+
+    ## Acceptance Criteria
+    - Create annotated git tags
+    - Include release summary in tag message
+    - Verify no uncommitted changes before tagging
+    - Support push to remote (with confirmation)
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 94-Uncategorized
+  created_at: 2025-12-02T06:09:57.261079727Z
+  modified_at: 2025-12-02T06:09:57.261079727Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 5cd0934b-a782-40f3-bd96-0a26403db404
+    created_at: 2025-12-02T06:09:57.261115959Z
+- id: 4fe62030-5afa-4115-bf45-691f4d122e1f
+  spec_id: FR-0179
+  prefix_override: FR
+  title: CHANGELOG.md maintenance
+  description: |-
+    The skill shall maintain a CHANGELOG.md file following Keep a Changelog format.
+
+    ## Format
+    Follow https://keepachangelog.com/en/1.0.0/ format:
+    - [Unreleased] section for pending changes
+    - Version sections with date: ## [1.2.3] - 2025-12-02
+    - Categories: Added, Changed, Deprecated, Removed, Fixed, Security
+
+    ## Operations
+    1. Read existing CHANGELOG.md (or create if missing)
+    2. Move [Unreleased] content to new version section
+    3. Add new [Unreleased] header
+    4. Map requirement types to changelog categories
+
+    ## Mapping
+    - Functional -> Added
+    - Bug -> Fixed
+    - ChangeRequest -> Changed
+    - Epic/Story/Task -> Added (features)
+
+    ## Acceptance Criteria
+    - Create CHANGELOG.md if not exists
+    - Preserve existing content
+    - Add new version section with date
+    - Map requirements to appropriate categories
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 95-Uncategorized
+  created_at: 2025-12-02T06:10:08.633649817Z
+  modified_at: 2025-12-02T06:10:08.633649817Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 5cd0934b-a782-40f3-bd96-0a26403db404
+    created_at: 2025-12-02T06:10:08.633692028Z
+- id: e1b1b9f8-fb2c-4e60-88ad-86aa0aea484b
+  spec_id: FR-0180
+  prefix_override: FR
+  title: Pre-release validation checks
+  description: |-
+    The skill shall perform validation checks before executing a release.
+
+    ## Checks
+    1. **Git status**: No uncommitted changes
+    2. **Branch**: On main/master branch (configurable)
+    3. **Tests**: All tests passing (optional, can be skipped)
+    4. **Build**: Project builds successfully (optional)
+    5. **Requirements**: No blocking issues or incomplete dependencies
+
+    ## Validation Output
+    - Clear pass/fail status for each check
+    - Warnings for non-critical issues
+    - Option to proceed with warnings
+    - Block on critical failures
+
+    ## Acceptance Criteria
+    - Check git working directory status
+    - Verify current branch
+    - Run test suite (with option to skip)
+    - Report clear pass/fail for each check
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-12-02T06:10:18.775681757Z
+  modified_at: 2025-12-02T06:10:18.775681757Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 5cd0934b-a782-40f3-bd96-0a26403db404
+    created_at: 2025-12-02T06:10:18.775717141Z
+- id: 52117ba4-1436-44fa-b5eb-38bacee83963
+  spec_id: FR-0175
+  title: Email support
+  description: |-
+    Email support
+
+    ability to email a requirement or a notification to a user
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-12-02T06:10:36.692817661Z
+  created_by: Joe Mooney
+  modified_at: 2025-12-02T06:10:36.692817661Z
+  req_type: Functional
+  dependencies: []
+  tags: []
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
   spec_id: $USER-001
@@ -7503,8 +7749,8 @@ id_config:
     prefix: SPIKE
     description: Research or investigation task to reduce uncertainty or explore technical approaches
 features: []
-next_feature_number: 90
-next_spec_number: 175
+next_feature_number: 96
+next_spec_number: 181
 prefix_counters: {}
 relationship_definitions:
 - name: parent
@@ -7740,6 +7986,143 @@ type_definitions:
   built_in: true
   color: '#6b7280'
   stateless: true
+- name: Bug
+  display_name: Bug
+  description: Bug reports and defects
+  prefix: BUG
+  statuses:
+  - New
+  - Confirmed
+  - In Progress
+  - Fixed
+  - Verified
+  - Closed
+  - Won't Fix
+  custom_fields:
+  - name: severity
+    label: Severity
+    field_type: select
+    required: false
+    options:
+    - Critical
+    - Major
+    - Minor
+    - Trivial
+    description: Severity of the bug
+    order: 1
+  - name: steps_to_reproduce
+    label: Steps to Reproduce
+    field_type: text
+    required: false
+    description: Steps to reproduce the bug
+    order: 2
+  - name: expected_behavior
+    label: Expected Behavior
+    field_type: text
+    required: false
+    description: What should happen
+    order: 3
+  - name: actual_behavior
+    label: Actual Behavior
+    field_type: text
+    required: false
+    description: What actually happens
+    order: 4
+  built_in: true
+  color: '#dc2626'
+  stateless: false
+- name: Epic
+  display_name: Epic
+  description: Large feature or initiative spanning multiple stories
+  prefix: EPIC
+  statuses:
+  - Draft
+  - Ready
+  - In Progress
+  - Done
+  custom_fields:
+  - name: business_value
+    label: Business Value
+    field_type: text
+    required: false
+    description: Business value or benefit of this epic
+    order: 1
+  - name: target_release
+    label: Target Release
+    field_type: text
+    required: false
+    description: Target release or milestone
+    order: 2
+  - name: story_points
+    label: Story Points
+    field_type: number
+    required: false
+    description: Estimated story points
+    order: 3
+  built_in: true
+  color: '#7c3aed'
+  stateless: false
+- name: Task
+  display_name: Task
+  description: Implementation task or work item
+  prefix: TASK
+  statuses:
+  - To Do
+  - In Progress
+  - In Review
+  - Done
+  custom_fields:
+  - name: estimate_hours
+    label: Estimate (hours)
+    field_type: number
+    required: false
+    description: Estimated hours to complete
+    order: 1
+  - name: assignee
+    label: Assignee
+    field_type: user
+    required: false
+    description: Person assigned to this task
+    order: 2
+  built_in: true
+  color: '#0891b2'
+  stateless: false
+- name: Spike
+  display_name: Spike
+  description: Research or investigation task with time-boxed exploration
+  prefix: SPIKE
+  statuses:
+  - Planned
+  - In Progress
+  - Completed
+  custom_fields:
+  - name: research_question
+    label: Research Question
+    field_type: text
+    required: true
+    description: The question or problem to investigate
+    order: 1
+  - name: time_box
+    label: Time Box
+    field_type: text
+    required: false
+    description: Time allocated for investigation (e.g., '2 days')
+    order: 2
+  - name: findings
+    label: Findings
+    field_type: textarea
+    required: false
+    description: Results and conclusions from the investigation
+    order: 3
+  - name: recommendation
+    label: Recommendation
+    field_type: text
+    required: false
+    description: Recommended next steps based on findings
+    order: 4
+  built_in: true
+  color: '#ca8a04'
+  stateless: false
 allowed_prefixes:
 - ADDREQ
 - AI

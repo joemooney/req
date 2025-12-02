@@ -149,6 +149,21 @@ Implement requirements with traceability:
 - Update requirements during implementation
 - Add inline traceability comments to code
 
+### /aida-capture
+Session-end review for capturing missed requirements:
+- Scan conversation for implemented features/fixes
+- Check against requirements database
+- Present summary of missing/outdated/captured items
+- Add or update requirements as needed
+
+### /aida-release
+Release management with requirements integration:
+- Version bumping (major/minor/patch)
+- Release notes from completed requirements
+- CHANGELOG.md maintenance (Keep a Changelog format)
+- Git tagging with release summary
+- Pre-release validation checks
+
 ## Code Traceability
 
 When implementing requirements, add inline trace comments:
