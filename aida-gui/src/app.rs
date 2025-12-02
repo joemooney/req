@@ -14999,33 +14999,38 @@ fn main() {
                         ui.selectable_value(&mut self.form_type, RequirementType::Story, "Story");
                         ui.selectable_value(&mut self.form_type, RequirementType::Task, "Task");
                         ui.selectable_value(&mut self.form_type, RequirementType::Spike, "Spike");
+                        ui.separator();
+                        ui.selectable_value(&mut self.form_type, RequirementType::Folder, "📁 Folder");
                     });
                 ui.end_row();
 
-                // Status dropdown
-                ui.label("Status:");
-                let statuses = self.store.get_statuses_for_type(&self.form_type);
-                egui::ComboBox::new("form_status_combo_vert", "")
-                    .selected_text(&self.form_status_string)
-                    .show_ui(ui, |ui| {
-                        for status in &statuses {
-                            if ui.selectable_label(self.form_status_string == *status, status).clicked() {
-                                self.form_status_string = status.clone();
+                // Status and Priority only for stateful types
+                if !self.store.is_type_stateless(&self.form_type) {
+                    // Status dropdown
+                    ui.label("Status:");
+                    let statuses = self.store.get_statuses_for_type(&self.form_type);
+                    egui::ComboBox::new("form_status_combo_vert", "")
+                        .selected_text(&self.form_status_string)
+                        .show_ui(ui, |ui| {
+                            for status in &statuses {
+                                if ui.selectable_label(self.form_status_string == *status, status).clicked() {
+                                    self.form_status_string = status.clone();
+                                }
                             }
-                        }
-                    });
-                ui.end_row();
+                        });
+                    ui.end_row();
 
-                // Priority dropdown
-                ui.label("Priority:");
-                egui::ComboBox::new("form_priority_combo_vert", "")
-                    .selected_text(format!("{:?}", self.form_priority))
-                    .show_ui(ui, |ui| {
-                        ui.selectable_value(&mut self.form_priority, RequirementPriority::High, "High");
-                        ui.selectable_value(&mut self.form_priority, RequirementPriority::Medium, "Medium");
-                        ui.selectable_value(&mut self.form_priority, RequirementPriority::Low, "Low");
-                    });
-                ui.end_row();
+                    // Priority dropdown
+                    ui.label("Priority:");
+                    egui::ComboBox::new("form_priority_combo_vert", "")
+                        .selected_text(format!("{:?}", self.form_priority))
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(&mut self.form_priority, RequirementPriority::High, "High");
+                            ui.selectable_value(&mut self.form_priority, RequirementPriority::Medium, "Medium");
+                            ui.selectable_value(&mut self.form_priority, RequirementPriority::Low, "Low");
+                        });
+                    ui.end_row();
+                }
 
                 // Feature
                 ui.label("Feature:");
