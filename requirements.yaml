@@ -4568,14 +4568,14 @@ requirements:
 - id: bae7da90-3781-4a92-927f-69e31a008422
   spec_id: FR-0106
   title: Add - select parent heuristically
-  description: "When you click '+ Add' heuristic: create a new requirement and the parent should be the parent of the currently selected requirement (i.e. a sibling), unless the selected requirement has children, in which case make it a child, or if the selected requirement has no children and has no parent then make it a root (no parent) requirement. \n\nUpdate the default key bindings such that Ctrl+n is new sibling requirement. Ctrl+Shift+N is a new child requirement,"
+  description: "When you click '+ Add' heuristic: create a new requirement and the parent should be the parent of the currently selected requirement (i.e. a sibling), unless the selected requirement has children, in which case make it a child, or if the selected requirement has no children and has no parent then make it a root (no parent) requirement. \n\nUpdate the default key bindings such that Ctrl+n is new sibling requirement. Ctrl+Shift+N is a new child requirement,\n\nIn the reqlist 'n' to add a new sibling requirement; 'N' to add a new child requriement"
   status: Approved
   priority: Medium
   owner: ''
   feature: 48-Uncategorized
   created_at: 2025-11-29T19:34:27.501813315Z
   created_by: Unknown User
-  modified_at: 2025-11-30T02:33:22.610336211Z
+  modified_at: 2025-12-02T03:34:27.605246586Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -4613,6 +4613,13 @@ requirements:
     - field_name: description
       old_value: When you click '+ Add' the parent should be the parent of the currently selected requirement, unless the selected requirement has children, in which case make it a child or if the selected requirement has no children and has no parent then make it a root (no parent) requirement.
       new_value: "When you click '+ Add' heuristic: create a new requirement and the parent should be the parent of the currently selected requirement (i.e. a sibling), unless the selected requirement has children, in which case make it a child, or if the selected requirement has no children and has no parent then make it a root (no parent) requirement. \n\nUpdate the default key bindings such that Ctrl+n is new sibling requirement. Ctrl+Shift+N is a new child requirement,"
+  - id: bf203eab-ab05-40c0-a925-4cc808d9f3cd
+    author: Unknown User
+    timestamp: 2025-12-02T03:34:27.605240962Z
+    changes:
+    - field_name: description
+      old_value: "When you click '+ Add' heuristic: create a new requirement and the parent should be the parent of the currently selected requirement (i.e. a sibling), unless the selected requirement has children, in which case make it a child, or if the selected requirement has no children and has no parent then make it a root (no parent) requirement. \n\nUpdate the default key bindings such that Ctrl+n is new sibling requirement. Ctrl+Shift+N is a new child requirement,"
+      new_value: "When you click '+ Add' heuristic: create a new requirement and the parent should be the parent of the currently selected requirement (i.e. a sibling), unless the selected requirement has children, in which case make it a child, or if the selected requirement has no children and has no parent then make it a root (no parent) requirement. \n\nUpdate the default key bindings such that Ctrl+n is new sibling requirement. Ctrl+Shift+N is a new child requirement,\n\nIn the reqlist 'n' to add a new sibling requirement; 'N' to add a new child requriement"
 - id: 32de4384-bede-49a0-8aad-0fd0c78d4e54
   spec_id: FR-0107
   title: Actions should include assigning owner
@@ -7096,6 +7103,44 @@ requirements:
   req_type: Functional
   dependencies: []
   tags: []
+- id: 394d69b4-8503-4247-b329-4ce6f6a92a83
+  spec_id: FR-0159
+  title: Skills related requirements
+  description: Skills related requirements
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-12-02T03:31:15.832402271Z
+  created_by: Unknown User
+  modified_at: 2025-12-02T03:31:15.832402271Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 9e9ea9a2-0734-44b8-b911-f76f5aabc4ac
+    created_at: 2025-12-02T03:31:15.832430936Z
+    created_by: Unknown User
+- id: 0a1ab189-cf84-41d9-a3d0-3e91a671b75a
+  spec_id: FR-0160
+  title: 'Add requirement, focus cursor in Description '
+  description: 'Add requirement, focus cursor in Description '
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-12-02T03:32:09.873396891Z
+  created_by: Unknown User
+  modified_at: 2025-12-02T03:32:09.873396891Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: 394d69b4-8503-4247-b329-4ce6f6a92a83
+    created_at: 2025-12-02T03:32:09.873437636Z
+    created_by: Unknown User
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
   spec_id: $USER-001

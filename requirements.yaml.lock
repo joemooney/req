@@ -1,9 +1,0 @@
-sessions:
-  2346748-adb7f34d-4587-4b4b-9f52-b2bddc40bf49:
-    session_id: 2346748-adb7f34d-4587-4b4b-9f52-b2bddc40bf49
-    user_name: Unknown User
-    hostname: imac
-    pid: 2346748
-    started_at: 2025-12-02T03:19:34.159258790Z
-    last_heartbeat: 2025-12-02T03:31:00.020927557Z
-    editing_requirement: null

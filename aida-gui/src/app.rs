@@ -943,6 +943,8 @@ pub enum KeyAction {
     ZoomReset,
     CycleTheme,
     NewRequirement,
+    NewSiblingRequirement,
+    NewChildRequirement,
 }
 
 impl KeyAction {
@@ -957,7 +959,9 @@ impl KeyAction {
             KeyAction::ZoomOut => "Zoom Out",
             KeyAction::ZoomReset => "Reset Zoom",
             KeyAction::CycleTheme => "Cycle Theme",
-            KeyAction::NewRequirement => "New Requirement",
+            KeyAction::NewRequirement => "New Requirement (Smart)",
+            KeyAction::NewSiblingRequirement => "New Sibling Requirement",
+            KeyAction::NewChildRequirement => "New Child Requirement",
         }
     }
 
@@ -974,6 +978,8 @@ impl KeyAction {
             KeyAction::ZoomReset => KeyContext::Global,
             KeyAction::CycleTheme => KeyContext::Global,
             KeyAction::NewRequirement => KeyContext::Global,
+            KeyAction::NewSiblingRequirement => KeyContext::RequirementsList,
+            KeyAction::NewChildRequirement => KeyContext::RequirementsList,
         }
     }
 
@@ -989,6 +995,8 @@ impl KeyAction {
             KeyAction::ZoomReset,
             KeyAction::CycleTheme,
             KeyAction::NewRequirement,
+            KeyAction::NewSiblingRequirement,
+            KeyAction::NewChildRequirement,
         ]
     }
 }
@@ -1261,9 +1269,21 @@ impl Default for KeyBindings {
             KeyAction::CycleTheme,
             KeyBinding::new(egui::Key::T, KeyAction::CycleTheme.default_context()).with_ctrl(),
         );
+        // Ctrl+N for smart new requirement (uses heuristic for parent selection)
         bindings.insert(
             KeyAction::NewRequirement,
             KeyBinding::new(egui::Key::N, KeyAction::NewRequirement.default_context()).with_ctrl(),
+        );
+        // 'n' in reqlist for new sibling requirement
+        bindings.insert(
+            KeyAction::NewSiblingRequirement,
+            KeyBinding::new(egui::Key::N, KeyAction::NewSiblingRequirement.default_context()),
+        );
+        // 'N' (Shift+N) in reqlist for new child requirement
+        bindings.insert(
+            KeyAction::NewChildRequirement,
+            KeyBinding::new(egui::Key::N, KeyAction::NewChildRequirement.default_context())
+                .with_shift(),
         );
         Self { bindings }
     }
@@ -3376,7 +3396,91 @@ impl RequirementsApp {
         self.user_settings.theme = next_theme;
     }
 
+    /// Determine parent for new requirement using smart heuristic:
+    /// - If selected has children: new req becomes child of selected (parent = selected)
+    /// - If selected has no children but has parent: new req becomes sibling (parent = selected's parent)
+    /// - If selected has no children and no parent: new req is root (no parent)
+    fn determine_smart_parent(&self) -> Option<Uuid> {
+        let selected_req = self
+            .selected_idx
+            .and_then(|idx| self.store.requirements.get(idx))?;
+
+        // Check if selected requirement has children
+        let has_children = self
+            .store
+            .requirements
+            .iter()
+            .any(|r| {
+                r.relationships.iter().any(|rel| {
+                    rel.rel_type == RelationshipType::Parent && rel.target_id == selected_req.id
+                })
+            });
+
+        if has_children {
+            // Selected has children: new req becomes child of selected
+            Some(selected_req.id)
+        } else {
+            // Selected has no children: check if it has a parent
+            let parent_rel = selected_req
+                .relationships
+                .iter()
+                .find(|r| r.rel_type == RelationshipType::Parent);
+
+            if let Some(rel) = parent_rel {
+                // Selected has a parent: new req becomes sibling (same parent)
+                Some(rel.target_id)
+            } else {
+                // Selected has no parent: new req is root
+                None
+            }
+        }
+    }
+
+    /// Get parent for new sibling requirement (same parent as selected, or None for root)
+    fn get_sibling_parent(&self) -> Option<Uuid> {
+        self.selected_idx
+            .and_then(|idx| self.store.requirements.get(idx))
+            .and_then(|req| {
+                req.relationships
+                    .iter()
+                    .find(|r| r.rel_type == RelationshipType::Parent)
+                    .map(|r| r.target_id)
+            })
+    }
+
+    /// Get parent for new child requirement (selected requirement becomes parent)
+    fn get_child_parent(&self) -> Option<Uuid> {
+        self.selected_idx
+            .and_then(|idx| self.store.requirements.get(idx))
+            .map(|req| req.id)
+    }
+
     fn clear_form(&mut self) {
+        self.clear_form_base();
+
+        // Use smart heuristic for parent selection
+        self.form_parent_id = self.determine_smart_parent();
+
+        // Store original values for change detection
+        self.store_original_form_values();
+    }
+
+    /// Clear form with explicit parent for sibling creation
+    fn clear_form_for_sibling(&mut self) {
+        self.clear_form_base();
+        self.form_parent_id = self.get_sibling_parent();
+        self.store_original_form_values();
+    }
+
+    /// Clear form with explicit parent for child creation
+    fn clear_form_for_child(&mut self) {
+        self.clear_form_base();
+        self.form_parent_id = self.get_child_parent();
+        self.store_original_form_values();
+    }
+
+    /// Base form clearing without parent logic
+    fn clear_form_base(&mut self) {
         self.form_title.clear();
         self.form_description.clear();
         self.form_status = RequirementStatus::Draft;
@@ -3389,18 +3493,8 @@ impl RequirementsApp {
         self.form_tags.clear();
         self.form_prefix.clear();
         self.show_description_preview = false;
-        // Reset auto-sync state for Add mode (enabled by default for new requirements)
         self.form_title_auto_synced = true;
         self.form_last_description.clear();
-
-        // If a requirement is selected, pre-populate parent relationship
-        self.form_parent_id = self
-            .selected_idx
-            .and_then(|idx| self.store.requirements.get(idx))
-            .map(|req| req.id);
-
-        // Store original values for change detection
-        self.store_original_form_values();
     }
 
     fn load_form_from_requirement(&mut self, idx: usize) {
@@ -16422,14 +16516,36 @@ impl eframe::App for RequirementsApp {
         }
 
         // Check for new requirement keybinding (Ctrl+N, global context)
+        // Uses smart heuristic for parent selection
         if self.user_settings.keybindings.is_pressed(
             KeyAction::NewRequirement,
             ctx,
             self.current_key_context,
         ) && !self.show_settings_dialog
         {
-            // Switch to Add view with no parent (creates orphan requirement)
-            self.form_parent_id = None;
+            self.clear_form(); // Uses smart heuristic for parent
+            self.pending_view_change = Some(View::Add);
+        }
+
+        // Check for new sibling requirement keybinding ('n' in reqlist)
+        if self.user_settings.keybindings.is_pressed(
+            KeyAction::NewSiblingRequirement,
+            ctx,
+            self.current_key_context,
+        ) && !self.show_settings_dialog
+        {
+            self.clear_form_for_sibling();
+            self.pending_view_change = Some(View::Add);
+        }
+
+        // Check for new child requirement keybinding ('N'/Shift+N in reqlist)
+        if self.user_settings.keybindings.is_pressed(
+            KeyAction::NewChildRequirement,
+            ctx,
+            self.current_key_context,
+        ) && !self.show_settings_dialog
+        {
+            self.clear_form_for_child();
             self.pending_view_change = Some(View::Add);
         }
 
