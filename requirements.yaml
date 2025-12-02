@@ -7706,6 +7706,23 @@ requirements:
   - rel_type: Parent
     target_id: 5cd0934b-a782-40f3-bd96-0a26403db404
     created_at: 2025-12-02T06:14:57.664513908Z
+- id: 2b3f5ebb-821c-4858-95ec-210c366e851d
+  spec_id: FR-0182
+  title: help hotkey '?' in reqlist
+  description: |-
+    help hotkey '?' in reqlist
+
+    This will show list of hotkeys and keyboard bindings available
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-12-02T06:15:44.786101039Z
+  created_by: Joe Mooney
+  modified_at: 2025-12-02T06:15:44.786101039Z
+  req_type: Functional
+  dependencies: []
+  tags: []
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
   spec_id: $USER-001
