@@ -7276,7 +7276,7 @@ requirements:
   status: Completed
   priority: High
   owner: ''
-  feature: Core
+  feature: 85-Core
   created_at: 2025-12-02T04:38:29.129973252Z
   modified_at: 2025-12-02T04:38:29.129973252Z
   req_type: Functional
@@ -7336,8 +7336,105 @@ id_config:
   - name: Implementation Task
     prefix: IMPL
     description: Implementation tasks and design records linked to requirements
+    statuses:
+    - todo
+    - in_progress
+    - completed
+    - blocked
+    priorities:
+    - low
+    - medium
+    - high
+    custom_fields:
+    - name: implementation_summary
+      label: Implementation Summary
+      field_type: textarea
+      required: false
+      description: Detailed summary of what was implemented, decisions made
+      order: 1
+    - name: files_changed
+      label: Files Changed
+      field_type: textarea
+      required: false
+      description: List of files created or modified
+      order: 2
+    - name: session_date
+      label: Session Date
+      field_type: date
+      required: false
+      description: Date of implementation session
+      order: 3
+  - name: Epic
+    prefix: EPIC
+    description: Large feature or initiative spanning multiple user stories or sprints
+    statuses:
+    - draft
+    - ready
+    - in_progress
+    - done
+    - cancelled
+    priorities:
+    - low
+    - medium
+    - high
+    - critical
+    custom_fields:
+    - name: business_value
+      label: Business Value
+      field_type: textarea
+      required: false
+      description: Description of the business value this epic delivers
+      order: 1
+    - name: target_release
+      label: Target Release
+      field_type: text
+      required: false
+      description: Target release or milestone
+      order: 2
+    - name: story_points
+      label: Story Points
+      field_type: number
+      required: false
+      description: Estimated total story points
+      order: 3
+  - name: Spike
+    prefix: SPIKE
+    description: Research or investigation task to reduce uncertainty or explore technical approaches
+    statuses:
+    - todo
+    - in_progress
+    - completed
+    priorities:
+    - low
+    - medium
+    - high
+    custom_fields:
+    - name: research_question
+      label: Research Question
+      field_type: textarea
+      required: false
+      description: The question or uncertainty this spike aims to answer
+      order: 1
+    - name: findings
+      label: Findings
+      field_type: textarea
+      required: false
+      description: Summary of research findings and conclusions
+      order: 2
+    - name: recommendation
+      label: Recommendation
+      field_type: textarea
+      required: false
+      description: Recommended approach based on findings
+      order: 3
+    - name: time_box
+      label: Time Box
+      field_type: text
+      required: false
+      description: Maximum time allocated for this spike (e.g., "2 days")
+      order: 4
 features: []
-next_feature_number: 85
+next_feature_number: 86
 next_spec_number: 171
 prefix_counters: {}
 relationship_definitions:
