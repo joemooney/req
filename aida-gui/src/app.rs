@@ -4805,7 +4805,7 @@ impl RequirementsApp {
                         "📝 Types",
                     );
                     ui.selectable_value(&mut self.settings_tab, SettingsTab::Users, "👥 Users");
-                    ui.selectable_value(&mut self.settings_tab, SettingsTab::AiPrompts, "🤖 AI");
+                    ui.selectable_value(&mut self.settings_tab, SettingsTab::AiPrompts, "✦ AI");
                     ui.selectable_value(&mut self.settings_tab, SettingsTab::Database, "🗄 Db");
                 });
 
