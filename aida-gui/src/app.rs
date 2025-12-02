@@ -1347,6 +1347,7 @@ impl Default for StatusIconConfig {
         icons.insert("closed".to_string(), "☒".to_string());
         icons.insert("backlog".to_string(), "☐".to_string());
         icons.insert("open".to_string(), "○".to_string());
+        icons.insert("ai".to_string(), "✦".to_string());
         Self {
             icons,
             default_icon: "? ".to_string(),
