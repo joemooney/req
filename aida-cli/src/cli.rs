@@ -393,6 +393,10 @@ pub enum Command {
         #[clap(long)]
         prefix: Option<String>,
 
+        /// Parent requirement ID (UUID or SPEC-ID) to link as child
+        #[clap(long)]
+        parent: Option<String>,
+
         /// Use interactive mode (prompts)
         #[clap(long)]
         interactive: bool,

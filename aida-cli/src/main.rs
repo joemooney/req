@@ -36,6 +36,7 @@ fn main() -> Result<()> {
             feature,
             tags,
             prefix,
+            parent,
             interactive,
         } => {
             // Default to interactive mode if no specific arguments are provided
@@ -48,7 +49,8 @@ fn main() -> Result<()> {
                     && owner.is_none()
                     && feature.is_none()
                     && tags.is_none()
-                    && prefix.is_none());
+                    && prefix.is_none()
+                    && parent.is_none());
 
             if should_be_interactive {
                 add_requirement_interactive(&storage)?;
@@ -64,6 +66,7 @@ fn main() -> Result<()> {
                     feature,
                     tags,
                     prefix,
+                    parent,
                 )?;
             }
         }
@@ -164,6 +167,7 @@ fn add_requirement_cli(
     feature: &Option<String>,
     tags_str: &Option<String>,
     prefix: &Option<String>,
+    parent: &Option<String>,
 ) -> Result<()> {
     // Load existing requirements
     let mut store = storage.load()?;
@@ -177,6 +181,13 @@ fn add_requirement_cli(
     let description = match description {
         Some(d) => d.clone(),
         None => String::new(),
+    };
+
+    // Validate parent exists if specified
+    let parent_uuid = if let Some(parent_id) = parent {
+        Some(parse_requirement_id(parent_id, &store)?)
+    } else {
+        None
     };
 
     // Create a requirement with basic data
@@ -233,6 +244,14 @@ fn add_requirement_cli(
         feature_prefix.as_deref(),
         type_prefix.as_deref(),
     );
+
+    // Add parent relationship if specified
+    if let Some(parent_id) = parent_uuid {
+        store
+            .add_relationship(&id, RelationshipType::Parent, &parent_id, false)
+            .map_err(|e| anyhow::anyhow!("Failed to add parent relationship: {}", e))?;
+    }
+
     storage.save(&store)?;
 
     // Get the added requirement to show its ID
@@ -244,6 +263,11 @@ fn add_requirement_cli(
     println!("UUID: {}", id);
     if let Some(spec_id) = &added_req.spec_id {
         println!("ID: {}", spec_id.green());
+    }
+
+    // Show parent relationship if created
+    if let Some(parent_id_str) = parent {
+        println!("Parent: {}", parent_id_str.cyan());
     }
 
     Ok(())
