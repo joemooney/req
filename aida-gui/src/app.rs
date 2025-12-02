@@ -6675,6 +6675,10 @@ impl RequirementsApp {
             // Clone type definitions to avoid borrow issues
             let type_defs = self.store.type_definitions.clone();
 
+            // Separate stateful and stateless types
+            let stateful_types: Vec<_> = type_defs.iter().filter(|t| !t.stateless).collect();
+            let stateless_types: Vec<_> = type_defs.iter().filter(|t| t.stateless).collect();
+
             if type_defs.is_empty() {
                 ui.label("No type definitions configured.");
             } else {
@@ -6682,118 +6686,24 @@ impl RequirementsApp {
                 let mut type_to_edit: Option<String> = None;
                 let mut type_to_reset: Option<String> = None;
 
-                for type_def in &type_defs {
-                    let header = egui::collapsing_header::CollapsingState::load_with_default_open(
-                        ui.ctx(),
-                        egui::Id::new(format!("type_def_{}", type_def.name)),
-                        false,
-                    );
+                // Show stateful types
+                for type_def in &stateful_types {
+                    self.show_type_def_entry(ui, type_def, &mut type_to_edit, &mut type_to_reset, &mut type_to_delete);
+                }
 
-                    header
-                        .show_header(ui, |ui| {
-                            ui.horizontal(|ui| {
-                                ui.label(format!(
-                                    "{} {}",
-                                    if type_def.built_in { "📦" } else { "📝" },
-                                    &type_def.display_name
-                                ));
-
-                                // Edit button
-                                if ui.small_button("✏").on_hover_text("Edit type").clicked() {
-                                    type_to_edit = Some(type_def.name.clone());
-                                }
-
-                                // Reset to default button (only for built-in types)
-                                if type_def.built_in {
-                                    if ui
-                                        .small_button("↺")
-                                        .on_hover_text("Reset to default")
-                                        .clicked()
-                                    {
-                                        type_to_reset = Some(type_def.name.clone());
-                                    }
-                                } else {
-                                    // Delete button (only for custom types)
-                                    if ui.small_button("🗑").on_hover_text("Delete type").clicked()
-                                    {
-                                        type_to_delete = Some(type_def.name.clone());
-                                    }
-                                }
-                            });
-                        })
-                        .body(|ui| {
-                            egui::Grid::new(format!("type_def_grid_{}", type_def.name))
-                                .num_columns(2)
-                                .spacing([10.0, 5.0])
-                                .show(ui, |ui| {
-                                    ui.label("Internal Name:");
-                                    ui.label(&type_def.name);
-                                    ui.end_row();
-
-                                    if let Some(ref prefix) = type_def.prefix {
-                                        ui.label("ID Prefix:");
-                                        ui.label(prefix);
-                                        ui.end_row();
-                                    }
-
-                                    if let Some(ref desc) = type_def.description {
-                                        ui.label("Description:");
-                                        ui.label(desc);
-                                        ui.end_row();
-                                    }
-
-                                    if type_def.built_in {
-                                        ui.label("");
-                                        ui.small("[Built-in type]");
-                                        ui.end_row();
-                                    }
-                                });
-
-                            // Statuses section
-                            if !type_def.statuses.is_empty() {
-                                ui.add_space(5.0);
-                                ui.label("Available Statuses:");
-                                ui.horizontal_wrapped(|ui| {
-                                    for status in &type_def.statuses {
-                                        ui.label(format!("• {}", status));
-                                    }
-                                });
-                            }
-
-                            // Custom fields section
-                            if !type_def.custom_fields.is_empty() {
-                                ui.add_space(5.0);
-                                ui.label("Custom Fields:");
-                                egui::Grid::new(format!("custom_fields_grid_{}", type_def.name))
-                                    .num_columns(4)
-                                    .striped(true)
-                                    .spacing([10.0, 3.0])
-                                    .show(ui, |ui| {
-                                        ui.strong("Field");
-                                        ui.strong("Type");
-                                        ui.strong("Required");
-                                        ui.strong("Options/Default");
-                                        ui.end_row();
-
-                                        for field in &type_def.custom_fields {
-                                            ui.label(&field.label);
-                                            ui.label(Self::field_type_display(&field.field_type));
-                                            ui.label(if field.required { "Yes" } else { "No" });
-                                            // Show options or default
-                                            let extra_info = if !field.options.is_empty() {
-                                                field.options.join(", ")
-                                            } else if let Some(ref def) = field.default_value {
-                                                format!("Default: {}", def)
-                                            } else {
-                                                "-".to_string()
-                                            };
-                                            ui.label(extra_info);
-                                            ui.end_row();
-                                        }
-                                    });
-                            }
-                        });
+                // Show stateless types section if any exist
+                if !stateless_types.is_empty() {
+                    ui.add_space(15.0);
+                    ui.separator();
+                    ui.add_space(10.0);
+                    ui.heading("📁 Organizational Types (Stateless)");
                     ui.add_space(5.0);
+                    ui.label("Types without status/priority tracking, used for organizing requirements.");
+                    ui.add_space(10.0);
+
+                    for type_def in &stateless_types {
+                        self.show_type_def_entry(ui, type_def, &mut type_to_edit, &mut type_to_reset, &mut type_to_delete);
+                    }
                 }
 
                 // Handle edit action
@@ -6865,6 +6775,134 @@ impl RequirementsApp {
                 self.save();
             }
         });
+    }
+
+    fn show_type_def_entry(
+        &self,
+        ui: &mut egui::Ui,
+        type_def: &aida_core::CustomTypeDefinition,
+        type_to_edit: &mut Option<String>,
+        type_to_reset: &mut Option<String>,
+        type_to_delete: &mut Option<String>,
+    ) {
+        let header = egui::collapsing_header::CollapsingState::load_with_default_open(
+            ui.ctx(),
+            egui::Id::new(format!("type_def_{}", type_def.name)),
+            false,
+        );
+
+        header
+            .show_header(ui, |ui| {
+                ui.horizontal(|ui| {
+                    // Icon: folder for stateless, package for built-in, pencil for custom
+                    let icon = if type_def.stateless {
+                        "📁"
+                    } else if type_def.built_in {
+                        "📦"
+                    } else {
+                        "📝"
+                    };
+                    ui.label(format!("{} {}", icon, &type_def.display_name));
+
+                    // Edit button
+                    if ui.small_button("✏").on_hover_text("Edit type").clicked() {
+                        *type_to_edit = Some(type_def.name.clone());
+                    }
+
+                    // Reset to default button (only for built-in types)
+                    if type_def.built_in {
+                        if ui
+                            .small_button("↺")
+                            .on_hover_text("Reset to default")
+                            .clicked()
+                        {
+                            *type_to_reset = Some(type_def.name.clone());
+                        }
+                    } else {
+                        // Delete button (only for custom types)
+                        if ui.small_button("🗑").on_hover_text("Delete type").clicked() {
+                            *type_to_delete = Some(type_def.name.clone());
+                        }
+                    }
+                });
+            })
+            .body(|ui| {
+                egui::Grid::new(format!("type_def_grid_{}", type_def.name))
+                    .num_columns(2)
+                    .spacing([10.0, 5.0])
+                    .show(ui, |ui| {
+                        ui.label("Internal Name:");
+                        ui.label(&type_def.name);
+                        ui.end_row();
+
+                        if let Some(ref prefix) = type_def.prefix {
+                            ui.label("ID Prefix:");
+                            ui.label(prefix);
+                            ui.end_row();
+                        }
+
+                        if let Some(ref desc) = type_def.description {
+                            ui.label("Description:");
+                            ui.label(desc);
+                            ui.end_row();
+                        }
+
+                        if type_def.stateless {
+                            ui.label("");
+                            ui.small("[Stateless - no status/priority]");
+                            ui.end_row();
+                        } else if type_def.built_in {
+                            ui.label("");
+                            ui.small("[Built-in type]");
+                            ui.end_row();
+                        }
+                    });
+
+                // Statuses section (only for stateful types)
+                if !type_def.stateless && !type_def.statuses.is_empty() {
+                    ui.add_space(5.0);
+                    ui.label("Available Statuses:");
+                    ui.horizontal_wrapped(|ui| {
+                        for status in &type_def.statuses {
+                            ui.label(format!("• {}", status));
+                        }
+                    });
+                }
+
+                // Custom fields section
+                if !type_def.custom_fields.is_empty() {
+                    ui.add_space(5.0);
+                    ui.label("Custom Fields:");
+                    egui::Grid::new(format!("custom_fields_grid_{}", type_def.name))
+                        .num_columns(4)
+                        .striped(true)
+                        .spacing([10.0, 3.0])
+                        .show(ui, |ui| {
+                            ui.strong("Field");
+                            ui.strong("Type");
+                            ui.strong("Required");
+                            ui.strong("Options/Default");
+                            ui.end_row();
+
+                            for field in &type_def.custom_fields {
+                                ui.label(&field.label);
+                                ui.label(Self::field_type_display(&field.field_type));
+                                ui.label(if field.required { "Yes" } else { "No" });
+                                // Show options or default
+                                let extra_info = if !field.options.is_empty() {
+                                    field.options.join(", ")
+                                } else if let Some(ref def) = field.default_value {
+                                    format!("Default: {}", def)
+                                } else {
+                                    "-".to_string()
+                                };
+                                ui.label(extra_info);
+                                ui.end_row();
+                            }
+                        });
+                }
+            });
+        ui.add_space(5.0);
     }
 
     fn field_type_display(field_type: &CustomFieldType) -> &'static str {

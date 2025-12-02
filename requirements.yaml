@@ -4486,6 +4486,10 @@ requirements:
     target_id: 652d7124-8cf8-422b-875c-0f9784eeb3df
     created_at: 2025-11-30T19:21:48.409827457Z
     created_by: Unknown User
+  - rel_type: Child
+    target_id: 0a1ab189-cf84-41d9-a3d0-3e91a671b75a
+    created_at: 2025-12-02T05:49:33.252795445Z
+    created_by: Joe Mooney
 - id: 3ef749b7-b220-41f8-9a1d-1545d0c43a7f
   spec_id: FR-0103
   title: Dynamically update ID preview when Type changes in Edit form
@@ -7152,9 +7156,9 @@ requirements:
   tags: []
   relationships:
   - rel_type: Parent
-    target_id: 394d69b4-8503-4247-b329-4ce6f6a92a83
-    created_at: 2025-12-02T03:32:09.873437636Z
-    created_by: Unknown User
+    target_id: 7e994d79-6b1a-442d-9f2b-002e738f7cea
+    created_at: 2025-12-02T05:49:33.252795445Z
+    created_by: Joe Mooney
 - id: 452fc8ef-4d73-43af-a759-5435b8ae922c
   spec_id: FR-0165
   title: Smart parent selection for new requirements
@@ -7336,103 +7340,12 @@ id_config:
   - name: Implementation Task
     prefix: IMPL
     description: Implementation tasks and design records linked to requirements
-    statuses:
-    - todo
-    - in_progress
-    - completed
-    - blocked
-    priorities:
-    - low
-    - medium
-    - high
-    custom_fields:
-    - name: implementation_summary
-      label: Implementation Summary
-      field_type: textarea
-      required: false
-      description: Detailed summary of what was implemented, decisions made
-      order: 1
-    - name: files_changed
-      label: Files Changed
-      field_type: textarea
-      required: false
-      description: List of files created or modified
-      order: 2
-    - name: session_date
-      label: Session Date
-      field_type: date
-      required: false
-      description: Date of implementation session
-      order: 3
   - name: Epic
     prefix: EPIC
     description: Large feature or initiative spanning multiple user stories or sprints
-    statuses:
-    - draft
-    - ready
-    - in_progress
-    - done
-    - cancelled
-    priorities:
-    - low
-    - medium
-    - high
-    - critical
-    custom_fields:
-    - name: business_value
-      label: Business Value
-      field_type: textarea
-      required: false
-      description: Description of the business value this epic delivers
-      order: 1
-    - name: target_release
-      label: Target Release
-      field_type: text
-      required: false
-      description: Target release or milestone
-      order: 2
-    - name: story_points
-      label: Story Points
-      field_type: number
-      required: false
-      description: Estimated total story points
-      order: 3
   - name: Spike
     prefix: SPIKE
     description: Research or investigation task to reduce uncertainty or explore technical approaches
-    statuses:
-    - todo
-    - in_progress
-    - completed
-    priorities:
-    - low
-    - medium
-    - high
-    custom_fields:
-    - name: research_question
-      label: Research Question
-      field_type: textarea
-      required: false
-      description: The question or uncertainty this spike aims to answer
-      order: 1
-    - name: findings
-      label: Findings
-      field_type: textarea
-      required: false
-      description: Summary of research findings and conclusions
-      order: 2
-    - name: recommendation
-      label: Recommendation
-      field_type: textarea
-      required: false
-      description: Recommended approach based on findings
-      order: 3
-    - name: time_box
-      label: Time Box
-      field_type: text
-      required: false
-      description: Maximum time allocated for this spike (e.g., "2 days")
-      order: 4
 features: []
 next_feature_number: 86
 next_spec_number: 171
@@ -7598,21 +7511,25 @@ type_definitions:
   description: Functional requirements describing system behavior
   prefix: FR
   built_in: true
+  stateless: false
 - name: NonFunctional
   display_name: Non-Functional
   description: Non-functional requirements (performance, security, etc.)
   prefix: NFR
   built_in: true
+  stateless: false
 - name: System
   display_name: System
   description: System-level requirements
   prefix: SYS
   built_in: true
+  stateless: false
 - name: User
   display_name: User Story
   description: User stories and user requirements
   prefix: US
   built_in: true
+  stateless: false
 - name: ChangeRequest
   display_name: Change Request
   description: Change requests for existing functionality
@@ -7659,6 +7576,7 @@ type_definitions:
     order: 4
   built_in: true
   color: '#9333ea'
+  stateless: false
 allowed_prefixes:
 - ADDREQ
 - AI

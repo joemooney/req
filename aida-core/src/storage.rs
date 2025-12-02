@@ -404,11 +404,14 @@ impl Storage {
         let had_missing_user_spec_ids = store.users.iter().any(|u| u.spec_id.is_none());
         store.migrate_users_to_spec_ids();
 
+        // Add any missing built-in type definitions
+        let had_missing_types = store.migrate_type_definitions();
+
         // Drop read lock before acquiring write lock for migration save
         drop(_lock);
 
-        // Save back if we assigned any SPEC-IDs (migration)
-        if had_missing_spec_ids || had_missing_user_spec_ids {
+        // Save back if we assigned any SPEC-IDs or added missing types (migration)
+        if had_missing_spec_ids || had_missing_user_spec_ids || had_missing_types {
             self.save(&store)?;
         }
 

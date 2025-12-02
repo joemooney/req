@@ -2382,6 +2382,26 @@ impl RequirementsStore {
         self.requirements.push(req);
     }
 
+    /// Migrates type definitions by adding any missing built-in types
+    /// Returns true if any types were added
+    pub fn migrate_type_definitions(&mut self) -> bool {
+        let defaults = default_type_definitions();
+        let mut added = false;
+
+        for default_type in defaults {
+            // Only add built-in types that are missing
+            if default_type.built_in {
+                let exists = self.type_definitions.iter().any(|t| t.name == default_type.name);
+                if !exists {
+                    self.type_definitions.push(default_type);
+                    added = true;
+                }
+            }
+        }
+
+        added
+    }
+
     // ========================================================================
     // New ID System Methods
     // ========================================================================
