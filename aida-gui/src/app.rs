@@ -1943,6 +1943,18 @@ pub(crate) enum Perspective {
     Verification,
     /// Tree view based on References relationships
     References,
+    /// Tree view with Users as roots, owned requirements as children
+    ByOwner,
+}
+
+/// Sub-hierarchy mode for ByOwner perspective
+#[derive(Debug, Default, PartialEq, Clone, Copy, Serialize, Deserialize)]
+pub(crate) enum OwnerViewMode {
+    /// Flat: All owned requirements shown directly under user (2-level)
+    #[default]
+    Flat,
+    /// Nested: Owned requirements preserve their parent/child hierarchy
+    Nested,
 }
 
 impl Perspective {
@@ -1952,6 +1964,7 @@ impl Perspective {
             Perspective::ParentChild => "Parent/Child",
             Perspective::Verification => "Verification",
             Perspective::References => "References",
+            Perspective::ByOwner => "By Owner",
         }
     }
 
@@ -1966,7 +1979,13 @@ impl Perspective {
             Perspective::References => {
                 Some((RelationshipType::References, RelationshipType::References))
             }
+            Perspective::ByOwner => None, // ByOwner uses a different grouping mechanism
         }
+    }
+
+    /// Returns true if this perspective uses users as root nodes
+    fn uses_user_roots(&self) -> bool {
+        matches!(self, Perspective::ByOwner)
     }
 }
 
@@ -2228,6 +2247,7 @@ pub struct RequirementsApp {
     // Perspective and filtering
     perspective: Perspective,
     perspective_direction: PerspectiveDirection,
+    owner_view_mode: OwnerViewMode, // Sub-hierarchy mode for ByOwner perspective
     filter_types: HashSet<RequirementType>, // Root filter: Empty = show all
     filter_features: HashSet<String>,       // Root filter: Empty = show all
     filter_prefixes: HashSet<String>,       // Root filter: Empty = show all
@@ -2705,6 +2725,7 @@ impl RequirementsApp {
             relationship_tree_collapsed: HashMap::new(),
             perspective: initial_perspective,
             perspective_direction: PerspectiveDirection::default(),
+            owner_view_mode: OwnerViewMode::default(),
             filter_types: HashSet::new(),
             filter_features: HashSet::new(),
             filter_prefixes: HashSet::new(),
@@ -5237,6 +5258,11 @@ impl RequirementsApp {
                             &mut self.settings_form_perspective,
                             Perspective::References,
                             Perspective::References.label(),
+                        );
+                        ui.selectable_value(
+                            &mut self.settings_form_perspective,
+                            Perspective::ByOwner,
+                            Perspective::ByOwner.label(),
                         );
                     });
                 ui.end_row();
@@ -10033,6 +10059,8 @@ impl RequirementsApp {
                                 && self.active_preset.is_none();
                             let is_references = self.perspective == Perspective::References
                                 && self.active_preset.is_none();
+                            let is_by_owner = self.perspective == Perspective::ByOwner
+                                && self.active_preset.is_none();
 
                             if ui
                                 .selectable_label(is_flat, Perspective::Flat.label())
@@ -10063,6 +10091,13 @@ impl RequirementsApp {
                                 .clicked()
                             {
                                 self.perspective = Perspective::References;
+                                clear_active_preset = true;
+                            }
+                            if ui
+                                .selectable_label(is_by_owner, Perspective::ByOwner.label())
+                                .clicked()
+                            {
+                                self.perspective = Perspective::ByOwner;
                                 clear_active_preset = true;
                             }
 
@@ -10331,6 +10366,15 @@ impl RequirementsApp {
                                 .clicked()
                             {
                                 self.split_perspective = Perspective::References;
+                            }
+                            if ui
+                                .selectable_label(
+                                    self.split_perspective == Perspective::ByOwner,
+                                    Perspective::ByOwner.label(),
+                                )
+                                .clicked()
+                            {
+                                self.split_perspective = Perspective::ByOwner;
                             }
                         });
 
@@ -10604,6 +10648,8 @@ impl RequirementsApp {
                         && self.active_preset.is_none();
                     let is_references =
                         self.perspective == Perspective::References && self.active_preset.is_none();
+                    let is_by_owner =
+                        self.perspective == Perspective::ByOwner && self.active_preset.is_none();
 
                     if ui
                         .selectable_label(is_flat, Perspective::Flat.label())
@@ -10631,6 +10677,13 @@ impl RequirementsApp {
                         .clicked()
                     {
                         self.perspective = Perspective::References;
+                        clear_active_preset = true;
+                    }
+                    if ui
+                        .selectable_label(is_by_owner, Perspective::ByOwner.label())
+                        .clicked()
+                    {
+                        self.perspective = Perspective::ByOwner;
                         clear_active_preset = true;
                     }
 
@@ -11320,6 +11373,12 @@ impl RequirementsApp {
     }
 
     fn show_tree_list(&mut self, ui: &mut egui::Ui) {
+        // Handle ByOwner perspective specially - uses Users as root nodes
+        if self.perspective == Perspective::ByOwner {
+            self.show_by_owner_list(ui);
+            return;
+        }
+
         // Get the relationship types for the current perspective
         let Some((outgoing_type, _incoming_type)) = self.perspective.relationship_types() else {
             // Fallback to flat list if no relationship types
@@ -11377,6 +11436,235 @@ impl RequirementsApp {
                     }
                 }
             }
+        }
+    }
+
+    /// Show the By Owner list - Users as roots with their owned requirements as children
+    fn show_by_owner_list(&mut self, ui: &mut egui::Ui) {
+        // Get all non-archived users
+        let users: Vec<_> = self.store.users.iter()
+            .filter(|u| !u.archived)
+            .map(|u| (u.id, u.name.clone(), u.handle.clone(), u.spec_id.clone()))
+            .collect();
+
+        if users.is_empty() {
+            ui.label("No users defined. Add users in Settings → Members → Users.");
+            return;
+        }
+
+        // Show mode toggle
+        ui.horizontal(|ui| {
+            ui.label("Mode:");
+            if ui.selectable_label(self.owner_view_mode == OwnerViewMode::Flat, "Flat").clicked() {
+                self.owner_view_mode = OwnerViewMode::Flat;
+            }
+            if ui.selectable_label(self.owner_view_mode == OwnerViewMode::Nested, "Nested").clicked() {
+                self.owner_view_mode = OwnerViewMode::Nested;
+            }
+        });
+        ui.separator();
+
+        // For each user, show them as a root node
+        for (user_id, name, handle, spec_id) in users {
+            // Count owned requirements for this user
+            let owned_count = self.store.requirements.iter()
+                .filter(|r| !r.archived || self.show_archived)
+                .filter(|r| self.matches_user_owner(r, &handle))
+                .count();
+
+            // Skip users with no owned requirements unless we want to show all
+            if owned_count == 0 {
+                continue;
+            }
+
+            let is_collapsed = self.tree_collapsed.get(&user_id).copied().unwrap_or(false);
+
+            ui.horizontal(|ui| {
+                // Expand/collapse button
+                let toggle_text = if is_collapsed { "▶" } else { "▼" };
+                if ui.small_button(toggle_text).clicked() {
+                    self.tree_collapsed.insert(user_id, !is_collapsed);
+                }
+
+                // User display
+                ui.label("👤");
+                ui.strong(&name);
+                ui.weak(format!("(@{})", handle));
+                if let Some(id) = &spec_id {
+                    ui.weak(format!("[{}]", id));
+                }
+                ui.weak(format!("({} items)", owned_count));
+            });
+
+            // Show owned requirements if expanded
+            if !is_collapsed {
+                match self.owner_view_mode {
+                    OwnerViewMode::Flat => {
+                        self.show_owned_requirements_flat(ui, &handle);
+                    }
+                    OwnerViewMode::Nested => {
+                        self.show_owned_requirements_nested(ui, &handle);
+                    }
+                }
+            }
+        }
+
+        // Show unassigned requirements (owner is empty or doesn't match any user)
+        let unassigned_count = self.store.requirements.iter()
+            .filter(|r| !r.archived || self.show_archived)
+            .filter(|r| r.owner.is_empty() || !self.owner_is_known_user(&r.owner))
+            .count();
+
+        if unassigned_count > 0 {
+            ui.add_space(10.0);
+            let unassigned_id = Uuid::nil(); // Use nil UUID for unassigned section
+            let is_collapsed = self.tree_collapsed.get(&unassigned_id).copied().unwrap_or(false);
+
+            ui.horizontal(|ui| {
+                let toggle_text = if is_collapsed { "▶" } else { "▼" };
+                if ui.small_button(toggle_text).clicked() {
+                    self.tree_collapsed.insert(unassigned_id, !is_collapsed);
+                }
+                ui.label("❓");
+                ui.strong("Unassigned");
+                ui.weak(format!("({} items)", unassigned_count));
+            });
+
+            if !is_collapsed {
+                self.show_unassigned_requirements(ui);
+            }
+        }
+    }
+
+    /// Check if a requirement's owner matches a user handle (case-insensitive)
+    fn matches_user_owner(&self, req: &Requirement, handle: &str) -> bool {
+        let owner = req.owner.trim();
+        // Match @handle or just handle
+        owner.eq_ignore_ascii_case(handle) ||
+        owner.strip_prefix('@').map(|s| s.eq_ignore_ascii_case(handle)).unwrap_or(false)
+    }
+
+    /// Check if an owner string matches any known user
+    fn owner_is_known_user(&self, owner: &str) -> bool {
+        let owner = owner.trim();
+        self.store.users.iter().any(|u| {
+            owner.eq_ignore_ascii_case(&u.handle) ||
+            owner.strip_prefix('@').map(|s| s.eq_ignore_ascii_case(&u.handle)).unwrap_or(false)
+        })
+    }
+
+    /// Show owned requirements in flat mode (direct children of user)
+    fn show_owned_requirements_flat(&mut self, ui: &mut egui::Ui, owner_handle: &str) {
+        // Collect matching requirements
+        let matching: Vec<usize> = self.store.requirements.iter()
+            .enumerate()
+            .filter(|(_, r)| !r.archived || self.show_archived)
+            .filter(|(_, r)| self.matches_user_owner(r, owner_handle))
+            .filter(|(_, r)| self.passes_filters(r, true))
+            .map(|(idx, _)| idx)
+            .collect();
+
+        for idx in matching {
+            ui.horizontal(|ui| {
+                ui.add_space(20.0); // Indent under user
+                self.show_draggable_requirement_inline(ui, idx, false);
+            });
+        }
+    }
+
+    /// Show owned requirements in nested mode (preserving parent/child hierarchy)
+    fn show_owned_requirements_nested(&mut self, ui: &mut egui::Ui, owner_handle: &str) {
+        // Find all requirements owned by this user
+        let owned_ids: HashSet<Uuid> = self.store.requirements.iter()
+            .filter(|r| !r.archived || self.show_archived)
+            .filter(|r| self.matches_user_owner(r, owner_handle))
+            .map(|r| r.id)
+            .collect();
+
+        // Find root requirements for this owner (owned reqs that have no owned parent)
+        let root_reqs: Vec<usize> = self.store.requirements.iter()
+            .enumerate()
+            .filter(|(_, r)| !r.archived || self.show_archived)
+            .filter(|(_, r)| self.matches_user_owner(r, owner_handle))
+            .filter(|(_, r)| self.passes_filters(r, true))
+            .filter(|(_, r)| {
+                // Check if any parent is also owned - if so, this is not a root
+                !r.relationships.iter().any(|rel| {
+                    rel.rel_type == RelationshipType::Parent &&
+                    owned_ids.contains(&rel.target_id)
+                })
+            })
+            .map(|(idx, _)| idx)
+            .collect();
+
+        for idx in root_reqs {
+            self.show_owned_tree_node(ui, idx, &owned_ids, 1);
+        }
+    }
+
+    /// Show a tree node within the owner's owned requirements
+    fn show_owned_tree_node(&mut self, ui: &mut egui::Ui, idx: usize, owned_ids: &HashSet<Uuid>, depth: usize) {
+        let Some(req) = self.store.requirements.get(idx) else {
+            return;
+        };
+
+        let req_id = req.id;
+
+        // Find children that are also owned
+        let children: Vec<usize> = self.store.requirements.iter()
+            .enumerate()
+            .filter(|(_, r)| !r.archived || self.show_archived)
+            .filter(|(_, r)| owned_ids.contains(&r.id))
+            .filter(|(_, r)| {
+                r.relationships.iter().any(|rel| {
+                    rel.rel_type == RelationshipType::Parent && rel.target_id == req_id
+                })
+            })
+            .map(|(idx, _)| idx)
+            .collect();
+
+        let has_children = !children.is_empty();
+        let is_collapsed = self.tree_collapsed.get(&req_id).copied().unwrap_or(false);
+
+        ui.horizontal(|ui| {
+            ui.add_space(depth as f32 * 20.0);
+
+            // Expand/collapse button or placeholder
+            if has_children {
+                let toggle_text = if is_collapsed { "▶" } else { "▼" };
+                if ui.small_button(toggle_text).clicked() {
+                    self.tree_collapsed.insert(req_id, !is_collapsed);
+                }
+            } else {
+                ui.add_space(20.0); // Placeholder for alignment
+            }
+
+            self.show_draggable_requirement_inline(ui, idx, false);
+        });
+
+        // Show children if expanded
+        if has_children && !is_collapsed {
+            for child_idx in children {
+                self.show_owned_tree_node(ui, child_idx, owned_ids, depth + 1);
+            }
+        }
+    }
+
+    /// Show unassigned requirements (no owner or unknown owner)
+    fn show_unassigned_requirements(&mut self, ui: &mut egui::Ui) {
+        let matching: Vec<usize> = self.store.requirements.iter()
+            .enumerate()
+            .filter(|(_, r)| !r.archived || self.show_archived)
+            .filter(|(_, r)| r.owner.is_empty() || !self.owner_is_known_user(&r.owner))
+            .filter(|(_, r)| self.passes_filters(r, true))
+            .map(|(idx, _)| idx)
+            .collect();
+
+        for idx in matching {
+            ui.horizontal(|ui| {
+                ui.add_space(20.0);
+                self.show_draggable_requirement_inline(ui, idx, false);
+            });
         }
     }
 
@@ -11669,6 +11957,7 @@ impl RequirementsApp {
                     ui.selectable_value(&mut self.split_perspective, Perspective::ParentChild, Perspective::ParentChild.label());
                     ui.selectable_value(&mut self.split_perspective, Perspective::Verification, Perspective::Verification.label());
                     ui.selectable_value(&mut self.split_perspective, Perspective::References, Perspective::References.label());
+                    ui.selectable_value(&mut self.split_perspective, Perspective::ByOwner, Perspective::ByOwner.label());
                 });
         });
         ui.separator();
@@ -16558,11 +16847,18 @@ fn main() {
                                 self.perspective = Perspective::References;
                                 self.active_preset = None;
                             }
+                            if ui.selectable_label(
+                                self.perspective == Perspective::ByOwner,
+                                Perspective::ByOwner.label(),
+                            ).clicked() {
+                                self.perspective = Perspective::ByOwner;
+                                self.active_preset = None;
+                            }
                         });
                 });
 
                 // Direction selector (only for non-Flat perspectives)
-                if self.perspective != Perspective::Flat {
+                if self.perspective != Perspective::Flat && !self.perspective.uses_user_roots() {
                     ui.horizontal(|ui| {
                         ui.label("Direction:");
                         egui::ComboBox::from_id_salt("view_dialog_direction")
@@ -16584,6 +16880,34 @@ fn main() {
                                 }
                             });
                     });
+                }
+
+                // Owner view mode selector (only for ByOwner perspective)
+                if self.perspective.uses_user_roots() {
+                    ui.horizontal(|ui| {
+                        ui.label("Sub-hierarchy:");
+                        egui::ComboBox::from_id_salt("view_dialog_owner_mode")
+                            .selected_text(match self.owner_view_mode {
+                                OwnerViewMode::Flat => "Flat",
+                                OwnerViewMode::Nested => "Nested (Parent/Child)",
+                            })
+                            .show_ui(ui, |ui| {
+                                if ui.selectable_label(
+                                    self.owner_view_mode == OwnerViewMode::Flat,
+                                    "Flat",
+                                ).clicked() {
+                                    self.owner_view_mode = OwnerViewMode::Flat;
+                                }
+                                if ui.selectable_label(
+                                    self.owner_view_mode == OwnerViewMode::Nested,
+                                    "Nested (Parent/Child)",
+                                ).clicked() {
+                                    self.owner_view_mode = OwnerViewMode::Nested;
+                                }
+                            });
+                    });
+                    ui.add_space(2.0);
+                    ui.label("Flat: Shows all owned requirements directly under owner.\nNested: Preserves parent/child hierarchy within owned requirements.");
                 }
 
                 ui.add_space(10.0);
@@ -16840,11 +17164,18 @@ fn main() {
                                 self.split_perspective = Perspective::References;
                                 self.split_active_preset = None;
                             }
+                            if ui.selectable_label(
+                                self.split_perspective == Perspective::ByOwner,
+                                Perspective::ByOwner.label(),
+                            ).clicked() {
+                                self.split_perspective = Perspective::ByOwner;
+                                self.split_active_preset = None;
+                            }
                         });
                 });
 
-                // Direction selector (only for non-Flat perspectives)
-                if self.split_perspective != Perspective::Flat {
+                // Direction selector (only for non-Flat perspectives and non-ByOwner)
+                if self.split_perspective != Perspective::Flat && !self.split_perspective.uses_user_roots() {
                     ui.horizontal(|ui| {
                         ui.label("Direction:");
                         egui::ComboBox::from_id_salt("view_dialog_direction_list2")
@@ -16866,6 +17197,34 @@ fn main() {
                                 }
                             });
                     });
+                }
+
+                // Owner view mode selector (only for ByOwner perspective)
+                if self.split_perspective.uses_user_roots() {
+                    ui.horizontal(|ui| {
+                        ui.label("Sub-hierarchy:");
+                        egui::ComboBox::from_id_salt("view_dialog_owner_mode_list2")
+                            .selected_text(match self.owner_view_mode {
+                                OwnerViewMode::Flat => "Flat",
+                                OwnerViewMode::Nested => "Nested (Parent/Child)",
+                            })
+                            .show_ui(ui, |ui| {
+                                if ui.selectable_label(
+                                    self.owner_view_mode == OwnerViewMode::Flat,
+                                    "Flat",
+                                ).clicked() {
+                                    self.owner_view_mode = OwnerViewMode::Flat;
+                                }
+                                if ui.selectable_label(
+                                    self.owner_view_mode == OwnerViewMode::Nested,
+                                    "Nested (Parent/Child)",
+                                ).clicked() {
+                                    self.owner_view_mode = OwnerViewMode::Nested;
+                                }
+                            });
+                    });
+                    ui.add_space(2.0);
+                    ui.label("Flat: Shows all owned requirements directly under owner.\nNested: Preserves parent/child hierarchy within owned requirements.");
                 }
 
                 ui.add_space(10.0);
