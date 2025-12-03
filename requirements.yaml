@@ -7261,7 +7261,7 @@ requirements:
         c. Presents summary: Missing, Outdated, Already Captured
         d. Prompts user to add/update requirements
         e. Executes captures with aida CLI
-  status: Draft
+  status: Completed
   priority: Medium
   owner: ''
   feature: 84-Uncategorized
