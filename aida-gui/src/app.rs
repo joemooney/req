@@ -8324,6 +8324,10 @@ impl RequirementsApp {
                 if r.archived && !self.show_archived {
                     return false;
                 }
+                // Exclude Folder types - they're stateless organizational containers
+                if r.req_type == RequirementType::Folder {
+                    return false;
+                }
                 // Filter by type if set
                 if let Some(ref filter_type) = self.kanban_filter_type {
                     if &r.req_type != filter_type {
