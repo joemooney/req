@@ -8178,6 +8178,11 @@ impl RequirementsApp {
                     }
                 });
             });
+
+        // Clear drop target when not dragging (cleanup stale state)
+        if self.kanban_drag_card.is_none() {
+            self.kanban_drop_column = None;
+        }
     }
 
     /// Get column definitions for the current KanBan field
@@ -8243,19 +8248,29 @@ impl RequirementsApp {
         let card_count = reqs_in_column.len();
         let wip_limit = self.kanban_wip_limits.get(&column.value).copied().unwrap_or(column.wip_limit);
         let over_wip = wip_limit > 0 && card_count > wip_limit;
+        let is_dragging = self.kanban_drag_card.is_some();
+        let is_drop_target = self.kanban_drop_column.as_ref() == Some(&column.value);
 
-        // Column frame
+        // Column frame - highlight when it's a valid drop target
         let column_color = if over_wip {
             egui::Color32::from_rgb(255, 200, 200) // Light red for over WIP
-        } else if self.kanban_drop_column.as_ref() == Some(&column.value) {
-            egui::Color32::from_rgb(200, 230, 255) // Light blue for drop target
+        } else if is_drop_target && is_dragging {
+            egui::Color32::from_rgb(180, 220, 255) // Brighter blue for active drop target
         } else {
             ui.visuals().window_fill()
         };
 
-        egui::Frame::none()
+        let column_stroke = if is_drop_target && is_dragging {
+            egui::Stroke::new(2.0, egui::Color32::from_rgb(100, 150, 255))
+        } else {
+            ui.visuals().window_stroke()
+        };
+
+        let column_value = column.value.clone();
+
+        let frame_response = egui::Frame::none()
             .fill(column_color)
-            .stroke(ui.visuals().window_stroke())
+            .stroke(column_stroke)
             .rounding(5.0)
             .inner_margin(5.0)
             .show(ui, |ui| {
@@ -8281,23 +8296,43 @@ impl RequirementsApp {
 
                     // Cards scroll area
                     egui::ScrollArea::vertical()
-                        .id_salt(format!("kanban_col_{}", column.value))
+                        .id_salt(format!("kanban_col_{}", column_value))
                         .max_height(ui.available_height() - 30.0)
                         .auto_shrink([false, false])
                         .show(ui, |ui| {
                             for (idx, req_id, spec_id, title, owner) in reqs_in_column {
-                                self.render_kanban_card(ui, idx, &req_id, &spec_id, &title, &owner, &column.value);
+                                self.render_kanban_card(ui, idx, &req_id, &spec_id, &title, &owner, &column_value);
                             }
 
-                            // Drop zone hint when empty
-                            if card_count == 0 {
-                                ui.centered_and_justified(|ui| {
-                                    ui.weak("Drop cards here");
-                                });
+                            // Drop zone - always show when dragging, with hint when empty
+                            if is_dragging || card_count == 0 {
+                                let drop_zone_height = if card_count == 0 { 100.0 } else { 40.0 };
+                                let (rect, _response) = ui.allocate_exact_size(
+                                    egui::vec2(ui.available_width(), drop_zone_height),
+                                    egui::Sense::hover()
+                                );
+
+                                if card_count == 0 {
+                                    ui.painter().text(
+                                        rect.center(),
+                                        egui::Align2::CENTER_CENTER,
+                                        "Drop cards here",
+                                        egui::FontId::default(),
+                                        ui.visuals().weak_text_color(),
+                                    );
+                                }
                             }
                         });
                 });
             });
+
+        // Track if mouse is over this column during drag
+        if is_dragging {
+            let response = frame_response.response.interact(egui::Sense::hover());
+            if response.hovered() {
+                self.kanban_drop_column = Some(column_value);
+            }
+        }
 
         ui.add_space(5.0);
     }
@@ -8311,29 +8346,36 @@ impl RequirementsApp {
         spec_id: &str,
         title: &str,
         owner: &str,
-        column_value: &str,
+        _column_value: &str,
     ) {
-        let is_dragging = self.kanban_drag_card == Some(*req_id);
+        let is_this_card_dragging = self.kanban_drag_card == Some(*req_id);
         let is_selected = self.selected_idx == Some(idx);
 
-        let card_color = if is_dragging {
-            egui::Color32::from_rgb(200, 200, 255) // Light purple for dragging
+        // Card appearance based on state
+        let card_color = if is_this_card_dragging {
+            egui::Color32::from_rgb(180, 180, 255) // Purple tint for dragging card
         } else if is_selected {
             ui.visuals().selection.bg_fill
         } else {
             ui.visuals().widgets.inactive.bg_fill
         };
 
+        let card_stroke = if is_this_card_dragging {
+            egui::Stroke::new(2.0, egui::Color32::from_rgb(100, 100, 200))
+        } else {
+            egui::Stroke::new(1.0, ui.visuals().widgets.inactive.bg_stroke.color)
+        };
+
         let response = egui::Frame::none()
             .fill(card_color)
-            .stroke(egui::Stroke::new(1.0, ui.visuals().widgets.inactive.bg_stroke.color))
+            .stroke(card_stroke)
             .rounding(3.0)
             .inner_margin(8.0)
             .show(ui, |ui| {
                 ui.set_min_width(ui.available_width() - 10.0);
 
                 ui.vertical(|ui| {
-                    // Spec ID
+                    // Spec ID and owner
                     ui.horizontal(|ui| {
                         ui.strong(spec_id);
                         if !owner.is_empty() {
@@ -8365,17 +8407,13 @@ impl RequirementsApp {
             self.pending_view_change = Some(View::Detail);
         }
 
-        // Drag start
+        // Drag start - begin dragging this card
         if response.drag_started() {
             self.kanban_drag_card = Some(*req_id);
+            self.kanban_drop_column = None; // Clear any previous drop target
         }
 
-        // During drag, track which column we're over
-        if self.kanban_drag_card.is_some() && response.hovered() {
-            self.kanban_drop_column = Some(column_value.to_string());
-        }
-
-        // Drag end - update the requirement
+        // Drag end - update the requirement if we have a valid drop target
         if response.drag_stopped() {
             if let Some(drag_id) = self.kanban_drag_card.take() {
                 if let Some(target_column) = self.kanban_drop_column.take() {

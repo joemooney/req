@@ -73,7 +73,7 @@ requirements:
   owner: ''
   feature: 3-Uncategorized
   created_at: 2025-11-25T21:06:58.790215612Z
-  modified_at: 2025-11-26T06:01:59.059014949Z
+  modified_at: 2025-12-03T05:03:47.682123683Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -8034,7 +8034,7 @@ requirements:
   status: Completed
   priority: Medium
   owner: ''
-  feature: Views
+  feature: 106-Views
   created_at: 2025-12-03T04:25:55.427939897Z
   modified_at: 2025-12-03T04:25:55.427939897Z
   req_type: Functional
@@ -8131,7 +8131,7 @@ id_config:
     prefix: SPIKE
     description: Research or investigation task to reduce uncertainty or explore technical approaches
 features: []
-next_feature_number: 106
+next_feature_number: 107
 next_spec_number: 192
 prefix_counters: {}
 relationship_definitions:
@@ -8288,8 +8288,8 @@ reaction_definitions:
   description: Mark as important/attention needed
   built_in: true
 meta_counters:
-  $USER: 6
   $TEAM: 4
+  $USER: 6
 type_definitions:
 - name: Functional
   display_name: Functional
