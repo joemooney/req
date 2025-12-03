@@ -12056,6 +12056,14 @@ impl RequirementsApp {
     }
 
     fn show_tree_list(&mut self, ui: &mut egui::Ui) {
+        // When there's active search text, show a flat list of all matching results
+        // This ensures search finds ALL matching requirements regardless of tree hierarchy
+        let has_search_text = !self.filter_text.is_empty() && !self.search_scope.is_none();
+        if has_search_text {
+            self.show_flat_list(ui);
+            return;
+        }
+
         // Handle ByOwner perspective specially - uses Users as root nodes
         if self.perspective == Perspective::ByOwner {
             self.show_by_owner_list(ui);
