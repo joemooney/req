@@ -1698,9 +1698,16 @@ enum SettingsTab {
     Relationships,
     Reactions,
     TypeDefinitions,
-    Users,
+    Members, // Replaced Users with Members (contains Users and Teams sub-tabs)
     Database,
     AiPrompts,
+}
+
+#[derive(Default, PartialEq, Clone, Copy)]
+enum MembersSubTab {
+    #[default]
+    Users,
+    Teams,
 }
 
 #[derive(Default, PartialEq, Clone, Copy)]
@@ -1830,6 +1837,7 @@ enum View {
     Detail,
     Add,
     Edit,
+    OrgChart, // Organization chart view for teams
 }
 
 /// Layout mode defines the panel arrangement (cycles through 5 predefined layouts)
@@ -2199,6 +2207,16 @@ pub struct RequirementsApp {
     user_form_email: String,
     user_form_handle: String,
     show_archived_users: bool,
+
+    // Team management
+    members_sub_tab: MembersSubTab,
+    show_team_form: bool,
+    editing_team_id: Option<Uuid>,
+    team_form_name: String,
+    team_form_description: String,
+    team_form_parent_id: Option<Uuid>,
+    show_archived_teams: bool,
+    show_team_members_dialog: Option<Uuid>, // Team ID for member management dialog
 
     // Relationships view
     show_recursive_relationships: bool, // Toggle for recursive tree view
@@ -2675,6 +2693,14 @@ impl RequirementsApp {
             user_form_email: String::new(),
             user_form_handle: String::new(),
             show_archived_users: false,
+            members_sub_tab: MembersSubTab::default(),
+            show_team_form: false,
+            editing_team_id: None,
+            team_form_name: String::new(),
+            team_form_description: String::new(),
+            team_form_parent_id: None,
+            show_archived_teams: false,
+            show_team_members_dialog: None,
             show_recursive_relationships: false,
             relationship_tree_collapsed: HashMap::new(),
             perspective: initial_perspective,
@@ -4029,6 +4055,18 @@ impl RequirementsApp {
                     }
                 });
 
+                // View menu
+                ui.menu_button("👁 View", |ui| {
+                    if ui.button("📋 Requirements").clicked() {
+                        self.pending_view_change = Some(View::List);
+                        ui.close_menu();
+                    }
+                    if ui.button("🏢 Org Chart").clicked() {
+                        self.pending_view_change = Some(View::OrgChart);
+                        ui.close_menu();
+                    }
+                });
+
                 if ui.button("➕ Add").clicked() {
                     self.clear_form();
                     self.pending_view_change = Some(View::Add);
@@ -4888,7 +4926,7 @@ impl RequirementsApp {
                         SettingsTab::TypeDefinitions,
                         "📝 Types",
                     );
-                    ui.selectable_value(&mut self.settings_tab, SettingsTab::Users, "👥 Users");
+                    ui.selectable_value(&mut self.settings_tab, SettingsTab::Members, "👥 Members");
                     ui.selectable_value(&mut self.settings_tab, SettingsTab::AiPrompts, "✦ AI");
                     ui.selectable_value(&mut self.settings_tab, SettingsTab::Database, "🗄 Db");
                 });
@@ -4919,8 +4957,8 @@ impl RequirementsApp {
                     SettingsTab::TypeDefinitions => {
                         self.show_settings_type_definitions_tab(ui);
                     }
-                    SettingsTab::Users => {
-                        self.show_settings_users_tab(ui);
+                    SettingsTab::Members => {
+                        self.show_settings_members_tab(ui);
                     }
                     SettingsTab::Database => {
                         self.show_settings_database_tab(ui);
@@ -7487,6 +7525,494 @@ impl RequirementsApp {
 
         self.save();
         self.show_type_def_form = false;
+    }
+
+    fn show_settings_members_tab(&mut self, ui: &mut egui::Ui) {
+        // Sub-tabs for Users and Teams
+        ui.horizontal(|ui| {
+            ui.selectable_value(&mut self.members_sub_tab, MembersSubTab::Users, "👤 Users");
+            ui.selectable_value(&mut self.members_sub_tab, MembersSubTab::Teams, "👥 Teams");
+        });
+        ui.separator();
+        ui.add_space(5.0);
+
+        match self.members_sub_tab {
+            MembersSubTab::Users => {
+                self.show_settings_users_tab(ui);
+            }
+            MembersSubTab::Teams => {
+                self.show_settings_teams_tab(ui);
+            }
+        }
+    }
+
+    fn show_settings_teams_tab(&mut self, ui: &mut egui::Ui) {
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            ui.heading("Team Management");
+            ui.add_space(5.0);
+
+            ui.horizontal(|ui| {
+                if ui.button("➕ Add Team").clicked() {
+                    self.show_team_form = true;
+                    self.editing_team_id = None;
+                    self.team_form_name.clear();
+                    self.team_form_description.clear();
+                    self.team_form_parent_id = None;
+                }
+                ui.checkbox(&mut self.show_archived_teams, "Show Archived");
+            });
+
+            ui.add_space(5.0);
+
+            // Team form (inline)
+            if self.show_team_form {
+                ui.group(|ui| {
+                    let title = if self.editing_team_id.is_some() {
+                        "Edit Team"
+                    } else {
+                        "Add Team"
+                    };
+                    ui.label(title);
+
+                    egui::Grid::new("team_form_grid")
+                        .num_columns(2)
+                        .spacing([10.0, 5.0])
+                        .show(ui, |ui| {
+                            ui.label("Name:");
+                            ui.text_edit_singleline(&mut self.team_form_name);
+                            ui.end_row();
+
+                            ui.label("Description:");
+                            ui.add(
+                                egui::TextEdit::multiline(&mut self.team_form_description)
+                                    .desired_rows(2)
+                                    .desired_width(250.0),
+                            );
+                            ui.end_row();
+
+                            ui.label("Parent Team:");
+                            // Dropdown for parent team selection
+                            let current_parent_name = self
+                                .team_form_parent_id
+                                .and_then(|id| self.store.find_team_by_id(&id))
+                                .map(|t| t.name.clone())
+                                .unwrap_or_else(|| "(None)".to_string());
+
+                            egui::ComboBox::from_id_salt("parent_team_select")
+                                .selected_text(&current_parent_name)
+                                .show_ui(ui, |ui| {
+                                    if ui.selectable_label(self.team_form_parent_id.is_none(), "(None)").clicked() {
+                                        self.team_form_parent_id = None;
+                                    }
+                                    // Clone teams to avoid borrow issues
+                                    let teams: Vec<_> = self.store.teams.iter()
+                                        .filter(|t| !t.archived)
+                                        .filter(|t| {
+                                            // Don't allow selecting self as parent when editing
+                                            self.editing_team_id.map(|eid| t.id != eid).unwrap_or(true)
+                                        })
+                                        .map(|t| (t.id, t.name.clone()))
+                                        .collect();
+                                    for (team_id, team_name) in teams {
+                                        let is_selected = self.team_form_parent_id == Some(team_id);
+                                        if ui.selectable_label(is_selected, &team_name).clicked() {
+                                            self.team_form_parent_id = Some(team_id);
+                                        }
+                                    }
+                                });
+                            ui.end_row();
+                        });
+
+                    ui.horizontal(|ui| {
+                        if ui.button("Save").clicked() {
+                            if self.editing_team_id.is_some() {
+                                self.save_edited_team();
+                            } else {
+                                self.add_new_team();
+                            }
+                        }
+                        if ui.button("Cancel").clicked() {
+                            self.show_team_form = false;
+                            self.editing_team_id = None;
+                        }
+                    });
+                });
+                ui.add_space(5.0);
+            }
+
+            // Teams table
+            self.show_teams_table(ui);
+        });
+    }
+
+    fn add_new_team(&mut self) {
+        if self.team_form_name.trim().is_empty() {
+            self.message = Some(("Team name cannot be empty".to_string(), true));
+            return;
+        }
+
+        // Check for circular reference if parent is set
+        if let Some(parent_id) = self.team_form_parent_id {
+            if let Some(editing_id) = self.editing_team_id {
+                if self.store.would_create_team_cycle(&editing_id, &parent_id) {
+                    self.message = Some(("Cannot set parent: would create circular reference".to_string(), true));
+                    return;
+                }
+            }
+        }
+
+        let _spec_id = self.store.add_team_with_id(
+            self.team_form_name.clone(),
+            self.team_form_description.clone(),
+            self.team_form_parent_id,
+        );
+
+        self.show_team_form = false;
+        self.team_form_name.clear();
+        self.team_form_description.clear();
+        self.team_form_parent_id = None;
+
+        self.save();
+        self.message = Some(("Team added successfully".to_string(), false));
+    }
+
+    fn save_edited_team(&mut self) {
+        if self.team_form_name.trim().is_empty() {
+            self.message = Some(("Team name cannot be empty".to_string(), true));
+            return;
+        }
+
+        let team_id = match self.editing_team_id {
+            Some(id) => id,
+            None => return,
+        };
+
+        // Check for circular reference if parent is set
+        if let Some(parent_id) = self.team_form_parent_id {
+            if self.store.would_create_team_cycle(&team_id, &parent_id) {
+                self.message = Some(("Cannot set parent: would create circular reference".to_string(), true));
+                return;
+            }
+        }
+
+        if let Some(team) = self.store.get_team_by_id_mut(&team_id) {
+            team.name = self.team_form_name.clone();
+            team.description = self.team_form_description.clone();
+            team.parent_team_id = self.team_form_parent_id;
+            team.modified_at = Some(chrono::Utc::now());
+        }
+
+        self.show_team_form = false;
+        self.editing_team_id = None;
+
+        self.save();
+        self.message = Some(("Team updated successfully".to_string(), false));
+    }
+
+    fn show_teams_table(&mut self, ui: &mut egui::Ui) {
+        let teams: Vec<_> = self.store.teams.iter()
+            .filter(|t| self.show_archived_teams || !t.archived)
+            .map(|t| (t.id, t.spec_id.clone(), t.name.clone(), t.description.clone(),
+                      t.parent_team_id, t.member_ids.len(), t.archived))
+            .collect();
+
+        if teams.is_empty() {
+            ui.label("No teams defined yet.");
+            return;
+        }
+
+        egui::Grid::new("teams_table")
+            .num_columns(6)
+            .striped(true)
+            .spacing([10.0, 5.0])
+            .show(ui, |ui| {
+                // Header
+                ui.strong("ID");
+                ui.strong("Name");
+                ui.strong("Parent");
+                ui.strong("Members");
+                ui.strong("Status");
+                ui.strong("Actions");
+                ui.end_row();
+
+                for (team_id, spec_id, name, _desc, parent_id, member_count, archived) in &teams {
+                    // ID
+                    ui.label(spec_id.as_deref().unwrap_or("-"));
+
+                    // Name
+                    ui.label(name);
+
+                    // Parent
+                    let parent_name = parent_id
+                        .and_then(|pid| self.store.find_team_by_id(&pid))
+                        .map(|t| t.name.as_str())
+                        .unwrap_or("-");
+                    ui.label(parent_name);
+
+                    // Members
+                    ui.label(format!("{}", member_count));
+
+                    // Status
+                    if *archived {
+                        ui.label("📦 Archived");
+                    } else {
+                        ui.label("Active");
+                    }
+
+                    // Actions
+                    ui.horizontal(|ui| {
+                        if ui.small_button("✏").on_hover_text("Edit").clicked() {
+                            self.editing_team_id = Some(*team_id);
+                            self.show_team_form = true;
+                            if let Some(team) = self.store.find_team_by_id(team_id) {
+                                self.team_form_name = team.name.clone();
+                                self.team_form_description = team.description.clone();
+                                self.team_form_parent_id = team.parent_team_id;
+                            }
+                        }
+
+                        if ui.small_button("👥").on_hover_text("Manage Members").clicked() {
+                            self.show_team_members_dialog = Some(*team_id);
+                        }
+
+                        if *archived {
+                            if ui.small_button("📤").on_hover_text("Unarchive").clicked() {
+                                if let Some(team) = self.store.get_team_by_id_mut(team_id) {
+                                    team.archived = false;
+                                    team.modified_at = Some(chrono::Utc::now());
+                                }
+                                self.save();
+                            }
+                        } else {
+                            if ui.small_button("📦").on_hover_text("Archive").clicked() {
+                                if let Some(team) = self.store.get_team_by_id_mut(team_id) {
+                                    team.archived = true;
+                                    team.modified_at = Some(chrono::Utc::now());
+                                }
+                                self.save();
+                            }
+                        }
+                    });
+
+                    ui.end_row();
+                }
+            });
+
+        // Team members dialog
+        self.show_team_members_dialog_ui(ui);
+    }
+
+    fn show_team_members_dialog_ui(&mut self, ui: &mut egui::Ui) {
+        let team_id = match self.show_team_members_dialog {
+            Some(id) => id,
+            None => return,
+        };
+
+        let team_name = self.store.find_team_by_id(&team_id)
+            .map(|t| t.name.clone())
+            .unwrap_or_default();
+
+        let mut open = true;
+        egui::Window::new(format!("Members of '{}'", team_name))
+            .collapsible(false)
+            .resizable(true)
+            .open(&mut open)
+            .show(ui.ctx(), |ui| {
+                // Current members
+                ui.heading("Current Members");
+
+                let member_ids: Vec<Uuid> = self.store.find_team_by_id(&team_id)
+                    .map(|t| t.member_ids.clone())
+                    .unwrap_or_default();
+
+                if member_ids.is_empty() {
+                    ui.label("No members in this team.");
+                } else {
+                    for member_id in &member_ids {
+                        ui.horizontal(|ui| {
+                            let user_name = self.store.find_user_by_id(member_id)
+                                .map(|u| format!("{} (@{})", u.name, u.handle))
+                                .unwrap_or_else(|| format!("Unknown user: {}", member_id));
+                            ui.label(&user_name);
+                            if ui.small_button("❌").on_hover_text("Remove from team").clicked() {
+                                if let Some(team) = self.store.get_team_by_id_mut(&team_id) {
+                                    team.remove_member(member_id);
+                                }
+                                self.save();
+                            }
+                        });
+                    }
+                }
+
+                ui.add_space(10.0);
+                ui.separator();
+                ui.add_space(5.0);
+
+                // Add member
+                ui.heading("Add Member");
+
+                // Show users not already in the team
+                let available_users: Vec<_> = self.store.users.iter()
+                    .filter(|u| !u.archived)
+                    .filter(|u| !member_ids.contains(&u.id))
+                    .map(|u| (u.id, u.name.clone(), u.handle.clone()))
+                    .collect();
+
+                if available_users.is_empty() {
+                    ui.label("All users are already members of this team.");
+                } else {
+                    for (user_id, name, handle) in available_users {
+                        ui.horizontal(|ui| {
+                            ui.label(format!("{} (@{})", name, handle));
+                            if ui.small_button("➕").on_hover_text("Add to team").clicked() {
+                                if let Some(team) = self.store.get_team_by_id_mut(&team_id) {
+                                    team.add_member(user_id);
+                                }
+                                self.save();
+                            }
+                        });
+                    }
+                }
+            });
+
+        if !open {
+            self.show_team_members_dialog = None;
+        }
+    }
+
+    /// Render the organization chart view showing team hierarchy and members
+    fn show_org_chart_view(&mut self, ui: &mut egui::Ui) {
+        ui.horizontal(|ui| {
+            ui.heading("🏢 Organization Chart");
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                if ui.button("📋 Back to Requirements").clicked() {
+                    self.pending_view_change = Some(View::List);
+                }
+                if ui.button("⚙ Manage Teams").clicked() {
+                    self.show_settings_dialog = true;
+                    self.settings_tab = SettingsTab::Members;
+                    self.members_sub_tab = MembersSubTab::Teams;
+                }
+            });
+        });
+        ui.separator();
+        ui.add_space(10.0);
+
+        if self.store.teams.is_empty() {
+            ui.vertical_centered(|ui| {
+                ui.add_space(50.0);
+                ui.label("No teams defined yet.");
+                ui.add_space(10.0);
+                if ui.button("➕ Create First Team").clicked() {
+                    self.show_settings_dialog = true;
+                    self.settings_tab = SettingsTab::Members;
+                    self.members_sub_tab = MembersSubTab::Teams;
+                    self.show_team_form = true;
+                }
+            });
+            return;
+        }
+
+        egui::ScrollArea::both()
+            .auto_shrink([false, false])
+            .show(ui, |ui| {
+                // Get root teams (teams without a parent)
+                let root_teams: Vec<_> = self.store.teams.iter()
+                    .filter(|t| !t.archived && t.parent_team_id.is_none())
+                    .map(|t| t.id)
+                    .collect();
+
+                if root_teams.is_empty() {
+                    // All teams have parents but there are teams - show all as orphans
+                    ui.label("All teams have parent references. Showing all teams:");
+                    ui.add_space(10.0);
+                    let all_teams: Vec<_> = self.store.teams.iter()
+                        .filter(|t| !t.archived)
+                        .map(|t| t.id)
+                        .collect();
+                    for team_id in all_teams {
+                        self.render_org_chart_team_node(ui, &team_id, 0);
+                    }
+                } else {
+                    for team_id in root_teams {
+                        self.render_org_chart_team_node(ui, &team_id, 0);
+                    }
+                }
+            });
+    }
+
+    /// Recursively render a team node in the org chart
+    fn render_org_chart_team_node(&mut self, ui: &mut egui::Ui, team_id: &Uuid, depth: usize) {
+        let indent = depth as f32 * 30.0;
+
+        // Get team data (clone to avoid borrowing issues)
+        let team_data = self.store.find_team_by_id(team_id).map(|t| {
+            (
+                t.name.clone(),
+                t.description.clone(),
+                t.spec_id.clone(),
+                t.member_ids.clone(),
+            )
+        });
+
+        let Some((name, description, spec_id, member_ids)) = team_data else {
+            return;
+        };
+
+        ui.horizontal(|ui| {
+            ui.add_space(indent);
+
+            // Team card
+            ui.group(|ui| {
+                ui.set_min_width(250.0);
+                ui.vertical(|ui| {
+                    // Team header
+                    ui.horizontal(|ui| {
+                        ui.label("👥");
+                        ui.strong(&name);
+                        if let Some(id) = &spec_id {
+                            ui.weak(format!("({})", id));
+                        }
+                    });
+
+                    // Description if present
+                    if !description.is_empty() {
+                        ui.label(&description);
+                    }
+
+                    // Member count and expandable member list
+                    let member_count = member_ids.len();
+                    ui.horizontal(|ui| {
+                        ui.label(format!("👤 {} member{}", member_count, if member_count == 1 { "" } else { "s" }));
+                    });
+
+                    // Show members
+                    if !member_ids.is_empty() {
+                        ui.add_space(5.0);
+                        ui.separator();
+                        ui.label("Members:");
+                        for member_id in &member_ids {
+                            let member_name = self.store.find_user_by_id(member_id)
+                                .map(|u| format!("• {} (@{})", u.name, u.handle))
+                                .unwrap_or_else(|| format!("• Unknown user"));
+                            ui.small(&member_name);
+                        }
+                    }
+                });
+            });
+        });
+
+        ui.add_space(5.0);
+
+        // Render child teams
+        let child_team_ids: Vec<_> = self.store.teams.iter()
+            .filter(|t| !t.archived && t.parent_team_id == Some(*team_id))
+            .map(|t| t.id)
+            .collect();
+
+        for child_id in child_team_ids {
+            self.render_org_chart_team_node(ui, &child_id, depth + 1);
+        }
     }
 
     fn show_settings_users_tab(&mut self, ui: &mut egui::Ui) {
@@ -16767,6 +17293,7 @@ impl eframe::App for RequirementsApp {
                 View::List => KeyContext::RequirementsList,
                 View::Detail => KeyContext::DetailView,
                 View::Add | View::Edit => KeyContext::Form, // This branch won't be reached due to in_form_view check
+                View::OrgChart => KeyContext::RequirementsList, // Use same context for org chart
             }
         };
 
@@ -17361,6 +17888,11 @@ impl eframe::App for RequirementsApp {
                     });
                 }
             }
+        } else if self.current_view == View::OrgChart {
+            // Organization Chart view
+            egui::CentralPanel::default().show(ctx, |ui| {
+                self.show_org_chart_view(ui);
+            });
         } else {
             // In List/Detail view, use layout mode
             match self.layout_mode {

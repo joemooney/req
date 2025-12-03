@@ -1610,6 +1610,115 @@ impl User {
     }
 }
 
+/// Represents a team in the system
+/// Teams can contain users (members) and can be nested (parent/child teams)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Team {
+    /// Unique identifier for the team
+    pub id: Uuid,
+
+    /// Human-friendly spec ID (e.g., "$TEAM-001")
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub spec_id: Option<String>,
+
+    /// Team name
+    pub name: String,
+
+    /// Team description (optional)
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub description: String,
+
+    /// Parent team ID for nested teams (None if top-level team)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parent_team_id: Option<Uuid>,
+
+    /// User IDs of team members
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub member_ids: Vec<Uuid>,
+
+    /// When the team was created
+    pub created_at: DateTime<Utc>,
+
+    /// When the team was last modified
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub modified_at: Option<DateTime<Utc>>,
+
+    /// Whether the team is archived
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub archived: bool,
+}
+
+impl Team {
+    /// Creates a new team (without spec_id - use RequirementsStore::add_team_with_id for auto-generated ID)
+    pub fn new(name: String, description: String, parent_team_id: Option<Uuid>) -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            spec_id: None,
+            name,
+            description,
+            parent_team_id,
+            member_ids: Vec::new(),
+            created_at: Utc::now(),
+            modified_at: None,
+            archived: false,
+        }
+    }
+
+    /// Creates a new team with a spec_id
+    pub fn new_with_spec_id(
+        name: String,
+        description: String,
+        parent_team_id: Option<Uuid>,
+        spec_id: String,
+    ) -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            spec_id: Some(spec_id),
+            name,
+            description,
+            parent_team_id,
+            member_ids: Vec::new(),
+            created_at: Utc::now(),
+            modified_at: None,
+            archived: false,
+        }
+    }
+
+    /// Returns display name: spec_id if available, otherwise name
+    pub fn display_id(&self) -> &str {
+        self.spec_id.as_deref().unwrap_or(&self.name)
+    }
+
+    /// Adds a member to the team
+    pub fn add_member(&mut self, user_id: Uuid) {
+        if !self.member_ids.contains(&user_id) {
+            self.member_ids.push(user_id);
+            self.modified_at = Some(Utc::now());
+        }
+    }
+
+    /// Removes a member from the team
+    pub fn remove_member(&mut self, user_id: &Uuid) -> bool {
+        if let Some(pos) = self.member_ids.iter().position(|id| id == user_id) {
+            self.member_ids.remove(pos);
+            self.modified_at = Some(Utc::now());
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Checks if a user is a member of this team
+    pub fn has_member(&self, user_id: &Uuid) -> bool {
+        self.member_ids.contains(user_id)
+    }
+
+    /// Returns the number of members
+    pub fn member_count(&self) -> usize {
+        self.member_ids.len()
+    }
+}
+
 /// Represents a single requirement in the system
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Requirement {
@@ -2071,6 +2180,10 @@ pub struct RequirementsStore {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub users: Vec<User>,
 
+    /// Teams in the system
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub teams: Vec<Team>,
+
     /// ID system configuration
     #[serde(default)]
     pub id_config: IdConfiguration,
@@ -2150,6 +2263,7 @@ fn default_next_spec_number() -> u32 {
 pub const META_PREFIX_USER: &str = "$USER";
 pub const META_PREFIX_VIEW: &str = "$VIEW";
 pub const META_PREFIX_FEATURE: &str = "$FEAT";
+pub const META_PREFIX_TEAM: &str = "$TEAM";
 
 impl RequirementsStore {
     /// Creates an empty requirements store
@@ -2160,6 +2274,7 @@ impl RequirementsStore {
             description: String::new(),
             requirements: Vec::new(),
             users: Vec::new(),
+            teams: Vec::new(),
             id_config: IdConfiguration::default(),
             features: Vec::new(),
             next_feature_number: 1,
@@ -2379,6 +2494,121 @@ impl RequirementsStore {
             false
         }
     }
+
+    // ==================== Team Management ====================
+
+    /// Adds a team to the store (legacy - no spec_id)
+    pub fn add_team(&mut self, team: Team) {
+        self.teams.push(team);
+    }
+
+    /// Adds a team with auto-generated $TEAM-XXX spec_id
+    pub fn add_team_with_id(
+        &mut self,
+        name: String,
+        description: String,
+        parent_team_id: Option<Uuid>,
+    ) -> String {
+        let spec_id = self.next_meta_id(META_PREFIX_TEAM);
+        let team = Team::new_with_spec_id(name, description, parent_team_id, spec_id.clone());
+        self.teams.push(team);
+        spec_id
+    }
+
+    /// Finds a team by spec_id (e.g., "$TEAM-001")
+    pub fn find_team_by_spec_id(&self, spec_id: &str) -> Option<&Team> {
+        self.teams
+            .iter()
+            .find(|t| t.spec_id.as_deref() == Some(spec_id))
+    }
+
+    /// Finds a team by spec_id (mutable)
+    pub fn find_team_by_spec_id_mut(&mut self, spec_id: &str) -> Option<&mut Team> {
+        self.teams
+            .iter_mut()
+            .find(|t| t.spec_id.as_deref() == Some(spec_id))
+    }
+
+    /// Finds a team by UUID
+    pub fn find_team_by_id(&self, id: &Uuid) -> Option<&Team> {
+        self.teams.iter().find(|t| t.id == *id)
+    }
+
+    /// Gets a mutable reference to a team by ID
+    pub fn get_team_by_id_mut(&mut self, id: &Uuid) -> Option<&mut Team> {
+        self.teams.iter_mut().find(|t| &t.id == id)
+    }
+
+    /// Removes a team by ID
+    pub fn remove_team(&mut self, id: &Uuid) -> bool {
+        if let Some(pos) = self.teams.iter().position(|t| &t.id == id) {
+            self.teams.remove(pos);
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Gets child teams for a given parent team
+    pub fn get_child_teams(&self, parent_id: &Uuid) -> Vec<&Team> {
+        self.teams
+            .iter()
+            .filter(|t| t.parent_team_id.as_ref() == Some(parent_id))
+            .collect()
+    }
+
+    /// Gets top-level teams (teams without a parent)
+    pub fn get_root_teams(&self) -> Vec<&Team> {
+        self.teams
+            .iter()
+            .filter(|t| t.parent_team_id.is_none())
+            .collect()
+    }
+
+    /// Gets all teams a user belongs to
+    pub fn get_teams_for_user(&self, user_id: &Uuid) -> Vec<&Team> {
+        self.teams
+            .iter()
+            .filter(|t| t.member_ids.contains(user_id))
+            .collect()
+    }
+
+    /// Checks if setting a parent team would create a circular reference
+    pub fn would_create_team_cycle(&self, team_id: &Uuid, proposed_parent_id: &Uuid) -> bool {
+        // If team_id equals proposed_parent_id, it's a direct cycle
+        if team_id == proposed_parent_id {
+            return true;
+        }
+
+        // Walk up the parent chain from proposed_parent_id
+        let mut current_id = Some(*proposed_parent_id);
+        while let Some(id) = current_id {
+            if &id == team_id {
+                return true;
+            }
+            current_id = self
+                .find_team_by_id(&id)
+                .and_then(|t| t.parent_team_id);
+        }
+        false
+    }
+
+    /// Migrates existing teams without spec_id to have $TEAM-XXX IDs
+    pub fn migrate_teams_to_spec_ids(&mut self) {
+        for team in &mut self.teams {
+            if team.spec_id.is_none() {
+                let counter = self
+                    .meta_counters
+                    .entry(META_PREFIX_TEAM.to_string())
+                    .or_insert(1);
+                let spec_id = format!("{}-{:03}", META_PREFIX_TEAM, *counter);
+                *counter += 1;
+                team.spec_id = Some(spec_id);
+            }
+        }
+    }
+
+    // ==================== End Team Management ====================
 
     /// Gets a requirement by ID
     pub fn get_requirement_by_id(&self, id: &Uuid) -> Option<&Requirement> {

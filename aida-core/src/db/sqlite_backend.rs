@@ -516,6 +516,7 @@ impl DatabaseBackend for SqliteBackend {
             description,
             requirements,
             users,
+            teams: Vec::new(), // Teams not yet implemented in SQLite backend
             id_config,
             features,
             next_feature_number,

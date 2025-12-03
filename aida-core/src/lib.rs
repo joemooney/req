@@ -50,10 +50,13 @@ pub use models::{
     // URL link type
     UrlLink,
     User,
+    // Team type
+    Team,
     META_PREFIX_FEATURE,
     // Meta-type prefixes
     META_PREFIX_USER,
     META_PREFIX_VIEW,
+    META_PREFIX_TEAM,
 };
 pub use project::determine_requirements_path;
 pub use registry::{get_config_dir, get_registry_path, get_templates_dir, Registry};
