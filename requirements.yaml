@@ -4370,11 +4370,11 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: 47-Uncategorized
+  feature: Uncategorized
   created_at: 2025-11-29T19:10:52.867367071Z
   created_by: Unknown User
-  modified_at: 2025-11-29T19:10:52.867367071Z
-  req_type: Functional
+  modified_at: 2025-12-02T06:45:09.029836775Z
+  req_type: Folder
   dependencies: []
   tags: []
   relationships:
@@ -4490,6 +4490,17 @@ requirements:
     target_id: 0a1ab189-cf84-41d9-a3d0-3e91a671b75a
     created_at: 2025-12-02T05:49:33.252795445Z
     created_by: Joe Mooney
+  history:
+  - id: bb9d63f0-d0e9-4a12-aee7-aefb1048ea88
+    author: Joe Mooney
+    timestamp: 2025-12-02T06:45:09.029833741Z
+    changes:
+    - field_name: type
+      old_value: Functional
+      new_value: Folder
+    - field_name: feature
+      old_value: 47-Uncategorized
+      new_value: Uncategorized
 - id: 3ef749b7-b220-41f8-9a1d-1545d0c43a7f
   spec_id: FR-0103
   title: Dynamically update ID preview when Type changes in Edit form

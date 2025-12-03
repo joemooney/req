@@ -86,49 +86,6 @@ Based on the evaluation, offer:
 - **Link**: Suggest relationships to existing requirements
 - **Accept**: Keep as-is and approve
 
-## Example Session
-
-```
-User: "I want users to be able to export their data"
-
-Claude: I'll add this as a new requirement.
-
-Let me clarify a few details:
-- Type: This sounds like a Functional requirement - is that correct?
-- Priority: What priority should this have? (High/Medium/Low)
-- Feature: Should this go under a specific feature area?
-
-User: Yes functional, high priority, put it under User Management
-
-Claude: Adding requirement...
-
-Requirement added: FR-0149
-Title: User Data Export Capability
-Status: Draft (evaluation pending...)
-
-Running AI evaluation...
-
-**Evaluation Results:**
-- Clarity: 6/10 - Good concept but needs specifics
-- Testability: 5/10 - Missing acceptance criteria
-- Completeness: 4/10 - Missing details
-
-**Issues:**
-- No specified export formats (CSV, JSON, PDF?)
-- No data scope defined (all data? specific types?)
-- No retention/download requirements
-
-**Suggestions:**
-1. Specify supported export formats
-2. Define what data can be exported
-3. Add acceptance criteria
-
-Would you like me to:
-1. **Improve** - Generate an improved description
-2. **Split** - Create separate requirements for each format
-3. **Accept** - Keep as-is for now
-```
-
 ## CLI Reference
 
 ```bash

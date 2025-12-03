@@ -28,6 +28,8 @@ pub struct ScaffoldConfig {
     pub include_aida_req_skill: bool,
     /// Include aida-implement skill for requirement implementation
     pub include_aida_implement_skill: bool,
+    /// Include aida-capture skill for session review
+    pub include_aida_capture_skill: bool,
     /// Custom project type for specialized scaffolding
     pub project_type: ProjectType,
     /// Tech stack hints for context generation
@@ -42,6 +44,7 @@ impl Default for ScaffoldConfig {
             generate_skills: true,
             include_aida_req_skill: true,
             include_aida_implement_skill: true,
+            include_aida_capture_skill: true,
             project_type: ProjectType::Generic,
             tech_stack: Vec::new(),
         }
@@ -226,6 +229,26 @@ impl Scaffolder {
                     path,
                     content: self.generate_aida_implement_skill(store),
                     description: "Skill for implementing requirements with traceability".to_string(),
+                    exists,
+                });
+            }
+
+            // Add aida-capture skill
+            if self.config.include_aida_capture_skill {
+                let path = PathBuf::from(".claude/skills/aida-capture.md");
+                let full_path = self.project_root.join(&path);
+                let exists = full_path.exists();
+
+                if exists {
+                    overwrites.push(path.clone());
+                } else {
+                    new_files.push(path.clone());
+                }
+
+                artifacts.push(ScaffoldArtifact {
+                    path,
+                    content: self.generate_aida_capture_skill(),
+                    description: "Skill for capturing missed requirements from session".to_string(),
                     exists,
                 });
             }
@@ -608,6 +631,84 @@ Invoke with: `/review <SPEC-ID>`
             "Review a requirement for quality".to_string(),
         ));
 
+        // Add aida-req command
+        let aida_req_cmd = r#"# Add AIDA Requirement
+
+Add a new requirement to the database with AI evaluation.
+
+## Instructions
+
+Follow the workflow in `.claude/skills/aida-req.md`:
+
+1. Ask user for requirement description (required) and optional: type, priority, feature, tags
+2. Generate a concise title from the description
+3. Add to database with `aida add --title "..." --description "..." --status draft`
+4. Run AI evaluation (clarity, testability, completeness, consistency)
+5. Offer follow-up actions: improve, split, link, or accept
+"#
+        .to_string();
+
+        commands.push((
+            "aida-req".to_string(),
+            aida_req_cmd,
+            "Add a new requirement with AI evaluation".to_string(),
+        ));
+
+        // Add aida-implement command
+        let aida_implement_cmd = r#"# Implement AIDA Requirement
+
+Implement a requirement with full traceability.
+
+## Usage
+
+Invoke with: `/aida-implement <SPEC-ID>`
+
+## Instructions
+
+Follow the workflow in `.claude/skills/aida-implement.md`:
+
+1. Load requirement: `aida show $ARGUMENTS`
+2. Analyze scope and identify files to modify
+3. Implement with traceability comments: `// trace:<SPEC-ID> | ai:claude:high`
+4. Update requirement during implementation with `aida edit` and `aida comment add`
+5. Create child requirements if needed with `aida add` and `aida rel add`
+6. Mark complete: `aida edit <SPEC-ID> --status completed`
+"#
+        .to_string();
+
+        commands.push((
+            "aida-implement".to_string(),
+            aida_implement_cmd,
+            "Implement a requirement with traceability".to_string(),
+        ));
+
+        // Add aida-capture command
+        let aida_capture_cmd = r#"# Capture Session Requirements
+
+Review conversation and capture any missed requirements.
+
+## Instructions
+
+Follow the workflow in `.claude/skills/aida-capture.md`:
+
+1. Scan the conversation for discussed features, bugs, or ideas
+2. Identify any implemented work not yet in requirements database
+3. For each finding, offer to:
+   - Add as new requirement with `aida add`
+   - Update existing requirement status
+   - Link related requirements
+4. Summarize what was captured
+
+Use at end of conversational sessions as a safety net.
+"#
+        .to_string();
+
+        commands.push((
+            "aida-capture".to_string(),
+            aida_capture_cmd,
+            "Capture missed requirements from session".to_string(),
+        ));
+
         commands
     }
 
@@ -929,6 +1030,103 @@ aida list --feature <feature-name>
             comment_examples
         )
     }
+
+    /// Generate aida-capture skill content
+    fn generate_aida_capture_skill(&self) -> String {
+        r#"# AIDA Session Capture Skill
+
+## Purpose
+
+Review the current conversation and capture any requirements, features, or implementation details that were discussed but not yet added to the requirements database.
+
+## When to Use
+
+Use this skill when:
+- User says "capture requirements" or "review session"
+- At the end of a conversational coding session
+- User asks to update requirements based on what was discussed
+- After implementing features without explicitly creating requirements
+
+## Workflow
+
+### Step 1: Scan Conversation
+
+Review the conversation history for:
+- Features that were discussed or requested
+- Bugs that were identified or fixed
+- Implementation decisions that were made
+- Ideas or future enhancements mentioned
+- Any work that was completed
+
+### Step 2: Check Against Database
+
+For each finding, check if it already exists:
+
+```bash
+aida list --search "<keyword>"
+```
+
+### Step 3: Present Findings
+
+Present a summary to the user:
+```
+## Session Review
+
+### Implemented (not in database)
+- [Description of implemented work]
+
+### Discussed (not captured)
+- [Description of discussed feature/idea]
+
+### Existing Requirements Updated
+- [SPEC-ID] - Status changed / notes added
+```
+
+### Step 4: Offer Actions
+
+For each finding, offer to:
+1. **Add as new requirement**: Create with appropriate type and status
+2. **Update existing**: Add comments or change status
+3. **Skip**: Don't capture this item
+
+### Step 5: Execute Updates
+
+For new requirements:
+```bash
+aida add --title "..." --description "..." --type functional --status completed
+```
+
+For existing requirements:
+```bash
+aida comment add <SPEC-ID> "Session note: ..."
+aida edit <SPEC-ID> --status completed
+```
+
+## CLI Reference
+
+```bash
+# Search for existing requirements
+aida list --search "<keyword>"
+
+# Add new requirement
+aida add --title "..." --description "..." --status <status>
+
+# Update requirement
+aida edit <SPEC-ID> --status <status>
+
+# Add comment
+aida comment add <SPEC-ID> "Comment text"
+```
+
+## Best Practices
+
+- Use status `completed` for work that was already implemented
+- Use status `draft` for ideas that need refinement
+- Link related requirements that were discovered during the session
+- Add implementation comments with file paths that were modified
+"#
+        .to_string()
+    }
 }
 
 /// Errors that can occur during scaffolding
@@ -972,6 +1170,7 @@ mod tests {
         assert!(config.generate_skills);
         assert!(config.include_aida_req_skill);
         assert!(config.include_aida_implement_skill);
+        assert!(config.include_aida_capture_skill);
         assert_eq!(config.project_type, ProjectType::Generic);
     }
 
