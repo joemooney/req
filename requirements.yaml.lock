@@ -1,9 +1,1 @@
-sessions:
-  2396931-6e4e4ff6-c53f-4906-b9a6-246a2badf53c:
-    session_id: 2396931-6e4e4ff6-c53f-4906-b9a6-246a2badf53c
-    user_name: Joe Mooney
-    hostname: imac
-    pid: 2396931
-    started_at: 2025-12-03T02:35:17.773824185Z
-    last_heartbeat: 2025-12-03T02:42:12.830938997Z
-    editing_requirement: null
+sessions: {}

@@ -4370,7 +4370,7 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 98-Uncategorized
   created_at: 2025-11-29T19:10:52.867367071Z
   created_by: Unknown User
   modified_at: 2025-12-02T06:45:09.029836775Z
@@ -7761,12 +7761,121 @@ requirements:
   status: Draft
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 98-Uncategorized
   created_at: 2025-12-02T06:20:45.623601337Z
   modified_at: 2025-12-02T06:20:45.623601337Z
   req_type: Functional
   dependencies: []
   tags: []
+- id: b6911b4c-a0d4-46ee-b87d-c94de49fcd57
+  spec_id: FR-0184
+  title: Team Management Support
+  description: |-
+    Add support for Teams to organize users. A Team is a group of users (members). Teams support:
+    - Users can belong to multiple teams
+    - Teams can contain nested teams (hierarchical structure)
+    - Organization chart view to visualize team structure and members
+    - Settings tab for team management with sub-tabs for Users and Teams under a Members section
+
+    This is the parent feature for all team-related functionality.
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 99-Teams
+  created_at: 2025-12-03T02:49:45.680926022Z
+  modified_at: 2025-12-03T02:49:45.680926022Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+- id: 4dba3fb5-cd72-402c-886a-caf0f8f133d4
+  spec_id: FR-0185
+  title: Team Data Model
+  description: |-
+    Define the Team entity with the following properties:
+    - Team ID (unique identifier)
+    - Team name
+    - Team description (optional)
+    - Parent team reference (for nested teams, nullable)
+    - List of member user IDs
+    - Created/modified timestamps
+
+    Constraints:
+    - A team can have zero or more child teams
+    - A team can have zero or more members
+    - Users can belong to multiple teams
+    - Circular nesting must be prevented
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 100-Teams
+  created_at: 2025-12-03T02:50:36.494058788Z
+  modified_at: 2025-12-03T02:50:36.494058788Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: b6911b4c-a0d4-46ee-b87d-c94de49fcd57
+    created_at: 2025-12-03T02:50:36.494072232Z
+- id: a0b83c6a-3411-406a-8944-05147985b8a0
+  spec_id: FR-0186
+  title: Organization Chart View
+  description: |-
+    Add a new view that displays teams and their members in an organization chart format:
+    - Visual hierarchy showing team nesting structure
+    - Display team names and member counts
+    - Expandable/collapsible team nodes
+    - Show member avatars/names within team nodes
+    - Click on team to navigate to team details
+    - Click on member to navigate to user details
+
+    Should integrate with existing view system and be accessible from navigation.
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: 101-Teams
+  created_at: 2025-12-03T02:51:11.475316094Z
+  modified_at: 2025-12-03T02:51:11.475316094Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: b6911b4c-a0d4-46ee-b87d-c94de49fcd57
+    created_at: 2025-12-03T02:51:11.475326379Z
+- id: 9f45cb71-a6f7-40bb-b951-c3f5b90fca9b
+  spec_id: FR-0187
+  title: Settings Members Tab with Users and Teams Sub-tabs
+  description: |-
+    Add a Members tab to the Settings panel with sub-tabs for Users and Teams:
+
+    **Members Tab Structure:**
+    - Parent tab called 'Members' in Settings
+    - Sub-tab: 'Users' - manage individual users (existing user management)
+    - Sub-tab: 'Teams' - manage teams
+
+    **Teams Sub-tab Features:**
+    - List all teams with name, member count, parent team
+    - Create new team (name, description, parent team selector)
+    - Edit existing team
+    - Delete team (with confirmation, handle nested teams)
+    - Assign/remove members from team
+    - Set parent team for hierarchy
+
+    This reorganizes user management under a Members umbrella alongside team management.
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Teams
+  created_at: 2025-12-03T02:51:46.995533652Z
+  modified_at: 2025-12-03T02:51:46.995533652Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+  relationships:
+  - rel_type: Parent
+    target_id: b6911b4c-a0d4-46ee-b87d-c94de49fcd57
+    created_at: 2025-12-03T02:51:46.995551063Z
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
   spec_id: $USER-001
@@ -7828,8 +7937,8 @@ id_config:
     prefix: SPIKE
     description: Research or investigation task to reduce uncertainty or explore technical approaches
 features: []
-next_feature_number: 98
-next_spec_number: 183
+next_feature_number: 102
+next_spec_number: 187
 prefix_counters: {}
 relationship_definitions:
 - name: parent
