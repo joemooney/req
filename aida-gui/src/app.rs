@@ -10021,6 +10021,8 @@ impl RequirementsApp {
     /// Get indices of requirements for the split list (List 2) that pass the split filters
     fn get_split_filtered_indices(&self) -> Vec<usize> {
         let filter_text = self.split_filter_text.to_lowercase();
+        let has_search_text = !filter_text.is_empty();
+
         self.store
             .requirements
             .iter()
@@ -10030,14 +10032,16 @@ impl RequirementsApp {
                 if req.archived && !self.show_archived {
                     return false;
                 }
-                // Text filter
-                if !filter_text.is_empty() {
+
+                // When searching, bypass other filters and search all requirements
+                if has_search_text {
                     let matches = req.title.to_lowercase().contains(&filter_text)
-                        || req.description.to_lowercase().contains(&filter_text);
-                    if !matches {
-                        return false;
-                    }
+                        || req.description.to_lowercase().contains(&filter_text)
+                        || req.spec_id.as_ref().map_or(false, |id| id.to_lowercase().contains(&filter_text));
+                    return matches;
                 }
+
+                // No search text - apply all filters normally
                 // Type filter
                 if !self.split_filter_types.is_empty()
                     && !self.split_filter_types.contains(&req.req_type)
@@ -10167,8 +10171,11 @@ impl RequirementsApp {
     /// Check if a requirement passes the current filters
     /// `is_root` indicates whether this is a root-level requirement (true) or a child (false)
     fn passes_filters(&self, req: &Requirement, is_root: bool) -> bool {
-        // Text search filter (applies to all levels)
-        if !self.filter_text.is_empty() && !self.search_scope.is_none() {
+        // Text search filter - when active, search across ALL requirements (ignoring other filters)
+        // This allows users to find requirements regardless of current filter state
+        let has_search_text = !self.filter_text.is_empty() && !self.search_scope.is_none();
+
+        if has_search_text {
             let search = self.filter_text.to_lowercase();
             let mut found = false;
 
@@ -10199,11 +10206,21 @@ impl RequirementsApp {
                 found = self.search_comments_recursive(&req.comments, &search);
             }
 
+            // When searching, only apply archive filter (not type/feature/status/priority filters)
+            // This lets users search across all requirements regardless of filter state
             if !found {
                 return false;
             }
+
+            // Still respect archive filter even when searching
+            if req.archived && !self.show_archived {
+                return false;
+            }
+
+            return true;
         }
 
+        // No search text - apply all filters normally
         // Determine which filters to use based on root vs child
         let (filter_types, filter_features, filter_prefixes, filter_statuses, filter_priorities) =
             if is_root || self.children_same_as_root {
