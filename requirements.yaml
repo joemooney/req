@@ -8025,13 +8025,13 @@ requirements:
     - Tags
 
     ## Acceptance Criteria
-    - [ ] KanBan board renders with columns
-    - [ ] Cards display in correct columns based on field value
-    - [ ] Drag-and-drop updates the requirement field
-    - [ ] Configurable swimlane field (status/priority/custom)
-    - [ ] WIP limits with visual indicator
+    - [x] KanBan board renders with columns
+    - [x] Cards display in correct columns based on field value
+    - [x] Drag-and-drop updates the requirement field
+    - [x] Configurable swimlane field (status/priority)
+    - [x] WIP limits with visual indicator
     - [ ] Board presets can be saved/loaded
-  status: Draft
+  status: Completed
   priority: Medium
   owner: ''
   feature: Views
