@@ -2285,6 +2285,7 @@ pub struct RequirementsApp {
     kanban_wip_limits: HashMap<String, usize>,      // WIP limits per column value
     kanban_drag_card: Option<Uuid>,                 // Card being dragged
     kanban_drop_column: Option<String>,             // Column being hovered for drop
+    kanban_detail_modal: Option<usize>,             // Index of requirement to show in detail modal
 
     filter_types: HashSet<RequirementType>, // Root filter: Empty = show all
     filter_features: HashSet<String>,       // Root filter: Empty = show all
@@ -2769,6 +2770,7 @@ impl RequirementsApp {
             kanban_wip_limits: HashMap::new(),
             kanban_drag_card: None,
             kanban_drop_column: None,
+            kanban_detail_modal: None,
             filter_types: HashSet::new(),
             filter_features: HashSet::new(),
             filter_prefixes: HashSet::new(),
@@ -8439,13 +8441,18 @@ impl RequirementsApp {
         // Handle interactions
         let response = response.interact(egui::Sense::click_and_drag());
 
-        if response.clicked() {
+        // Single click - open detail modal (only if not dragging)
+        if response.clicked() && self.kanban_drag_card.is_none() {
             self.selected_idx = Some(idx);
+            self.kanban_detail_modal = Some(idx);
         }
 
+        // Double click - open edit view
         if response.double_clicked() {
             self.selected_idx = Some(idx);
-            self.pending_view_change = Some(View::Detail);
+            self.kanban_detail_modal = None; // Close any open modal
+            self.load_form_from_requirement(idx);
+            self.pending_view_change = Some(View::Edit);
         }
 
         // Drag start - begin dragging this card
@@ -8475,6 +8482,170 @@ impl RequirementsApp {
             if let Err(e) = self.storage.save(&self.store) {
                 eprintln!("Failed to save after KanBan update: {}", e);
             }
+        }
+    }
+
+    /// Show the KanBan detail modal dialog
+    fn show_kanban_detail_modal(&mut self, ctx: &egui::Context) {
+        let Some(idx) = self.kanban_detail_modal else {
+            return;
+        };
+
+        let Some(req) = self.store.requirements.get(idx).cloned() else {
+            self.kanban_detail_modal = None;
+            return;
+        };
+
+        let mut close_modal = false;
+        let mut open_edit = false;
+
+        // Calculate modal size based on screen size
+        let screen_rect = ctx.screen_rect();
+        let modal_width = (screen_rect.width() * 0.7).min(900.0).max(400.0);
+        let modal_height = (screen_rect.height() * 0.8).min(700.0).max(300.0);
+
+        let title = format!("{} - {}",
+            req.spec_id.as_deref().unwrap_or("N/A"),
+            if req.title.len() > 50 { format!("{}...", &req.title[..47]) } else { req.title.clone() }
+        );
+
+        egui::Window::new(title)
+            .id(egui::Id::new("kanban_detail_modal"))
+            .collapsible(false)
+            .resizable(true)
+            .default_width(modal_width)
+            .default_height(modal_height)
+            .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
+            .show(ctx, |ui| {
+                // Header with buttons
+                ui.horizontal(|ui| {
+                    if ui.button("✏ Edit").clicked() {
+                        open_edit = true;
+                    }
+
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+
+                ui.separator();
+
+                // Scrollable content area
+                egui::ScrollArea::vertical()
+                    .auto_shrink([false, false])
+                    .show(ui, |ui| {
+                        // Status and Priority row
+                        ui.horizontal(|ui| {
+                            ui.label("Status:");
+                            ui.strong(req.effective_status());
+                            ui.separator();
+                            ui.label("Priority:");
+                            ui.strong(format!("{}", req.priority));
+                            ui.separator();
+                            ui.label("Type:");
+                            ui.strong(format!("{:?}", req.req_type));
+                        });
+
+                        ui.add_space(10.0);
+
+                        // Owner and Feature
+                        ui.horizontal(|ui| {
+                            if !req.owner.is_empty() {
+                                ui.label("Owner:");
+                                ui.strong(&req.owner);
+                                ui.separator();
+                            }
+                            if !req.feature.is_empty() {
+                                ui.label("Feature:");
+                                ui.strong(&req.feature);
+                            }
+                        });
+
+                        ui.add_space(10.0);
+
+                        // Description
+                        ui.heading("Description");
+                        ui.separator();
+
+                        if req.description.is_empty() {
+                            ui.weak("No description provided.");
+                        } else {
+                            // Use a label with text wrapping for the description
+                            ui.add(egui::Label::new(&req.description).wrap());
+                        }
+
+                        ui.add_space(15.0);
+
+                        // Tags
+                        if !req.tags.is_empty() {
+                            ui.heading("Tags");
+                            ui.horizontal_wrapped(|ui| {
+                                for tag in &req.tags {
+                                    ui.label(format!("#{}", tag));
+                                }
+                            });
+                            ui.add_space(10.0);
+                        }
+
+                        // URLs
+                        if !req.urls.is_empty() {
+                            ui.heading("Links");
+                            for url in &req.urls {
+                                ui.horizontal(|ui| {
+                                    if !url.title.is_empty() {
+                                        ui.label(format!("{}: {}", url.title, url.url));
+                                    } else {
+                                        ui.label(&url.url);
+                                    }
+                                });
+                            }
+                            ui.add_space(10.0);
+                        }
+
+                        // Relationships
+                        if !req.relationships.is_empty() {
+                            ui.heading("Relationships");
+                            for rel in &req.relationships {
+                                // Find the related requirement
+                                if let Some(related) = self.store.requirements.iter().find(|r| r.id == rel.target_id) {
+                                    ui.horizontal(|ui| {
+                                        ui.label(format!("{:?} →", rel.rel_type));
+                                        ui.strong(related.spec_id.as_deref().unwrap_or("N/A"));
+                                        ui.weak(&related.title);
+                                    });
+                                }
+                            }
+                            ui.add_space(10.0);
+                        }
+
+                        // Timestamps
+                        ui.add_space(10.0);
+                        ui.separator();
+                        ui.horizontal(|ui| {
+                            ui.weak(format!("Created: {}", req.created_at.format("%Y-%m-%d %H:%M")));
+                            ui.separator();
+                            ui.weak(format!("Modified: {}", req.modified_at.format("%Y-%m-%d %H:%M")));
+                        });
+                    });
+            });
+
+        // Handle actions after the window is drawn
+        if close_modal {
+            self.kanban_detail_modal = None;
+        }
+
+        if open_edit {
+            self.kanban_detail_modal = None;
+            self.selected_idx = Some(idx);
+            self.load_form_from_requirement(idx);
+            self.pending_view_change = Some(View::Edit);
+        }
+
+        // Close modal on Escape key
+        if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
+            self.kanban_detail_modal = None;
         }
     }
 
@@ -18695,6 +18866,9 @@ impl eframe::App for RequirementsApp {
             egui::CentralPanel::default().show(ctx, |ui| {
                 self.show_kanban_view(ui);
             });
+
+            // KanBan detail modal window
+            self.show_kanban_detail_modal(ctx);
         } else {
             // In List/Detail view, use layout mode
             match self.layout_mode {

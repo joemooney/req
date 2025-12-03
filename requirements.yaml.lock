@@ -1,9 +1,1 @@
-sessions:
-  2428241-5ca3f2b3-66b5-42d0-bbb5-cbcd3a268f02:
-    session_id: 2428241-5ca3f2b3-66b5-42d0-bbb5-cbcd3a268f02
-    user_name: Joe Mooney
-    hostname: imac
-    pid: 2428241
-    started_at: 2025-12-03T05:09:49.189878895Z
-    last_heartbeat: 2025-12-03T05:11:54.203185633Z
-    editing_requirement: null
+sessions: {}
