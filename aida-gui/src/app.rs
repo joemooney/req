@@ -1413,6 +1413,25 @@ impl PriorityIconConfig {
     }
 }
 
+/// KanBan card click action for opening detail modal
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum KanBanClickAction {
+    /// Right-click opens detail modal (default)
+    #[default]
+    RightClick,
+    /// Single click opens detail modal
+    SingleClick,
+}
+
+impl KanBanClickAction {
+    pub fn label(&self) -> &'static str {
+        match self {
+            KanBanClickAction::RightClick => "Right Click",
+            KanBanClickAction::SingleClick => "Single Click",
+        }
+    }
+}
+
 /// User settings for the GUI application
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserSettings {
@@ -1452,6 +1471,9 @@ pub struct UserSettings {
     /// Priority icon configuration
     #[serde(default)]
     pub priority_icons: PriorityIconConfig,
+    /// KanBan card click action for opening detail modal
+    #[serde(default)]
+    pub kanban_click_action: KanBanClickAction,
 }
 
 fn default_font_size() -> f32 {
@@ -1478,6 +1500,7 @@ impl Default for UserSettings {
             show_status_icons: false,
             status_icons: StatusIconConfig::default(),
             priority_icons: PriorityIconConfig::default(),
+            kanban_click_action: KanBanClickAction::default(),
         }
     }
 }
@@ -5332,6 +5355,31 @@ impl RequirementsApp {
                     }
                 });
                 ui.end_row();
+
+                ui.label("KanBan Card Details:");
+                ui.horizontal(|ui| {
+                    let old_action = self.user_settings.kanban_click_action;
+                    egui::ComboBox::from_id_salt("settings_kanban_click_action")
+                        .selected_text(self.user_settings.kanban_click_action.label())
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(
+                                &mut self.user_settings.kanban_click_action,
+                                KanBanClickAction::RightClick,
+                                KanBanClickAction::RightClick.label(),
+                            );
+                            ui.selectable_value(
+                                &mut self.user_settings.kanban_click_action,
+                                KanBanClickAction::SingleClick,
+                                KanBanClickAction::SingleClick.label(),
+                            );
+                        });
+                    ui.weak("(opens detail modal)");
+                    // Save if changed
+                    if self.user_settings.kanban_click_action != old_action {
+                        let _ = self.user_settings.save();
+                    }
+                });
+                ui.end_row();
             });
 
         ui.add_space(5.0);
@@ -8441,10 +8489,20 @@ impl RequirementsApp {
         // Handle interactions
         let response = response.interact(egui::Sense::click_and_drag());
 
-        // Single click - open detail modal (only if not dragging)
-        if response.clicked() && self.kanban_drag_card.is_none() {
+        // Open detail modal based on configured click action
+        let open_modal = match self.user_settings.kanban_click_action {
+            KanBanClickAction::RightClick => response.secondary_clicked(),
+            KanBanClickAction::SingleClick => response.clicked() && self.kanban_drag_card.is_none(),
+        };
+
+        if open_modal {
             self.selected_idx = Some(idx);
             self.kanban_detail_modal = Some(idx);
+        }
+
+        // Single click selects the card (when using right-click for modal)
+        if response.clicked() && self.kanban_drag_card.is_none() {
+            self.selected_idx = Some(idx);
         }
 
         // Double click - open edit view
