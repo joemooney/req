@@ -9972,49 +9972,50 @@ impl RequirementsApp {
 
     /// Get indices of requirements that pass the current filters (in display order)
     /// For flat view, returns in storage order. For tree views, returns in tree traversal order.
+    /// When there's an active search, always uses flat list behavior to match what's displayed.
     fn get_filtered_indices(&self) -> Vec<usize> {
-        match &self.perspective {
-            Perspective::Flat => {
-                // Flat view: simple filtered list in storage order (all treated as root)
-                self.store
-                    .requirements
-                    .iter()
-                    .enumerate()
-                    .filter(|(_, req)| self.passes_filters(req, true))
-                    .map(|(idx, _)| idx)
-                    .collect()
-            }
-            _ => {
-                // Tree view: traverse in display order
-                let Some((outgoing_type, _)) = self.perspective.relationship_types() else {
-                    return Vec::new();
-                };
+        // When searching, use flat list behavior (matches show_tree_list which switches to flat list)
+        let has_search_text = !self.filter_text.is_empty() && !self.search_scope.is_none();
 
-                let mut result = Vec::new();
-                match self.perspective_direction {
-                    PerspectiveDirection::TopDown => {
-                        let leaves = self.find_tree_leaves(&outgoing_type);
-                        for leaf_idx in leaves {
-                            self.collect_tree_indices_bottom_up(
-                                leaf_idx,
-                                &outgoing_type,
-                                &mut result,
-                            );
-                        }
-                    }
-                    PerspectiveDirection::BottomUp => {
-                        let roots = self.find_tree_roots(&outgoing_type);
-                        for root_idx in roots {
-                            self.collect_tree_indices_top_down(
-                                root_idx,
-                                &outgoing_type,
-                                &mut result,
-                            );
-                        }
+        if has_search_text || self.perspective == Perspective::Flat {
+            // Flat view or search active: simple filtered list in storage order
+            self.store
+                .requirements
+                .iter()
+                .enumerate()
+                .filter(|(_, req)| self.passes_filters(req, true))
+                .map(|(idx, _)| idx)
+                .collect()
+        } else {
+            // Tree view without search: traverse in display order
+            let Some((outgoing_type, _)) = self.perspective.relationship_types() else {
+                return Vec::new();
+            };
+
+            let mut result = Vec::new();
+            match self.perspective_direction {
+                PerspectiveDirection::TopDown => {
+                    let leaves = self.find_tree_leaves(&outgoing_type);
+                    for leaf_idx in leaves {
+                        self.collect_tree_indices_bottom_up(
+                            leaf_idx,
+                            &outgoing_type,
+                            &mut result,
+                        );
                     }
                 }
-                result
+                PerspectiveDirection::BottomUp => {
+                    let roots = self.find_tree_roots(&outgoing_type);
+                    for root_idx in roots {
+                        self.collect_tree_indices_top_down(
+                            root_idx,
+                            &outgoing_type,
+                            &mut result,
+                        );
+                    }
+                }
             }
+            result
         }
     }
 
@@ -10690,6 +10691,12 @@ impl RequirementsApp {
                             .hint_text("Search (case-insensitive)...")
                             .desired_width(150.0),
                     );
+                    // Clear button
+                    if !self.filter_text.is_empty() {
+                        if ui.small_button("✕").on_hover_text("Clear search").clicked() {
+                            self.filter_text.clear();
+                        }
+                    }
 
                     // Filter toggle button
                     let filter_active =
@@ -10989,6 +10996,12 @@ impl RequirementsApp {
                             .hint_text("Search...")
                             .desired_width(120.0),
                     );
+                    // Clear button
+                    if !self.split_filter_text.is_empty() {
+                        if ui.small_button("✕").on_hover_text("Clear search").clicked() {
+                            self.split_filter_text.clear();
+                        }
+                    }
 
                     // Filter toggle
                     let filter_active = !self.split_filter_types.is_empty()
@@ -11281,6 +11294,12 @@ impl RequirementsApp {
                     .hint_text("Search (case-insensitive)...")
                     .desired_width(250.0),
             );
+            // Clear button
+            if !self.filter_text.is_empty() {
+                if ui.small_button("✕").on_hover_text("Clear search").clicked() {
+                    self.filter_text.clear();
+                }
+            }
 
             // Filter toggle button
             let filter_active = !self.filter_types.is_empty() || !self.filter_features.is_empty()
@@ -12624,6 +12643,12 @@ impl RequirementsApp {
                     .hint_text("Search...")
                     .desired_width(200.0),
             );
+            // Clear button
+            if !self.split_filter_text.is_empty() {
+                if ui.small_button("✕").on_hover_text("Clear search").clicked() {
+                    self.split_filter_text.clear();
+                }
+            }
 
             // Filter toggle
             let filter_active = !self.split_filter_types.is_empty()
@@ -12743,6 +12768,12 @@ impl RequirementsApp {
                             .hint_text("Search...")
                             .desired_width(120.0),
                     );
+                    // Clear button
+                    if !self.filter_text.is_empty() {
+                        if ui.small_button("✕").on_hover_text("Clear search").clicked() {
+                            self.filter_text.clear();
+                        }
+                    }
 
                     // Filter toggle button
                     let filter_active = !self.filter_types.is_empty()
@@ -12836,6 +12867,12 @@ impl RequirementsApp {
                     .hint_text("Search...")
                     .desired_width(120.0),
             );
+            // Clear button
+            if !self.filter_text.is_empty() {
+                if ui.small_button("✕").on_hover_text("Clear search").clicked() {
+                    self.filter_text.clear();
+                }
+            }
 
             // Filter toggle button
             let filter_active = !self.filter_types.is_empty()
@@ -12893,6 +12930,12 @@ impl RequirementsApp {
                     .hint_text("Search...")
                     .desired_width(120.0),
             );
+            // Clear button
+            if !self.split_filter_text.is_empty() {
+                if ui.small_button("✕").on_hover_text("Clear search").clicked() {
+                    self.split_filter_text.clear();
+                }
+            }
 
             // Filter toggle button
             let filter_active = !self.split_filter_types.is_empty()
@@ -12932,6 +12975,12 @@ impl RequirementsApp {
                     .hint_text("Search...")
                     .desired_width(150.0),
             );
+            // Clear button
+            if !self.filter_text.is_empty() {
+                if ui.small_button("✕").on_hover_text("Clear search").clicked() {
+                    self.filter_text.clear();
+                }
+            }
 
             // Filter toggle button
             let filter_active = !self.filter_types.is_empty() || !self.filter_features.is_empty()
@@ -12965,6 +13014,12 @@ impl RequirementsApp {
                     .hint_text("Search...")
                     .desired_width(120.0),
             );
+            // Clear button
+            if !self.split_filter_text.is_empty() {
+                if ui.small_button("✕").on_hover_text("Clear search").clicked() {
+                    self.split_filter_text.clear();
+                }
+            }
 
             // Filter toggle
             let filter_active = !self.split_filter_types.is_empty() || !self.split_filter_features.is_empty()
@@ -18818,6 +18873,12 @@ impl eframe::App for RequirementsApp {
                                                 .hint_text("Search...")
                                                 .desired_width(120.0),
                                         );
+                                        // Clear button
+                                        if !self.filter_text.is_empty() {
+                                            if ui.small_button("✕").on_hover_text("Clear search").clicked() {
+                                                self.filter_text.clear();
+                                            }
+                                        }
                                         // Filter toggle button
                                         let filter_active = !self.filter_types.is_empty() || !self.filter_features.is_empty()
                                             || !self.filter_prefixes.is_empty() || !self.filter_statuses.is_empty()
@@ -18880,6 +18941,12 @@ impl eframe::App for RequirementsApp {
                                             .hint_text("Search...")
                                             .desired_width(120.0),
                                     );
+                                    // Clear button
+                                    if !self.filter_text.is_empty() {
+                                        if ui.small_button("✕").on_hover_text("Clear search").clicked() {
+                                            self.filter_text.clear();
+                                        }
+                                    }
                                     // Filter toggle button
                                     let filter_active = !self.filter_types.is_empty() || !self.filter_features.is_empty()
                                         || !self.filter_prefixes.is_empty() || !self.filter_statuses.is_empty()
@@ -18975,6 +19042,12 @@ impl eframe::App for RequirementsApp {
                                             .hint_text("Search...")
                                             .desired_width(120.0),
                                     );
+                                    // Clear button
+                                    if !self.filter_text.is_empty() {
+                                        if ui.small_button("✕").on_hover_text("Clear search").clicked() {
+                                            self.filter_text.clear();
+                                        }
+                                    }
                                     // Filter toggle button
                                     let filter_active = !self.filter_types.is_empty() || !self.filter_features.is_empty()
                                         || !self.filter_prefixes.is_empty() || !self.filter_statuses.is_empty()
@@ -19065,6 +19138,12 @@ impl eframe::App for RequirementsApp {
                                             .hint_text("Search...")
                                             .desired_width(120.0),
                                     );
+                                    // Clear button
+                                    if !self.filter_text.is_empty() {
+                                        if ui.small_button("✕").on_hover_text("Clear search").clicked() {
+                                            self.filter_text.clear();
+                                        }
+                                    }
                                     // Filter toggle button
                                     let filter_active = !self.filter_types.is_empty() || !self.filter_features.is_empty()
                                         || !self.filter_prefixes.is_empty() || !self.filter_statuses.is_empty()
@@ -19104,6 +19183,12 @@ impl eframe::App for RequirementsApp {
                                             .hint_text("Search...")
                                             .desired_width(120.0),
                                     );
+                                    // Clear button
+                                    if !self.split_filter_text.is_empty() {
+                                        if ui.small_button("✕").on_hover_text("Clear search").clicked() {
+                                            self.split_filter_text.clear();
+                                        }
+                                    }
                                     // Filter toggle button
                                     let filter_active = !self.split_filter_types.is_empty() || !self.split_filter_features.is_empty()
                                         || !self.split_filter_prefixes.is_empty() || !self.split_filter_statuses.is_empty()
