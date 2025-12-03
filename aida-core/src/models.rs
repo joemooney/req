@@ -2750,6 +2750,77 @@ impl RequirementsStore {
         Ok(())
     }
 
+    /// Repairs duplicate SPEC-IDs by assigning new unique IDs to duplicates
+    /// Keeps the first occurrence of each SPEC-ID, reassigns duplicates
+    /// Returns the number of duplicates that were repaired
+    pub fn repair_duplicate_spec_ids(&mut self) -> usize {
+        use std::collections::HashSet;
+        let mut seen: HashSet<String> = HashSet::new();
+        let mut duplicates: Vec<(usize, String)> = Vec::new();
+
+        // First pass: find all duplicates (indices and their spec_id prefixes)
+        for (idx, req) in self.requirements.iter().enumerate() {
+            if let Some(spec_id) = &req.spec_id {
+                if !seen.insert(spec_id.clone()) {
+                    // This is a duplicate - extract the prefix
+                    let prefix = Self::extract_prefix_from_spec_id(spec_id);
+                    duplicates.push((idx, prefix));
+                }
+            }
+        }
+
+        if duplicates.is_empty() {
+            return 0;
+        }
+
+        // Log duplicates found (for CLI output)
+        eprintln!(
+            "Found {} duplicate SPEC-ID(s), automatically repairing...",
+            duplicates.len()
+        );
+
+        // Second pass: assign new unique IDs to duplicates
+        // We need to collect these changes because we're modifying self
+        let repairs: Vec<(usize, String)> = duplicates
+            .iter()
+            .map(|(idx, prefix)| {
+                let new_id = self.generate_requirement_id_with_override(prefix);
+                (*idx, new_id)
+            })
+            .collect();
+
+        // Apply the repairs
+        for (idx, new_id) in &repairs {
+            if let Some(req) = self.requirements.get_mut(*idx) {
+                let old_id = req.spec_id.clone().unwrap_or_default();
+                eprintln!("  Repaired: {} -> {} ({})", old_id, new_id, req.title);
+                req.spec_id = Some(new_id.clone());
+                // Add the new ID to seen set so we don't create new duplicates
+                seen.insert(new_id.clone());
+            }
+        }
+
+        repairs.len()
+    }
+
+    /// Extract the prefix from a spec_id (e.g., "FR-0042" -> "FR", "AUTH-REQ-001" -> "AUTH-REQ")
+    fn extract_prefix_from_spec_id(spec_id: &str) -> String {
+        // Find the last '-' followed by digits
+        if let Some(last_dash_pos) = spec_id.rfind('-') {
+            let after_dash = &spec_id[last_dash_pos + 1..];
+            if after_dash.chars().all(|c| c.is_ascii_digit()) {
+                // Return everything before the last dash as the prefix
+                return spec_id[..last_dash_pos].to_string();
+            }
+        }
+        // Fallback: use the whole thing as-is or default to "REQ"
+        if spec_id.is_empty() {
+            "REQ".to_string()
+        } else {
+            spec_id.to_string()
+        }
+    }
+
     /// Adds a requirement and assigns it a SPEC-ID (legacy method for backward compatibility)
     pub fn add_requirement_with_spec_id(&mut self, mut req: Requirement) {
         if req.spec_id.is_none() {
@@ -3972,6 +4043,72 @@ mod tests {
             .unwrap_err()
             .to_string()
             .contains("Duplicate SPEC-ID"));
+    }
+
+    #[test]
+    fn test_repair_duplicate_spec_ids() {
+        let mut store = RequirementsStore::new();
+
+        let mut req1 = Requirement::new("R1".into(), "D1".into());
+        req1.spec_id = Some("FR-0001".into());
+        let mut req2 = Requirement::new("R2".into(), "D2".into());
+        req2.spec_id = Some("FR-0001".into()); // Duplicate!
+        let mut req3 = Requirement::new("R3".into(), "D3".into());
+        req3.spec_id = Some("FR-0002".into()); // Unique
+
+        store.requirements.push(req1);
+        store.requirements.push(req2);
+        store.requirements.push(req3);
+
+        // Verify duplicates exist
+        assert!(store.validate_unique_spec_ids().is_err());
+
+        // Repair duplicates
+        let repaired = store.repair_duplicate_spec_ids();
+        assert_eq!(repaired, 1);
+
+        // Verify no more duplicates
+        assert!(store.validate_unique_spec_ids().is_ok());
+
+        // First requirement should keep its original ID
+        assert_eq!(store.requirements[0].spec_id.as_deref(), Some("FR-0001"));
+
+        // Second requirement should have a new ID with same prefix
+        let new_id = store.requirements[1].spec_id.as_deref().unwrap();
+        assert!(new_id.starts_with("FR-"));
+        assert_ne!(new_id, "FR-0001");
+
+        // Third requirement should be unchanged
+        assert_eq!(store.requirements[2].spec_id.as_deref(), Some("FR-0002"));
+    }
+
+    #[test]
+    fn test_extract_prefix_from_spec_id() {
+        assert_eq!(
+            RequirementsStore::extract_prefix_from_spec_id("FR-0042"),
+            "FR"
+        );
+        assert_eq!(
+            RequirementsStore::extract_prefix_from_spec_id("AUTH-REQ-001"),
+            "AUTH-REQ"
+        );
+        assert_eq!(
+            RequirementsStore::extract_prefix_from_spec_id("SPEC-123"),
+            "SPEC"
+        );
+        assert_eq!(
+            RequirementsStore::extract_prefix_from_spec_id("IMPL-0001"),
+            "IMPL"
+        );
+        // Edge cases
+        assert_eq!(
+            RequirementsStore::extract_prefix_from_spec_id(""),
+            "REQ"
+        );
+        assert_eq!(
+            RequirementsStore::extract_prefix_from_spec_id("no-numbers"),
+            "no-numbers"
+        );
     }
 
     #[test]

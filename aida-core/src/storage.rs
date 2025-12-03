@@ -418,15 +418,18 @@ impl Storage {
         // Add any missing built-in type definitions
         let had_missing_types = store.migrate_type_definitions();
 
+        // Repair any duplicate SPEC-IDs (auto-fix corruption)
+        let repaired_duplicates = store.repair_duplicate_spec_ids();
+
         // Drop read lock before acquiring write lock for migration save
         drop(_lock);
 
-        // Save back if we assigned any SPEC-IDs or added missing types (migration)
-        if had_missing_spec_ids || had_missing_user_spec_ids || had_missing_types {
+        // Save back if we assigned any SPEC-IDs, added missing types, or repaired duplicates
+        if had_missing_spec_ids || had_missing_user_spec_ids || had_missing_types || repaired_duplicates > 0 {
             self.save(&store)?;
         }
 
-        // Validate SPEC-ID uniqueness
+        // Validate SPEC-ID uniqueness (should pass after repair, but let's be safe)
         store.validate_unique_spec_ids()?;
 
         Ok(store)

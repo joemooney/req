@@ -7948,6 +7948,20 @@ requirements:
   req_type: Functional
   dependencies: []
   tags: []
+- id: 2be34e0c-327c-497f-bd9e-fc981531b664
+  spec_id: FR-0189
+  title: Work Queue View
+  description: "Work Queue View\n\nA user or team can have a work queue or other folders. This is an ordered list of requirements with a ranking where the ranking is discretionary ordering that the users themselves can elect. It is a type of Inbox and we will have other inboxes (such as notifcations, or mentions in comments). A user or a manager may wish to see what is in the work queue for that user. They can drag items higher or lower. "
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Uncategorized
+  created_at: 2025-12-03T03:53:18.076961209Z
+  created_by: Joe Mooney
+  modified_at: 2025-12-03T03:53:18.076961209Z
+  req_type: Functional
+  dependencies: []
+  tags: []
 users:
 - id: 150164ef-32ed-4d61-8cec-e887ac78cfd7
   spec_id: $USER-001
@@ -8040,7 +8054,7 @@ id_config:
     description: Research or investigation task to reduce uncertainty or explore technical approaches
 features: []
 next_feature_number: 103
-next_spec_number: 188
+next_spec_number: 189
 prefix_counters: {}
 relationship_definitions:
 - name: parent
@@ -8196,8 +8210,8 @@ reaction_definitions:
   description: Mark as important/attention needed
   built_in: true
 meta_counters:
-  $USER: 6
   $TEAM: 4
+  $USER: 6
 type_definitions:
 - name: Functional
   display_name: Functional
