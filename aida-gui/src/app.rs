@@ -8168,16 +8168,64 @@ impl RequirementsApp {
         let column_count = columns.len();
         let column_width = (available_width / column_count as f32).max(150.0) - 10.0;
 
+        // Collect column rects for drop detection
+        let mut column_rects: Vec<(String, egui::Rect)> = Vec::new();
+
         // Render columns
         egui::ScrollArea::horizontal()
             .auto_shrink([false, false])
             .show(ui, |ui| {
                 ui.horizontal_top(|ui| {
                     for (col_idx, column) in columns.iter().enumerate() {
-                        self.render_kanban_column(ui, column, column_width, col_idx);
+                        let rect = self.render_kanban_column(ui, column, column_width, col_idx);
+                        column_rects.push((column.value.clone(), rect));
                     }
                 });
             });
+
+        // Handle drag-and-drop using pointer position (more reliable than hovered())
+        if self.kanban_drag_card.is_some() {
+            if let Some(pointer_pos) = ui.input(|i| i.pointer.hover_pos()) {
+                // Find which column the pointer is over
+                self.kanban_drop_column = None;
+                for (col_value, rect) in &column_rects {
+                    if rect.contains(pointer_pos) {
+                        self.kanban_drop_column = Some(col_value.clone());
+                        break;
+                    }
+                }
+            }
+
+            // Show drag indicator following cursor
+            if let Some(drag_id) = self.kanban_drag_card {
+                if let Some(pos) = ui.input(|i| i.pointer.hover_pos()) {
+                    // Find the spec_id of the dragged card
+                    let spec_id = self.store.requirements.iter()
+                        .find(|r| r.id == drag_id)
+                        .and_then(|r| r.spec_id.clone())
+                        .unwrap_or_else(|| "Card".to_string());
+
+                    egui::Area::new(egui::Id::new("kanban_drag_indicator"))
+                        .fixed_pos(pos + egui::vec2(10.0, 10.0))
+                        .order(egui::Order::Tooltip)
+                        .show(ui.ctx(), |ui| {
+                            egui::Frame::popup(ui.style()).show(ui, |ui| {
+                                ui.label(format!("📎 {}", spec_id));
+                            });
+                        });
+                }
+            }
+
+            // Handle drag release
+            let released = ui.input(|i| i.pointer.primary_released());
+            if released {
+                if let Some(drag_id) = self.kanban_drag_card.take() {
+                    if let Some(target_column) = self.kanban_drop_column.take() {
+                        self.update_kanban_field(&drag_id, &target_column);
+                    }
+                }
+            }
+        }
 
         // Clear drop target when not dragging (cleanup stale state)
         if self.kanban_drag_card.is_none() {
@@ -8215,8 +8263,8 @@ impl RequirementsApp {
         }
     }
 
-    /// Render a single KanBan column
-    fn render_kanban_column(&mut self, ui: &mut egui::Ui, column: &KanBanColumn, width: f32, _col_idx: usize) {
+    /// Render a single KanBan column, returns the column rect for drop detection
+    fn render_kanban_column(&mut self, ui: &mut egui::Ui, column: &KanBanColumn, width: f32, _col_idx: usize) -> egui::Rect {
         // Get requirements for this column
         let reqs_in_column: Vec<(usize, Uuid, String, String, String)> = self.store.requirements
             .iter()
@@ -8304,37 +8352,30 @@ impl RequirementsApp {
                                 self.render_kanban_card(ui, idx, &req_id, &spec_id, &title, &owner, &column_value);
                             }
 
-                            // Drop zone - always show when dragging, with hint when empty
-                            if is_dragging || card_count == 0 {
-                                let drop_zone_height = if card_count == 0 { 100.0 } else { 40.0 };
+                            // Drop zone hint when empty
+                            if card_count == 0 {
+                                let drop_zone_height = 100.0;
                                 let (rect, _response) = ui.allocate_exact_size(
                                     egui::vec2(ui.available_width(), drop_zone_height),
                                     egui::Sense::hover()
                                 );
 
-                                if card_count == 0 {
-                                    ui.painter().text(
-                                        rect.center(),
-                                        egui::Align2::CENTER_CENTER,
-                                        "Drop cards here",
-                                        egui::FontId::default(),
-                                        ui.visuals().weak_text_color(),
-                                    );
-                                }
+                                ui.painter().text(
+                                    rect.center(),
+                                    egui::Align2::CENTER_CENTER,
+                                    "Drop cards here",
+                                    egui::FontId::default(),
+                                    ui.visuals().weak_text_color(),
+                                );
                             }
                         });
                 });
             });
 
-        // Track if mouse is over this column during drag
-        if is_dragging {
-            let response = frame_response.response.interact(egui::Sense::hover());
-            if response.hovered() {
-                self.kanban_drop_column = Some(column_value);
-            }
-        }
-
         ui.add_space(5.0);
+
+        // Return the column rect for drop detection
+        frame_response.response.rect
     }
 
     /// Render a single KanBan card
@@ -8408,19 +8449,10 @@ impl RequirementsApp {
         }
 
         // Drag start - begin dragging this card
+        // Release is handled globally in show_kanban_view
         if response.drag_started() {
             self.kanban_drag_card = Some(*req_id);
             self.kanban_drop_column = None; // Clear any previous drop target
-        }
-
-        // Drag end - update the requirement if we have a valid drop target
-        if response.drag_stopped() {
-            if let Some(drag_id) = self.kanban_drag_card.take() {
-                if let Some(target_column) = self.kanban_drop_column.take() {
-                    // Update the requirement's field value
-                    self.update_kanban_field(&drag_id, &target_column);
-                }
-            }
         }
 
         ui.add_space(5.0);
