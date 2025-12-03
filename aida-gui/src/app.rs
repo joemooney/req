@@ -1838,6 +1838,7 @@ enum View {
     Add,
     Edit,
     OrgChart, // Organization chart view for teams
+    KanBan,   // KanBan board view
 }
 
 /// Layout mode defines the panel arrangement (cycles through 5 predefined layouts)
@@ -1955,6 +1956,35 @@ pub(crate) enum OwnerViewMode {
     Flat,
     /// Nested: Owned requirements preserve their parent/child hierarchy
     Nested,
+}
+
+/// KanBan swimlane field - what field determines the columns
+#[derive(Debug, Default, PartialEq, Clone, Copy, Serialize, Deserialize)]
+pub(crate) enum KanBanField {
+    #[default]
+    Status,
+    Priority,
+    // Custom(String) - for custom enum fields, handled separately
+}
+
+impl KanBanField {
+    fn label(&self) -> &'static str {
+        match self {
+            KanBanField::Status => "Status",
+            KanBanField::Priority => "Priority",
+        }
+    }
+}
+
+/// KanBan column configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub(crate) struct KanBanColumn {
+    /// The value this column represents (e.g., "Draft", "In Progress")
+    pub value: String,
+    /// Display name for the column header
+    pub label: String,
+    /// Work-in-progress limit (0 = unlimited)
+    pub wip_limit: usize,
 }
 
 impl Perspective {
@@ -2248,6 +2278,14 @@ pub struct RequirementsApp {
     perspective: Perspective,
     perspective_direction: PerspectiveDirection,
     owner_view_mode: OwnerViewMode, // Sub-hierarchy mode for ByOwner perspective
+
+    // KanBan view state
+    kanban_field: KanBanField,                      // What field to use for columns
+    kanban_filter_type: Option<RequirementType>,    // Filter to single type (None = all)
+    kanban_wip_limits: HashMap<String, usize>,      // WIP limits per column value
+    kanban_drag_card: Option<Uuid>,                 // Card being dragged
+    kanban_drop_column: Option<String>,             // Column being hovered for drop
+
     filter_types: HashSet<RequirementType>, // Root filter: Empty = show all
     filter_features: HashSet<String>,       // Root filter: Empty = show all
     filter_prefixes: HashSet<String>,       // Root filter: Empty = show all
@@ -2726,6 +2764,11 @@ impl RequirementsApp {
             perspective: initial_perspective,
             perspective_direction: PerspectiveDirection::default(),
             owner_view_mode: OwnerViewMode::default(),
+            kanban_field: KanBanField::default(),
+            kanban_filter_type: None,
+            kanban_wip_limits: HashMap::new(),
+            kanban_drag_card: None,
+            kanban_drop_column: None,
             filter_types: HashSet::new(),
             filter_features: HashSet::new(),
             filter_prefixes: HashSet::new(),
@@ -4080,6 +4123,10 @@ impl RequirementsApp {
                 ui.menu_button("👁 View", |ui| {
                     if ui.button("📋 Requirements").clicked() {
                         self.pending_view_change = Some(View::List);
+                        ui.close_menu();
+                    }
+                    if ui.button("📊 KanBan Board").clicked() {
+                        self.pending_view_change = Some(View::KanBan);
                         ui.close_menu();
                     }
                     if ui.button("🏢 Org Chart").clicked() {
@@ -8038,6 +8085,326 @@ impl RequirementsApp {
 
         for child_id in child_team_ids {
             self.render_org_chart_team_node(ui, &child_id, depth + 1);
+        }
+    }
+
+    /// Show the KanBan board view
+    fn show_kanban_view(&mut self, ui: &mut egui::Ui) {
+        // Header with controls
+        ui.horizontal(|ui| {
+            ui.heading("📊 KanBan Board");
+
+            ui.separator();
+
+            // Field selector (what determines columns)
+            ui.label("Group by:");
+            egui::ComboBox::from_id_salt("kanban_field_selector")
+                .selected_text(self.kanban_field.label())
+                .show_ui(ui, |ui| {
+                    if ui.selectable_label(self.kanban_field == KanBanField::Status, "Status").clicked() {
+                        self.kanban_field = KanBanField::Status;
+                    }
+                    if ui.selectable_label(self.kanban_field == KanBanField::Priority, "Priority").clicked() {
+                        self.kanban_field = KanBanField::Priority;
+                    }
+                });
+
+            ui.separator();
+
+            // Type filter
+            ui.label("Type:");
+            let type_label = self.kanban_filter_type
+                .as_ref()
+                .map(|t| format!("{:?}", t))
+                .unwrap_or_else(|| "All".to_string());
+            egui::ComboBox::from_id_salt("kanban_type_filter")
+                .selected_text(&type_label)
+                .show_ui(ui, |ui| {
+                    if ui.selectable_label(self.kanban_filter_type.is_none(), "All").clicked() {
+                        self.kanban_filter_type = None;
+                    }
+                    for req_type in [
+                        RequirementType::Functional,
+                        RequirementType::NonFunctional,
+                        RequirementType::System,
+                        RequirementType::User,
+                        RequirementType::ChangeRequest,
+                        RequirementType::Bug,
+                        RequirementType::Epic,
+                        RequirementType::Story,
+                        RequirementType::Task,
+                        RequirementType::Spike,
+                    ] {
+                        if ui.selectable_label(
+                            self.kanban_filter_type.as_ref() == Some(&req_type),
+                            format!("{:?}", req_type)
+                        ).clicked() {
+                            self.kanban_filter_type = Some(req_type);
+                        }
+                    }
+                });
+
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                if ui.button("📋 Back to List").clicked() {
+                    self.pending_view_change = Some(View::List);
+                }
+            });
+        });
+
+        ui.separator();
+
+        // Get column definitions based on selected field
+        let columns = self.get_kanban_columns();
+
+        if columns.is_empty() {
+            ui.centered_and_justified(|ui| {
+                ui.label("No columns configured for this field");
+            });
+            return;
+        }
+
+        // Calculate column width
+        let available_width = ui.available_width();
+        let column_count = columns.len();
+        let column_width = (available_width / column_count as f32).max(150.0) - 10.0;
+
+        // Render columns
+        egui::ScrollArea::horizontal()
+            .auto_shrink([false, false])
+            .show(ui, |ui| {
+                ui.horizontal_top(|ui| {
+                    for (col_idx, column) in columns.iter().enumerate() {
+                        self.render_kanban_column(ui, column, column_width, col_idx);
+                    }
+                });
+            });
+    }
+
+    /// Get column definitions for the current KanBan field
+    fn get_kanban_columns(&self) -> Vec<KanBanColumn> {
+        match self.kanban_field {
+            KanBanField::Status => {
+                // Use status values from the store's definitions or defaults
+                vec![
+                    KanBanColumn { value: "Draft".to_string(), label: "📝 Draft".to_string(), wip_limit: 0 },
+                    KanBanColumn { value: "Approved".to_string(), label: "✅ Approved".to_string(), wip_limit: 0 },
+                    KanBanColumn { value: "Completed".to_string(), label: "🏁 Completed".to_string(), wip_limit: 0 },
+                    KanBanColumn { value: "Rejected".to_string(), label: "❌ Rejected".to_string(), wip_limit: 0 },
+                ]
+            }
+            KanBanField::Priority => {
+                vec![
+                    KanBanColumn { value: "High".to_string(), label: "🔴 High".to_string(), wip_limit: 0 },
+                    KanBanColumn { value: "Medium".to_string(), label: "🟡 Medium".to_string(), wip_limit: 0 },
+                    KanBanColumn { value: "Low".to_string(), label: "🟢 Low".to_string(), wip_limit: 0 },
+                ]
+            }
+        }
+    }
+
+    /// Get the value of a requirement for the current KanBan field
+    fn get_kanban_field_value(&self, req: &Requirement) -> String {
+        match self.kanban_field {
+            KanBanField::Status => req.effective_status(),
+            KanBanField::Priority => req.effective_priority(),
+        }
+    }
+
+    /// Render a single KanBan column
+    fn render_kanban_column(&mut self, ui: &mut egui::Ui, column: &KanBanColumn, width: f32, _col_idx: usize) {
+        // Get requirements for this column
+        let reqs_in_column: Vec<(usize, Uuid, String, String, String)> = self.store.requirements
+            .iter()
+            .enumerate()
+            .filter(|(_, r)| {
+                // Filter by archived
+                if r.archived && !self.show_archived {
+                    return false;
+                }
+                // Filter by type if set
+                if let Some(ref filter_type) = self.kanban_filter_type {
+                    if &r.req_type != filter_type {
+                        return false;
+                    }
+                }
+                // Filter by column value
+                let value = self.get_kanban_field_value(r);
+                value == column.value
+            })
+            .map(|(idx, r)| (
+                idx,
+                r.id,
+                r.spec_id.clone().unwrap_or_default(),
+                r.title.clone(),
+                r.owner.clone(),
+            ))
+            .collect();
+
+        let card_count = reqs_in_column.len();
+        let wip_limit = self.kanban_wip_limits.get(&column.value).copied().unwrap_or(column.wip_limit);
+        let over_wip = wip_limit > 0 && card_count > wip_limit;
+
+        // Column frame
+        let column_color = if over_wip {
+            egui::Color32::from_rgb(255, 200, 200) // Light red for over WIP
+        } else if self.kanban_drop_column.as_ref() == Some(&column.value) {
+            egui::Color32::from_rgb(200, 230, 255) // Light blue for drop target
+        } else {
+            ui.visuals().window_fill()
+        };
+
+        egui::Frame::none()
+            .fill(column_color)
+            .stroke(ui.visuals().window_stroke())
+            .rounding(5.0)
+            .inner_margin(5.0)
+            .show(ui, |ui| {
+                ui.set_min_width(width);
+                ui.set_max_width(width);
+
+                // Column header
+                ui.vertical(|ui| {
+                    ui.horizontal(|ui| {
+                        ui.strong(&column.label);
+                        ui.weak(format!("({})", card_count));
+                        if wip_limit > 0 {
+                            let wip_text = if over_wip {
+                                format!("⚠️ WIP: {}", wip_limit)
+                            } else {
+                                format!("WIP: {}", wip_limit)
+                            };
+                            ui.weak(&wip_text);
+                        }
+                    });
+
+                    ui.separator();
+
+                    // Cards scroll area
+                    egui::ScrollArea::vertical()
+                        .id_salt(format!("kanban_col_{}", column.value))
+                        .max_height(ui.available_height() - 30.0)
+                        .auto_shrink([false, false])
+                        .show(ui, |ui| {
+                            for (idx, req_id, spec_id, title, owner) in reqs_in_column {
+                                self.render_kanban_card(ui, idx, &req_id, &spec_id, &title, &owner, &column.value);
+                            }
+
+                            // Drop zone hint when empty
+                            if card_count == 0 {
+                                ui.centered_and_justified(|ui| {
+                                    ui.weak("Drop cards here");
+                                });
+                            }
+                        });
+                });
+            });
+
+        ui.add_space(5.0);
+    }
+
+    /// Render a single KanBan card
+    fn render_kanban_card(
+        &mut self,
+        ui: &mut egui::Ui,
+        idx: usize,
+        req_id: &Uuid,
+        spec_id: &str,
+        title: &str,
+        owner: &str,
+        column_value: &str,
+    ) {
+        let is_dragging = self.kanban_drag_card == Some(*req_id);
+        let is_selected = self.selected_idx == Some(idx);
+
+        let card_color = if is_dragging {
+            egui::Color32::from_rgb(200, 200, 255) // Light purple for dragging
+        } else if is_selected {
+            ui.visuals().selection.bg_fill
+        } else {
+            ui.visuals().widgets.inactive.bg_fill
+        };
+
+        let response = egui::Frame::none()
+            .fill(card_color)
+            .stroke(egui::Stroke::new(1.0, ui.visuals().widgets.inactive.bg_stroke.color))
+            .rounding(3.0)
+            .inner_margin(8.0)
+            .show(ui, |ui| {
+                ui.set_min_width(ui.available_width() - 10.0);
+
+                ui.vertical(|ui| {
+                    // Spec ID
+                    ui.horizontal(|ui| {
+                        ui.strong(spec_id);
+                        if !owner.is_empty() {
+                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                ui.weak(owner);
+                            });
+                        }
+                    });
+
+                    // Title (truncated if too long)
+                    let display_title = if title.len() > 60 {
+                        format!("{}...", &title[..57])
+                    } else {
+                        title.to_string()
+                    };
+                    ui.label(&display_title);
+                });
+            }).response;
+
+        // Handle interactions
+        let response = response.interact(egui::Sense::click_and_drag());
+
+        if response.clicked() {
+            self.selected_idx = Some(idx);
+        }
+
+        if response.double_clicked() {
+            self.selected_idx = Some(idx);
+            self.pending_view_change = Some(View::Detail);
+        }
+
+        // Drag start
+        if response.drag_started() {
+            self.kanban_drag_card = Some(*req_id);
+        }
+
+        // During drag, track which column we're over
+        if self.kanban_drag_card.is_some() && response.hovered() {
+            self.kanban_drop_column = Some(column_value.to_string());
+        }
+
+        // Drag end - update the requirement
+        if response.drag_stopped() {
+            if let Some(drag_id) = self.kanban_drag_card.take() {
+                if let Some(target_column) = self.kanban_drop_column.take() {
+                    // Update the requirement's field value
+                    self.update_kanban_field(&drag_id, &target_column);
+                }
+            }
+        }
+
+        ui.add_space(5.0);
+    }
+
+    /// Update a requirement's field based on KanBan column drop
+    fn update_kanban_field(&mut self, req_id: &Uuid, new_value: &str) {
+        if let Some(req) = self.store.requirements.iter_mut().find(|r| r.id == *req_id) {
+            match self.kanban_field {
+                KanBanField::Status => {
+                    req.set_status_from_str(new_value);
+                    req.modified_at = chrono::Utc::now();
+                }
+                KanBanField::Priority => {
+                    req.set_priority_from_str(new_value);
+                    req.modified_at = chrono::Utc::now();
+                }
+            }
+            // Save changes
+            if let Err(e) = self.storage.save(&self.store) {
+                eprintln!("Failed to save after KanBan update: {}", e);
+            }
         }
     }
 
@@ -17653,6 +18020,7 @@ impl eframe::App for RequirementsApp {
                 View::Detail => KeyContext::DetailView,
                 View::Add | View::Edit => KeyContext::Form, // This branch won't be reached due to in_form_view check
                 View::OrgChart => KeyContext::RequirementsList, // Use same context for org chart
+                View::KanBan => KeyContext::RequirementsList,   // Use same context for kanban
             }
         };
 
@@ -18251,6 +18619,11 @@ impl eframe::App for RequirementsApp {
             // Organization Chart view
             egui::CentralPanel::default().show(ctx, |ui| {
                 self.show_org_chart_view(ui);
+            });
+        } else if self.current_view == View::KanBan {
+            // KanBan board view
+            egui::CentralPanel::default().show(ctx, |ui| {
+                self.show_kanban_view(ui);
             });
         } else {
             // In List/Detail view, use layout mode

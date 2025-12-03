@@ -7990,9 +7990,53 @@ requirements:
   status: Completed
   priority: Medium
   owner: ''
-  feature: Uncategorized
+  feature: 105-Uncategorized
   created_at: 2025-12-03T04:01:58.094706048Z
   modified_at: 2025-12-03T04:01:58.094706048Z
+  req_type: Functional
+  dependencies: []
+  tags: []
+- id: 7d5f9637-5f9e-4c3c-9706-669341c466f4
+  spec_id: FR-0191
+  title: KanBan View Support
+  description: |-
+    Add a KanBan board view for visualizing requirements workflow.
+
+    ## Layout
+    - Left Panel: Filtered requirements list (backlog/source)
+    - Right Panel: KanBan board with configurable swimlanes
+
+    ## Swimlane Options
+    - By Status (Draft → In Progress → Review → Completed)
+    - By Priority (Critical → High → Medium → Low)
+    - By Custom Enum fields
+
+    ## Features
+    - Filter to single requirement type for consistent workflows
+    - Drag cards between swimlanes to change values
+    - Click card to view/edit details
+    - WIP (Work-In-Progress) limits per column
+    - Save board configurations as presets
+
+    ## Card Display
+    - Spec ID and title
+    - Owner avatar/indicator
+    - Priority badge
+    - Tags
+
+    ## Acceptance Criteria
+    - [ ] KanBan board renders with columns
+    - [ ] Cards display in correct columns based on field value
+    - [ ] Drag-and-drop updates the requirement field
+    - [ ] Configurable swimlane field (status/priority/custom)
+    - [ ] WIP limits with visual indicator
+    - [ ] Board presets can be saved/loaded
+  status: Draft
+  priority: Medium
+  owner: ''
+  feature: Views
+  created_at: 2025-12-03T04:25:55.427939897Z
+  modified_at: 2025-12-03T04:25:55.427939897Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -8087,8 +8131,8 @@ id_config:
     prefix: SPIKE
     description: Research or investigation task to reduce uncertainty or explore technical approaches
 features: []
-next_feature_number: 105
-next_spec_number: 191
+next_feature_number: 106
+next_spec_number: 192
 prefix_counters: {}
 relationship_definitions:
 - name: parent
