@@ -19,6 +19,10 @@ pub use models::{
     AiActionPromptConfig,
     AiPromptConfig,
     AiTypePromptConfig,
+    // Baseline types
+    Baseline,
+    BaselineComparison,
+    BaselineRequirementDiff,
     Cardinality,
     Comment,
     // Comment reaction types
@@ -43,6 +47,7 @@ pub use models::{
     RelationshipValidation,
     Requirement,
     RequirementPriority,
+    RequirementSnapshot,
     RequirementStatus,
     RequirementType,
     RequirementTypeDefinition,

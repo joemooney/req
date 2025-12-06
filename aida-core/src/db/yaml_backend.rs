@@ -59,6 +59,94 @@ impl DatabaseBackend for YamlBackend {
     {
         self.storage.update_atomically(update_fn)
     }
+
+    /// Creates a baseline with git tagging support for YAML backend
+    fn create_baseline(
+        &self,
+        name: String,
+        description: Option<String>,
+        created_by: String,
+    ) -> Result<crate::models::Baseline> {
+        let mut store = self.load()?;
+        let mut baseline = store.create_baseline(name, description, created_by).clone();
+
+        // Try to create a git tag for this baseline
+        if let Some(git_tag) = self.create_git_tag_for_baseline(&baseline) {
+            // Update the baseline with the git tag
+            if let Some(b) = store.baselines.iter_mut().find(|b| b.id == baseline.id) {
+                b.git_tag = Some(git_tag.clone());
+                baseline.git_tag = Some(git_tag);
+            }
+        }
+
+        self.save(&store)?;
+        Ok(baseline)
+    }
+}
+
+impl YamlBackend {
+    /// Attempts to create a git tag for a baseline
+    /// Returns the tag name if successful, None if git is not available or fails
+    fn create_git_tag_for_baseline(&self, baseline: &crate::models::Baseline) -> Option<String> {
+        use std::process::Command;
+
+        // Get the directory containing the YAML file
+        let dir = self.path.parent()?;
+
+        // Check if we're in a git repository
+        let git_check = Command::new("git")
+            .args(["rev-parse", "--git-dir"])
+            .current_dir(dir)
+            .output()
+            .ok()?;
+
+        if !git_check.status.success() {
+            return None; // Not a git repo
+        }
+
+        let tag_name = baseline.git_tag_name();
+        let message = baseline.description.as_deref().unwrap_or(&baseline.name);
+
+        // Create an annotated tag
+        let result = Command::new("git")
+            .args(["tag", "-a", &tag_name, "-m", message])
+            .current_dir(dir)
+            .output()
+            .ok()?;
+
+        if result.status.success() {
+            Some(tag_name)
+        } else {
+            // Tag might already exist or other error
+            None
+        }
+    }
+
+    /// Lists git tags that match the baseline pattern
+    #[allow(dead_code)]
+    pub fn list_git_baseline_tags(&self) -> Vec<String> {
+        use std::process::Command;
+
+        let Some(dir) = self.path.parent() else {
+            return Vec::new();
+        };
+
+        let output = Command::new("git")
+            .args(["tag", "-l", "baseline-*"])
+            .current_dir(dir)
+            .output()
+            .ok();
+
+        match output {
+            Some(o) if o.status.success() => {
+                String::from_utf8_lossy(&o.stdout)
+                    .lines()
+                    .map(|s| s.to_string())
+                    .collect()
+            }
+            _ => Vec::new(),
+        }
+    }
 }
 
 #[cfg(test)]

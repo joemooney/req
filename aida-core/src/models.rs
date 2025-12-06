@@ -1237,6 +1237,187 @@ impl HistoryEntry {
     }
 }
 
+/// A snapshot of a requirement at a specific point in time (for baselines)
+/// This is a full copy of the requirement state, not a reference
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct RequirementSnapshot {
+    /// The original requirement's UUID (for linking back)
+    pub original_id: Uuid,
+
+    /// Spec ID at the time of snapshot
+    pub spec_id: Option<String>,
+
+    /// Title at snapshot time
+    pub title: String,
+
+    /// Description at snapshot time
+    pub description: String,
+
+    /// Status at snapshot time
+    pub status: RequirementStatus,
+
+    /// Priority at snapshot time
+    pub priority: RequirementPriority,
+
+    /// Owner at snapshot time
+    pub owner: String,
+
+    /// Feature at snapshot time
+    pub feature: String,
+
+    /// Type at snapshot time
+    pub req_type: RequirementType,
+
+    /// Tags at snapshot time
+    pub tags: HashSet<String>,
+
+    /// Relationships at snapshot time (storing IDs, not full objects)
+    pub relationships: Vec<Relationship>,
+
+    /// Custom status at snapshot time
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub custom_status: Option<String>,
+
+    /// Custom priority at snapshot time
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub custom_priority: Option<String>,
+
+    /// Custom fields at snapshot time
+    #[serde(default, skip_serializing_if = "std::collections::HashMap::is_empty")]
+    pub custom_fields: std::collections::HashMap<String, String>,
+}
+
+impl RequirementSnapshot {
+    /// Creates a snapshot from a requirement
+    pub fn from_requirement(req: &Requirement) -> Self {
+        Self {
+            original_id: req.id,
+            spec_id: req.spec_id.clone(),
+            title: req.title.clone(),
+            description: req.description.clone(),
+            status: req.status.clone(),
+            priority: req.priority.clone(),
+            owner: req.owner.clone(),
+            feature: req.feature.clone(),
+            req_type: req.req_type.clone(),
+            tags: req.tags.clone(),
+            relationships: req.relationships.clone(),
+            custom_status: req.custom_status.clone(),
+            custom_priority: req.custom_priority.clone(),
+            custom_fields: req.custom_fields.clone(),
+        }
+    }
+}
+
+/// Represents a baseline - a named snapshot of requirements at a point in time
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Baseline {
+    /// Unique identifier for this baseline
+    pub id: Uuid,
+
+    /// Human-readable name (e.g., "Release 1.0", "Sprint 5 End")
+    pub name: String,
+
+    /// Optional description of what this baseline represents
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+
+    /// When the baseline was created
+    pub created_at: DateTime<Utc>,
+
+    /// Who created the baseline
+    pub created_by: String,
+
+    /// Git tag associated with this baseline (for YAML backend)
+    /// Format: "baseline-{name-slug}" or custom
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub git_tag: Option<String>,
+
+    /// Full snapshots of all requirements at baseline time
+    /// For SQL backends, this is always populated
+    /// For YAML backend, this may be empty if git_tag is used (can reconstruct from git)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub requirements: Vec<RequirementSnapshot>,
+
+    /// Whether this baseline is locked (cannot be modified or deleted)
+    #[serde(default)]
+    pub locked: bool,
+}
+
+impl Baseline {
+    /// Creates a new baseline with snapshots of the given requirements
+    pub fn new(
+        name: String,
+        description: Option<String>,
+        created_by: String,
+        requirements: &[Requirement],
+    ) -> Self {
+        let snapshots: Vec<RequirementSnapshot> = requirements
+            .iter()
+            .filter(|r| !r.archived) // Don't include archived requirements in baselines
+            .map(RequirementSnapshot::from_requirement)
+            .collect();
+
+        Self {
+            id: Uuid::new_v4(),
+            name,
+            description,
+            created_at: Utc::now(),
+            created_by,
+            git_tag: None,
+            requirements: snapshots,
+            locked: false,
+        }
+    }
+
+    /// Creates a baseline name slug suitable for git tags
+    pub fn name_slug(&self) -> String {
+        self.name
+            .to_lowercase()
+            .chars()
+            .map(|c| if c.is_alphanumeric() { c } else { '-' })
+            .collect::<String>()
+            .trim_matches('-')
+            .to_string()
+    }
+
+    /// Gets the git tag name for this baseline
+    pub fn git_tag_name(&self) -> String {
+        self.git_tag
+            .clone()
+            .unwrap_or_else(|| format!("baseline-{}", self.name_slug()))
+    }
+}
+
+/// Summary of changes between two baselines or baseline and current state
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct BaselineComparison {
+    /// Requirements added (in target but not in source)
+    pub added: Vec<Uuid>,
+
+    /// Requirements removed (in source but not in target)
+    pub removed: Vec<Uuid>,
+
+    /// Requirements modified (exist in both but changed)
+    pub modified: Vec<BaselineRequirementDiff>,
+
+    /// Requirements unchanged
+    pub unchanged: Vec<Uuid>,
+}
+
+/// Represents changes to a single requirement between baselines
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BaselineRequirementDiff {
+    /// The requirement's UUID
+    pub id: Uuid,
+
+    /// Spec ID (for display)
+    pub spec_id: Option<String>,
+
+    /// List of changed fields
+    pub changes: Vec<FieldChange>,
+}
+
 /// Represents a reaction emoji definition
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ReactionDefinition {
@@ -2236,6 +2417,10 @@ pub struct RequirementsStore {
     /// AI prompt configuration for customizing AI behavior
     #[serde(default, skip_serializing_if = "is_default_ai_prompt_config")]
     pub ai_prompts: AiPromptConfig,
+
+    /// Baselines - named snapshots of requirements at specific points in time
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub baselines: Vec<Baseline>,
 }
 
 /// Helper function for skip_serializing_if on AiPromptConfig
@@ -2287,6 +2472,7 @@ impl RequirementsStore {
             allowed_prefixes: Vec::new(),
             restrict_prefixes: false,
             ai_prompts: AiPromptConfig::default(),
+            baselines: Vec::new(),
         }
     }
 
@@ -3931,6 +4117,277 @@ impl RequirementsStore {
         }
 
         None
+    }
+
+    // =========================================================================
+    // Baseline Operations
+    // =========================================================================
+
+    /// Creates a new baseline from current requirements
+    pub fn create_baseline(
+        &mut self,
+        name: String,
+        description: Option<String>,
+        created_by: String,
+    ) -> &Baseline {
+        let baseline = Baseline::new(name, description, created_by, &self.requirements);
+        self.baselines.push(baseline);
+        self.baselines.last().unwrap()
+    }
+
+    /// Gets a baseline by ID
+    pub fn get_baseline(&self, id: &Uuid) -> Option<&Baseline> {
+        self.baselines.iter().find(|b| &b.id == id)
+    }
+
+    /// Gets a baseline by name
+    pub fn get_baseline_by_name(&self, name: &str) -> Option<&Baseline> {
+        self.baselines.iter().find(|b| b.name == name)
+    }
+
+    /// Deletes a baseline by ID (if not locked)
+    pub fn delete_baseline(&mut self, id: &Uuid) -> bool {
+        if let Some(idx) = self.baselines.iter().position(|b| &b.id == id) {
+            if !self.baselines[idx].locked {
+                self.baselines.remove(idx);
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Compares current requirements against a baseline
+    pub fn compare_with_baseline(&self, baseline_id: &Uuid) -> Option<BaselineComparison> {
+        let baseline = self.get_baseline(baseline_id)?;
+        Some(self.compare_snapshots_to_current(&baseline.requirements))
+    }
+
+    /// Compares two baselines
+    pub fn compare_baselines(
+        &self,
+        source_id: &Uuid,
+        target_id: &Uuid,
+    ) -> Option<BaselineComparison> {
+        let source = self.get_baseline(source_id)?;
+        let target = self.get_baseline(target_id)?;
+        Some(Self::compare_snapshot_sets(&source.requirements, &target.requirements))
+    }
+
+    /// Helper: compare snapshots to current requirements
+    fn compare_snapshots_to_current(&self, snapshots: &[RequirementSnapshot]) -> BaselineComparison {
+        use std::collections::HashMap;
+
+        let snapshot_map: HashMap<Uuid, &RequirementSnapshot> =
+            snapshots.iter().map(|s| (s.original_id, s)).collect();
+
+        let current_map: HashMap<Uuid, &Requirement> = self
+            .requirements
+            .iter()
+            .filter(|r| !r.archived)
+            .map(|r| (r.id, r))
+            .collect();
+
+        let mut comparison = BaselineComparison::default();
+
+        // Find added (in current but not in baseline)
+        for id in current_map.keys() {
+            if !snapshot_map.contains_key(id) {
+                comparison.added.push(*id);
+            }
+        }
+
+        // Find removed (in baseline but not in current)
+        for id in snapshot_map.keys() {
+            if !current_map.contains_key(id) {
+                comparison.removed.push(*id);
+            }
+        }
+
+        // Find modified and unchanged
+        for (id, snapshot) in &snapshot_map {
+            if let Some(current) = current_map.get(id) {
+                let changes = Self::diff_snapshot_to_requirement(snapshot, current);
+                if changes.is_empty() {
+                    comparison.unchanged.push(*id);
+                } else {
+                    comparison.modified.push(BaselineRequirementDiff {
+                        id: *id,
+                        spec_id: current.spec_id.clone(),
+                        changes,
+                    });
+                }
+            }
+        }
+
+        comparison
+    }
+
+    /// Helper: compare two sets of snapshots
+    fn compare_snapshot_sets(
+        source: &[RequirementSnapshot],
+        target: &[RequirementSnapshot],
+    ) -> BaselineComparison {
+        use std::collections::HashMap;
+
+        let source_map: HashMap<Uuid, &RequirementSnapshot> =
+            source.iter().map(|s| (s.original_id, s)).collect();
+
+        let target_map: HashMap<Uuid, &RequirementSnapshot> =
+            target.iter().map(|s| (s.original_id, s)).collect();
+
+        let mut comparison = BaselineComparison::default();
+
+        // Find added (in target but not in source)
+        for id in target_map.keys() {
+            if !source_map.contains_key(id) {
+                comparison.added.push(*id);
+            }
+        }
+
+        // Find removed (in source but not in target)
+        for id in source_map.keys() {
+            if !target_map.contains_key(id) {
+                comparison.removed.push(*id);
+            }
+        }
+
+        // Find modified and unchanged
+        for (id, source_snap) in &source_map {
+            if let Some(target_snap) = target_map.get(id) {
+                let changes = Self::diff_snapshots(source_snap, target_snap);
+                if changes.is_empty() {
+                    comparison.unchanged.push(*id);
+                } else {
+                    comparison.modified.push(BaselineRequirementDiff {
+                        id: *id,
+                        spec_id: target_snap.spec_id.clone(),
+                        changes,
+                    });
+                }
+            }
+        }
+
+        comparison
+    }
+
+    /// Helper: diff a snapshot against current requirement
+    fn diff_snapshot_to_requirement(
+        snapshot: &RequirementSnapshot,
+        current: &Requirement,
+    ) -> Vec<FieldChange> {
+        let mut changes = Vec::new();
+
+        if snapshot.title != current.title {
+            changes.push(FieldChange {
+                field_name: "title".to_string(),
+                old_value: snapshot.title.clone(),
+                new_value: current.title.clone(),
+            });
+        }
+        if snapshot.description != current.description {
+            changes.push(FieldChange {
+                field_name: "description".to_string(),
+                old_value: snapshot.description.clone(),
+                new_value: current.description.clone(),
+            });
+        }
+        if snapshot.status != current.status {
+            changes.push(FieldChange {
+                field_name: "status".to_string(),
+                old_value: snapshot.status.to_string(),
+                new_value: current.status.to_string(),
+            });
+        }
+        if snapshot.priority != current.priority {
+            changes.push(FieldChange {
+                field_name: "priority".to_string(),
+                old_value: snapshot.priority.to_string(),
+                new_value: current.priority.to_string(),
+            });
+        }
+        if snapshot.owner != current.owner {
+            changes.push(FieldChange {
+                field_name: "owner".to_string(),
+                old_value: snapshot.owner.clone(),
+                new_value: current.owner.clone(),
+            });
+        }
+        if snapshot.feature != current.feature {
+            changes.push(FieldChange {
+                field_name: "feature".to_string(),
+                old_value: snapshot.feature.clone(),
+                new_value: current.feature.clone(),
+            });
+        }
+        if snapshot.req_type != current.req_type {
+            changes.push(FieldChange {
+                field_name: "type".to_string(),
+                old_value: format!("{:?}", snapshot.req_type),
+                new_value: format!("{:?}", current.req_type),
+            });
+        }
+
+        changes
+    }
+
+    /// Helper: diff two snapshots
+    fn diff_snapshots(
+        source: &RequirementSnapshot,
+        target: &RequirementSnapshot,
+    ) -> Vec<FieldChange> {
+        let mut changes = Vec::new();
+
+        if source.title != target.title {
+            changes.push(FieldChange {
+                field_name: "title".to_string(),
+                old_value: source.title.clone(),
+                new_value: target.title.clone(),
+            });
+        }
+        if source.description != target.description {
+            changes.push(FieldChange {
+                field_name: "description".to_string(),
+                old_value: source.description.clone(),
+                new_value: target.description.clone(),
+            });
+        }
+        if source.status != target.status {
+            changes.push(FieldChange {
+                field_name: "status".to_string(),
+                old_value: source.status.to_string(),
+                new_value: target.status.to_string(),
+            });
+        }
+        if source.priority != target.priority {
+            changes.push(FieldChange {
+                field_name: "priority".to_string(),
+                old_value: source.priority.to_string(),
+                new_value: target.priority.to_string(),
+            });
+        }
+        if source.owner != target.owner {
+            changes.push(FieldChange {
+                field_name: "owner".to_string(),
+                old_value: source.owner.clone(),
+                new_value: target.owner.clone(),
+            });
+        }
+        if source.feature != target.feature {
+            changes.push(FieldChange {
+                field_name: "feature".to_string(),
+                old_value: source.feature.clone(),
+                new_value: target.feature.clone(),
+            });
+        }
+        if source.req_type != target.req_type {
+            changes.push(FieldChange {
+                field_name: "type".to_string(),
+                old_value: format!("{:?}", source.req_type),
+                new_value: format!("{:?}", target.req_type),
+            });
+        }
+
+        changes
     }
 }
 

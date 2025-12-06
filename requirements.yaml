@@ -517,12 +517,12 @@ requirements:
   prefix_override: COMMENTS
   title: Support comments
   description: ''
-  status: Draft
+  status: Approved
   priority: Medium
   owner: ''
   feature: 6-Uncategorized
   created_at: 2025-11-25T23:51:23.542112733Z
-  modified_at: 2025-11-26T22:55:17.378345136Z
+  modified_at: 2025-12-03T05:49:10.216375591Z
   req_type: Functional
   dependencies: []
   tags: []
@@ -987,8 +987,8 @@ requirements:
   owner: ''
   feature: 19-Uncategorized
   created_at: 2025-11-26T23:04:21.820329556Z
-  modified_at: 2025-11-26T23:04:21.820329556Z
-  req_type: Functional
+  modified_at: 2025-12-03T05:51:25.286507586Z
+  req_type: Folder
   dependencies: []
   tags: []
   relationships:
@@ -996,6 +996,14 @@ requirements:
     target_id: 2fd609e9-d194-47a3-adbd-417f6306190c
   - rel_type: Child
     target_id: ce9fdd12-0860-4334-90b7-399952ca523a
+  history:
+  - id: cd728855-0349-48fe-b402-c7d280490106
+    author: Joe Mooney
+    timestamp: 2025-12-03T05:51:25.286504227Z
+    changes:
+    - field_name: type
+      old_value: Functional
+      new_value: Folder
 - id: 2fd609e9-d194-47a3-adbd-417f6306190c
   spec_id: USERS-0033
   prefix_override: USERS
@@ -8288,8 +8296,8 @@ reaction_definitions:
   description: Mark as important/attention needed
   built_in: true
 meta_counters:
-  $TEAM: 4
   $USER: 6
+  $TEAM: 4
 type_definitions:
 - name: Functional
   display_name: Functional
@@ -8508,6 +8516,7 @@ type_definitions:
   stateless: false
 allowed_prefixes:
 - ADDREQ
+- ADMIN
 - AI
 - DB
 - DETAILVIEW

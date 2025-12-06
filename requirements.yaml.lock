@@ -1,9 +1,1 @@
-sessions:
-  2434579-5abb7040-a77a-41c2-ace2-04ce0eb02256:
-    session_id: 2434579-5abb7040-a77a-41c2-ace2-04ce0eb02256
-    user_name: Joe Mooney
-    hostname: imac
-    pid: 2434579
-    started_at: 2025-12-03T05:35:28.947551269Z
-    last_heartbeat: 2025-12-03T05:35:28.947553394Z
-    editing_requirement: null
+sessions: {}

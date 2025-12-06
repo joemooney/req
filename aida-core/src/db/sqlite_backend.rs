@@ -529,6 +529,7 @@ impl DatabaseBackend for SqliteBackend {
             allowed_prefixes,
             restrict_prefixes,
             ai_prompts: Default::default(),
+            baselines: Vec::new(), // Baselines not yet implemented in SQLite backend
         })
     }
 

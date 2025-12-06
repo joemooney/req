@@ -265,6 +265,65 @@ pub trait DatabaseBackend: Send + Sync {
     }
 
     // =========================================================================
+    // Baseline Operations
+    // =========================================================================
+
+    /// Creates a new baseline from current requirements
+    /// For YAML backend, this also creates a git tag
+    fn create_baseline(
+        &self,
+        name: String,
+        description: Option<String>,
+        created_by: String,
+    ) -> Result<crate::models::Baseline> {
+        let mut store = self.load()?;
+        let baseline = store.create_baseline(name, description, created_by).clone();
+        self.save(&store)?;
+        Ok(baseline)
+    }
+
+    /// Lists all baselines
+    fn list_baselines(&self) -> Result<Vec<crate::models::Baseline>> {
+        let store = self.load()?;
+        Ok(store.baselines.clone())
+    }
+
+    /// Gets a baseline by ID
+    fn get_baseline(&self, id: &Uuid) -> Result<Option<crate::models::Baseline>> {
+        let store = self.load()?;
+        Ok(store.baselines.iter().find(|b| &b.id == id).cloned())
+    }
+
+    /// Deletes a baseline (if not locked)
+    fn delete_baseline(&self, id: &Uuid) -> Result<bool> {
+        let mut store = self.load()?;
+        let deleted = store.delete_baseline(id);
+        if deleted {
+            self.save(&store)?;
+        }
+        Ok(deleted)
+    }
+
+    /// Compares current state against a baseline
+    fn compare_with_baseline(
+        &self,
+        baseline_id: &Uuid,
+    ) -> Result<Option<crate::models::BaselineComparison>> {
+        let store = self.load()?;
+        Ok(store.compare_with_baseline(baseline_id))
+    }
+
+    /// Compares two baselines
+    fn compare_baselines(
+        &self,
+        source_id: &Uuid,
+        target_id: &Uuid,
+    ) -> Result<Option<crate::models::BaselineComparison>> {
+        let store = self.load()?;
+        Ok(store.compare_baselines(source_id, target_id))
+    }
+
+    // =========================================================================
     // Utility Operations
     // =========================================================================
 
