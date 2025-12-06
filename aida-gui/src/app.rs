@@ -1860,8 +1860,9 @@ enum View {
     Detail,
     Add,
     Edit,
-    OrgChart, // Organization chart view for teams
-    KanBan,   // KanBan board view
+    OrgChart,  // Organization chart view for teams
+    KanBan,    // KanBan board view
+    Baselines, // Baseline management view
 }
 
 /// Layout mode defines the panel arrangement (cycles through 5 predefined layouts)
@@ -2509,6 +2510,15 @@ pub struct RequirementsApp {
     heartbeat_sender: Option<std::sync::mpsc::Sender<HeartbeatCommand>>,  // Channel to heartbeat thread
     last_lock_info: Option<LockFileInfo>,               // Last known lock file state
     other_sessions_warning_shown: bool,                 // Whether we've shown the concurrent users warning
+
+    // Baseline management state
+    show_create_baseline_dialog: bool,
+    baseline_form_name: String,
+    baseline_form_description: String,
+    selected_baseline_id: Option<Uuid>,                 // Currently selected baseline for viewing
+    baseline_compare_source: Option<Uuid>,              // Source baseline for comparison
+    baseline_compare_target: Option<Uuid>,              // Target baseline (None = current state)
+    show_baseline_comparison: bool,                     // Whether to show comparison view
 }
 
 /// Result from background AI evaluation thread
@@ -2962,6 +2972,15 @@ impl RequirementsApp {
             heartbeat_sender: Some(heartbeat_sender),
             last_lock_info: initial_lock_info,
             other_sessions_warning_shown: false,
+
+            // Baseline management state
+            show_create_baseline_dialog: false,
+            baseline_form_name: String::new(),
+            baseline_form_description: String::new(),
+            selected_baseline_id: None,
+            baseline_compare_source: None,
+            baseline_compare_target: None,
+            show_baseline_comparison: false,
         }
     }
 
@@ -4156,6 +4175,11 @@ impl RequirementsApp {
                     }
                     if ui.button("🏢 Org Chart").clicked() {
                         self.pending_view_change = Some(View::OrgChart);
+                        ui.close_menu();
+                    }
+                    ui.separator();
+                    if ui.button("🏷 Baselines").clicked() {
+                        self.pending_view_change = Some(View::Baselines);
                         ui.close_menu();
                     }
                 });
@@ -8708,6 +8732,364 @@ impl RequirementsApp {
         // Close modal on Escape key
         if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
             self.kanban_detail_modal = None;
+        }
+    }
+
+    /// Show the baselines management view
+    fn show_baselines_view(&mut self, ui: &mut egui::Ui) {
+        // Header with controls
+        ui.horizontal(|ui| {
+            ui.heading("🏷 Baselines");
+
+            ui.separator();
+
+            if ui.button("➕ Create Baseline").clicked() {
+                self.show_create_baseline_dialog = true;
+                self.baseline_form_name.clear();
+                self.baseline_form_description.clear();
+            }
+
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                if ui.button("📋 Back to List").clicked() {
+                    self.pending_view_change = Some(View::List);
+                }
+            });
+        });
+
+        ui.separator();
+
+        // List of baselines
+        let baselines = self.store.baselines.clone();
+
+        if baselines.is_empty() {
+            ui.centered_and_justified(|ui| {
+                ui.vertical_centered(|ui| {
+                    ui.add_space(50.0);
+                    ui.label(egui::RichText::new("No baselines created yet").size(16.0).color(egui::Color32::GRAY));
+                    ui.add_space(10.0);
+                    ui.label("Baselines are named snapshots of your requirements at a point in time.");
+                    ui.label("Use them to track releases, milestones, or approved states.");
+                    ui.add_space(20.0);
+                    if ui.button("➕ Create First Baseline").clicked() {
+                        self.show_create_baseline_dialog = true;
+                        self.baseline_form_name.clear();
+                        self.baseline_form_description.clear();
+                    }
+                });
+            });
+            return;
+        }
+
+        // Baselines table
+        egui::ScrollArea::vertical()
+            .auto_shrink([false, false])
+            .show(ui, |ui| {
+                egui::Grid::new("baselines_grid")
+                    .num_columns(6)
+                    .spacing([20.0, 8.0])
+                    .striped(true)
+                    .show(ui, |ui| {
+                        // Header
+                        ui.strong("Name");
+                        ui.strong("Created");
+                        ui.strong("By");
+                        ui.strong("Requirements");
+                        ui.strong("Git Tag");
+                        ui.strong("Actions");
+                        ui.end_row();
+
+                        let mut delete_baseline_id: Option<Uuid> = None;
+
+                        for baseline in &baselines {
+                            // Name
+                            let selected = self.selected_baseline_id == Some(baseline.id);
+                            if ui.selectable_label(selected, &baseline.name).clicked() {
+                                self.selected_baseline_id = Some(baseline.id);
+                            }
+
+                            // Created date
+                            ui.label(baseline.created_at.format("%Y-%m-%d %H:%M").to_string());
+
+                            // Created by
+                            ui.label(&baseline.created_by);
+
+                            // Requirement count
+                            ui.label(format!("{}", baseline.requirements.len()));
+
+                            // Git tag
+                            if let Some(ref tag) = baseline.git_tag {
+                                ui.label(egui::RichText::new(tag).monospace().color(egui::Color32::from_rgb(100, 150, 200)));
+                            } else {
+                                ui.label(egui::RichText::new("-").color(egui::Color32::GRAY));
+                            }
+
+                            // Actions
+                            ui.horizontal(|ui| {
+                                if ui.small_button("📊 Compare").on_hover_text("Compare with current state").clicked() {
+                                    self.baseline_compare_source = Some(baseline.id);
+                                    self.baseline_compare_target = None; // Compare with current
+                                    self.show_baseline_comparison = true;
+                                }
+
+                                if !baseline.locked {
+                                    if ui.small_button("🗑").on_hover_text("Delete baseline").clicked() {
+                                        delete_baseline_id = Some(baseline.id);
+                                    }
+                                } else {
+                                    ui.small_button("🔒").on_hover_text("Baseline is locked");
+                                }
+                            });
+
+                            ui.end_row();
+
+                            // Show description if present
+                            if let Some(ref desc) = baseline.description {
+                                if !desc.is_empty() {
+                                    ui.label(""); // Empty first column
+                                    ui.add(egui::Label::new(egui::RichText::new(desc).italics().color(egui::Color32::GRAY)).wrap());
+                                    ui.end_row();
+                                }
+                            }
+                        }
+
+                        // Handle delete after iteration
+                        if let Some(id) = delete_baseline_id {
+                            self.store.delete_baseline(&id);
+                            if let Err(e) = self.storage.save(&self.store) {
+                                self.message = Some((format!("Failed to save: {}", e), true));
+                            }
+                        }
+                    });
+
+                // Selected baseline details
+                if let Some(baseline_id) = self.selected_baseline_id {
+                    if let Some(baseline) = baselines.iter().find(|b| b.id == baseline_id) {
+                        ui.add_space(20.0);
+                        ui.separator();
+                        ui.add_space(10.0);
+
+                        ui.heading(format!("Baseline: {}", baseline.name));
+
+                        if self.show_baseline_comparison {
+                            self.show_baseline_comparison_inline(ui, baseline);
+                        } else {
+                            // Show requirements in this baseline
+                            ui.label(format!("{} requirements in this baseline:", baseline.requirements.len()));
+                            ui.add_space(5.0);
+
+                            egui::ScrollArea::vertical()
+                                .id_salt("baseline_reqs_scroll")
+                                .max_height(300.0)
+                                .show(ui, |ui| {
+                                    for snapshot in &baseline.requirements {
+                                        ui.horizontal(|ui| {
+                                            if let Some(ref spec_id) = snapshot.spec_id {
+                                                ui.label(egui::RichText::new(spec_id).monospace().strong());
+                                            }
+                                            ui.label(&snapshot.title);
+                                            ui.label(format!("[{:?}]", snapshot.status));
+                                        });
+                                    }
+                                });
+                        }
+                    }
+                }
+            });
+    }
+
+    /// Show comparison between baseline and current state
+    fn show_baseline_comparison_inline(&mut self, ui: &mut egui::Ui, baseline: &aida_core::Baseline) {
+        ui.horizontal(|ui| {
+            ui.label(egui::RichText::new("Comparing with current state").strong());
+            if ui.small_button("✕ Close Comparison").clicked() {
+                self.show_baseline_comparison = false;
+            }
+        });
+
+        if let Some(comparison) = self.store.compare_with_baseline(&baseline.id) {
+            ui.add_space(10.0);
+
+            // Summary
+            ui.horizontal(|ui| {
+                if !comparison.added.is_empty() {
+                    ui.label(egui::RichText::new(format!("➕ {} added", comparison.added.len()))
+                        .color(egui::Color32::from_rgb(100, 200, 100)));
+                }
+                if !comparison.removed.is_empty() {
+                    ui.label(egui::RichText::new(format!("➖ {} removed", comparison.removed.len()))
+                        .color(egui::Color32::from_rgb(200, 100, 100)));
+                }
+                if !comparison.modified.is_empty() {
+                    ui.label(egui::RichText::new(format!("✏ {} modified", comparison.modified.len()))
+                        .color(egui::Color32::from_rgb(200, 200, 100)));
+                }
+                ui.label(format!("({} unchanged)", comparison.unchanged.len()));
+            });
+
+            ui.add_space(10.0);
+
+            // Added requirements
+            if !comparison.added.is_empty() {
+                ui.collapsing(format!("➕ Added ({}):", comparison.added.len()), |ui| {
+                    for id in &comparison.added {
+                        if let Some(req) = self.store.requirements.iter().find(|r| &r.id == id) {
+                            ui.horizontal(|ui| {
+                                if let Some(ref spec_id) = req.spec_id {
+                                    ui.label(egui::RichText::new(spec_id).monospace().color(egui::Color32::from_rgb(100, 200, 100)));
+                                }
+                                ui.label(&req.title);
+                            });
+                        }
+                    }
+                });
+            }
+
+            // Removed requirements
+            if !comparison.removed.is_empty() {
+                ui.collapsing(format!("➖ Removed ({}):", comparison.removed.len()), |ui| {
+                    for id in &comparison.removed {
+                        if let Some(snapshot) = baseline.requirements.iter().find(|s| &s.original_id == id) {
+                            ui.horizontal(|ui| {
+                                if let Some(ref spec_id) = snapshot.spec_id {
+                                    ui.label(egui::RichText::new(spec_id).monospace().color(egui::Color32::from_rgb(200, 100, 100)));
+                                }
+                                ui.label(&snapshot.title);
+                            });
+                        }
+                    }
+                });
+            }
+
+            // Modified requirements
+            if !comparison.modified.is_empty() {
+                ui.collapsing(format!("✏ Modified ({}):", comparison.modified.len()), |ui| {
+                    for diff in &comparison.modified {
+                        ui.group(|ui| {
+                            ui.horizontal(|ui| {
+                                if let Some(ref spec_id) = diff.spec_id {
+                                    ui.label(egui::RichText::new(spec_id).monospace().strong());
+                                }
+                            });
+
+                            for change in &diff.changes {
+                                ui.horizontal(|ui| {
+                                    ui.label(format!("  {}:", change.field_name));
+                                    ui.label(egui::RichText::new(&change.old_value).strikethrough().color(egui::Color32::from_rgb(200, 100, 100)));
+                                    ui.label("→");
+                                    ui.label(egui::RichText::new(&change.new_value).color(egui::Color32::from_rgb(100, 200, 100)));
+                                });
+                            }
+                        });
+                    }
+                });
+            }
+        } else {
+            ui.label("Unable to compute comparison");
+        }
+    }
+
+    /// Show the create baseline dialog
+    fn show_create_baseline_dialog(&mut self, ctx: &egui::Context) {
+        if !self.show_create_baseline_dialog {
+            return;
+        }
+
+        let mut close_dialog = false;
+        let mut create_baseline = false;
+
+        egui::Window::new("Create Baseline")
+            .collapsible(false)
+            .resizable(false)
+            .default_width(400.0)
+            .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
+            .show(ctx, |ui| {
+                ui.label("Create a snapshot of all current requirements.");
+                ui.add_space(10.0);
+
+                egui::Grid::new("create_baseline_grid")
+                    .num_columns(2)
+                    .spacing([10.0, 8.0])
+                    .show(ui, |ui| {
+                        ui.label("Name:");
+                        ui.add(egui::TextEdit::singleline(&mut self.baseline_form_name)
+                            .hint_text("e.g., Release 1.0, Sprint 5 End")
+                            .desired_width(250.0));
+                        ui.end_row();
+
+                        ui.label("Description:");
+                        ui.add(egui::TextEdit::multiline(&mut self.baseline_form_description)
+                            .hint_text("Optional description...")
+                            .desired_width(250.0)
+                            .desired_rows(3));
+                        ui.end_row();
+                    });
+
+                ui.add_space(10.0);
+
+                // Summary of what will be captured
+                let active_count = self.store.requirements.iter().filter(|r| !r.archived).count();
+                ui.label(format!("This will snapshot {} active requirements.", active_count));
+
+                ui.add_space(15.0);
+
+                ui.horizontal(|ui| {
+                    if ui.button("Cancel").clicked() {
+                        close_dialog = true;
+                    }
+
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        let can_create = !self.baseline_form_name.trim().is_empty();
+                        if ui.add_enabled(can_create, egui::Button::new("✓ Create Baseline")).clicked() {
+                            create_baseline = true;
+                        }
+                    });
+                });
+            });
+
+        if close_dialog {
+            self.show_create_baseline_dialog = false;
+        }
+
+        if create_baseline {
+            let name = self.baseline_form_name.trim().to_string();
+            let description = if self.baseline_form_description.trim().is_empty() {
+                None
+            } else {
+                Some(self.baseline_form_description.trim().to_string())
+            };
+
+            // Get username from settings
+            let created_by = if !self.user_settings.name.is_empty() {
+                self.user_settings.name.clone()
+            } else {
+                "Unknown".to_string()
+            };
+
+            // Create the baseline
+            let baseline = self.store.create_baseline(name.clone(), description, created_by).clone();
+
+            // Save
+            if let Err(e) = self.storage.save(&self.store) {
+                self.message = Some((format!("Failed to save baseline: {}", e), true));
+            } else {
+                // Select the new baseline
+                self.selected_baseline_id = Some(baseline.id);
+
+                // Show success message
+                let git_msg = if baseline.git_tag.is_some() {
+                    " (git tag created)"
+                } else {
+                    ""
+                };
+                self.message = Some((format!("Baseline '{}' created{}", name, git_msg), false));
+            }
+
+            self.show_create_baseline_dialog = false;
+        }
+
+        // Close on Escape
+        if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
+            self.show_create_baseline_dialog = false;
         }
     }
 
@@ -18404,6 +18786,7 @@ impl eframe::App for RequirementsApp {
                 View::Add | View::Edit => KeyContext::Form, // This branch won't be reached due to in_form_view check
                 View::OrgChart => KeyContext::RequirementsList, // Use same context for org chart
                 View::KanBan => KeyContext::RequirementsList,   // Use same context for kanban
+                View::Baselines => KeyContext::RequirementsList, // Use same context for baselines
             }
         };
 
@@ -19023,6 +19406,14 @@ impl eframe::App for RequirementsApp {
 
             // KanBan detail modal window
             self.show_kanban_detail_modal(ctx);
+        } else if self.current_view == View::Baselines {
+            // Baselines management view
+            egui::CentralPanel::default().show(ctx, |ui| {
+                self.show_baselines_view(ui);
+            });
+
+            // Create baseline dialog
+            self.show_create_baseline_dialog(ctx);
         } else {
             // In List/Detail view, use layout mode
             match self.layout_mode {
