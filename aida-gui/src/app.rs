@@ -2519,6 +2519,16 @@ pub struct RequirementsApp {
     baseline_compare_source: Option<Uuid>,              // Source baseline for comparison
     baseline_compare_target: Option<Uuid>,              // Target baseline (None = current state)
     show_baseline_comparison: bool,                     // Whether to show comparison view
+
+    // Clone requirement state
+    show_clone_dialog: bool,
+    clone_source_idx: Option<usize>,                    // Index of requirement being cloned
+    clone_include_tags: bool,
+    clone_include_relationships: bool,
+    clone_include_comments: bool,
+    clone_include_history: bool,
+    clone_include_urls: bool,
+    clone_include_custom_fields: bool,
 }
 
 /// Result from background AI evaluation thread
@@ -2981,6 +2991,16 @@ impl RequirementsApp {
             baseline_compare_source: None,
             baseline_compare_target: None,
             show_baseline_comparison: false,
+
+            // Clone requirement state
+            show_clone_dialog: false,
+            clone_source_idx: None,
+            clone_include_tags: true,
+            clone_include_relationships: false,
+            clone_include_comments: false,
+            clone_include_history: false,
+            clone_include_urls: true,
+            clone_include_custom_fields: true,
         }
     }
 
@@ -9093,6 +9113,219 @@ impl RequirementsApp {
         }
     }
 
+    /// Show the clone requirement dialog
+    fn show_clone_requirement_dialog(&mut self, ctx: &egui::Context) {
+        if !self.show_clone_dialog {
+            return;
+        }
+
+        let Some(source_idx) = self.clone_source_idx else {
+            self.show_clone_dialog = false;
+            return;
+        };
+
+        let Some(source_req) = self.store.requirements.get(source_idx).cloned() else {
+            self.show_clone_dialog = false;
+            return;
+        };
+
+        let mut close_dialog = false;
+        let mut do_clone = false;
+
+        egui::Window::new("Clone Requirement")
+            .collapsible(false)
+            .resizable(false)
+            .default_width(400.0)
+            .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
+            .show(ctx, |ui| {
+                ui.label(format!("Clone: {}", source_req.spec_id.as_deref().unwrap_or("(no ID)")));
+                ui.label(egui::RichText::new(&source_req.title).strong());
+                ui.add_space(10.0);
+
+                ui.label("The cloned requirement will have a new ID and start with Draft status.");
+                ui.add_space(10.0);
+
+                ui.separator();
+                ui.label(egui::RichText::new("Include in clone:").strong());
+                ui.add_space(5.0);
+
+                // Core fields are always cloned
+                ui.horizontal(|ui| {
+                    ui.add_enabled(false, egui::Checkbox::new(&mut true, "Title & Description"));
+                    ui.label(egui::RichText::new("(always)").small().color(egui::Color32::GRAY));
+                });
+                ui.horizontal(|ui| {
+                    ui.add_enabled(false, egui::Checkbox::new(&mut true, "Type, Priority, Owner, Feature"));
+                    ui.label(egui::RichText::new("(always)").small().color(egui::Color32::GRAY));
+                });
+
+                ui.add_space(5.0);
+
+                // Optional fields
+                ui.checkbox(&mut self.clone_include_tags, "Tags");
+
+                let has_urls = !source_req.urls.is_empty();
+                let url_label = if has_urls {
+                    format!("URL Links ({})", source_req.urls.len())
+                } else {
+                    "URL Links (none)".to_string()
+                };
+                ui.add_enabled(has_urls, egui::Checkbox::new(&mut self.clone_include_urls, url_label));
+
+                let has_custom = !source_req.custom_fields.is_empty();
+                let custom_label = if has_custom {
+                    format!("Custom Fields ({})", source_req.custom_fields.len())
+                } else {
+                    "Custom Fields (none)".to_string()
+                };
+                ui.add_enabled(has_custom, egui::Checkbox::new(&mut self.clone_include_custom_fields, custom_label));
+
+                ui.add_space(5.0);
+                ui.separator();
+                ui.add_space(5.0);
+
+                let has_relationships = !source_req.relationships.is_empty();
+                let rel_label = if has_relationships {
+                    format!("Relationships ({})", source_req.relationships.len())
+                } else {
+                    "Relationships (none)".to_string()
+                };
+                ui.add_enabled(has_relationships, egui::Checkbox::new(&mut self.clone_include_relationships, rel_label));
+                if has_relationships && self.clone_include_relationships {
+                    ui.label(egui::RichText::new("  Note: Clone will have same relationships as original").small().italics());
+                }
+
+                let has_comments = !source_req.comments.is_empty();
+                let comment_label = if has_comments {
+                    format!("Comments ({})", source_req.comments.len())
+                } else {
+                    "Comments (none)".to_string()
+                };
+                ui.add_enabled(has_comments, egui::Checkbox::new(&mut self.clone_include_comments, comment_label));
+
+                let has_history = !source_req.history.is_empty();
+                let history_label = if has_history {
+                    format!("History ({})", source_req.history.len())
+                } else {
+                    "History (none)".to_string()
+                };
+                ui.add_enabled(has_history, egui::Checkbox::new(&mut self.clone_include_history, history_label));
+
+                ui.add_space(15.0);
+
+                ui.horizontal(|ui| {
+                    if ui.button("Cancel").clicked() {
+                        close_dialog = true;
+                    }
+
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("📋 Clone").clicked() {
+                            do_clone = true;
+                        }
+                    });
+                });
+            });
+
+        if close_dialog {
+            self.show_clone_dialog = false;
+            self.clone_source_idx = None;
+        }
+
+        if do_clone {
+            self.clone_requirement(source_idx);
+            self.show_clone_dialog = false;
+            self.clone_source_idx = None;
+        }
+
+        // Close on Escape
+        if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
+            self.show_clone_dialog = false;
+            self.clone_source_idx = None;
+        }
+    }
+
+    /// Clone a requirement with the current dialog settings
+    fn clone_requirement(&mut self, source_idx: usize) {
+        let Some(source) = self.store.requirements.get(source_idx).cloned() else {
+            return;
+        };
+
+        // Create new requirement with core fields
+        let mut cloned = Requirement::new(
+            format!("{} (Clone)", source.title),
+            source.description.clone(),
+        );
+
+        // Copy type, priority, owner, feature
+        cloned.req_type = source.req_type.clone();
+        cloned.priority = source.priority.clone();
+        cloned.owner = source.owner.clone();
+        cloned.feature = source.feature.clone();
+
+        // Status is always Draft for clones
+        cloned.status = RequirementStatus::Draft;
+
+        // Optional: tags
+        if self.clone_include_tags {
+            cloned.tags = source.tags.clone();
+        }
+
+        // Optional: URLs
+        if self.clone_include_urls {
+            cloned.urls = source.urls.clone();
+        }
+
+        // Optional: custom fields
+        if self.clone_include_custom_fields {
+            cloned.custom_fields = source.custom_fields.clone();
+            cloned.custom_status = source.custom_status.clone();
+            cloned.custom_priority = source.custom_priority.clone();
+        }
+
+        // Optional: relationships
+        if self.clone_include_relationships {
+            cloned.relationships = source.relationships.clone();
+        }
+
+        // Optional: comments
+        if self.clone_include_comments {
+            cloned.comments = source.comments.clone();
+        }
+
+        // Optional: history
+        if self.clone_include_history {
+            cloned.history = source.history.clone();
+        }
+
+        // Add creation record
+        cloned.record_change(
+            self.user_settings.display_name(),
+            vec![aida_core::FieldChange {
+                field_name: "cloned_from".to_string(),
+                old_value: String::new(),
+                new_value: source.spec_id.clone().unwrap_or_else(|| source.id.to_string()),
+            }],
+        );
+
+        // Add to store with new spec_id
+        self.store.add_requirement_with_spec_id(cloned);
+
+        // Save
+        if let Err(e) = self.storage.save(&self.store) {
+            self.message = Some((format!("Failed to save: {}", e), true));
+        } else {
+            // Select the new requirement (last in list)
+            let new_idx = self.store.requirements.len() - 1;
+            self.selected_idx = Some(new_idx);
+
+            let new_spec_id = self.store.requirements.get(new_idx)
+                .and_then(|r| r.spec_id.clone())
+                .unwrap_or_else(|| "new".to_string());
+
+            self.message = Some((format!("Cloned as {}", new_spec_id), false));
+        }
+    }
+
     fn show_settings_users_tab(&mut self, ui: &mut egui::Ui) {
         egui::ScrollArea::vertical().show(ui, |ui| {
             ui.heading("User Management");
@@ -13733,6 +13966,7 @@ impl RequirementsApp {
                 let mut new_status: Option<RequirementStatus> = None;
                 let mut trigger_ai_action: Option<AiAction> = None;
                 let mut copy_for_claude_code_idx: Option<usize> = None;
+                let mut clone_req = false;
                 let current_priority = req.priority.clone();
                 let current_status = req.status.clone();
 
@@ -13883,6 +14117,12 @@ impl RequirementsApp {
 
                                     ui.separator();
 
+                                    // Clone action
+                                    if ui.button("📋 Clone").clicked() {
+                                        clone_req = true;
+                                        ui.close_menu();
+                                    }
+
                                     // Archive/Unarchive action
                                     let archive_label = if is_archived {
                                         "↩ Unarchive"
@@ -13914,6 +14154,10 @@ impl RequirementsApp {
                 }
                 if toggle_archive {
                     self.toggle_archive(idx);
+                }
+                if clone_req {
+                    self.show_clone_dialog = true;
+                    self.clone_source_idx = Some(idx);
                 }
 
                 // Apply priority change
@@ -19651,6 +19895,9 @@ impl eframe::App for RequirementsApp {
 
         // Show delete preset confirmation dialog
         self.show_delete_preset_confirmation_dialog(ctx);
+
+        // Show clone requirement dialog
+        self.show_clone_requirement_dialog(ctx);
 
         // Show filter dialogs
         self.show_filter_dialog_list1(ctx);
